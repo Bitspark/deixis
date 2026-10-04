@@ -31,8 +31,8 @@
     "test": "tsc && node --test dist/index.test.js dist/vectors.test.js dist/sha256.test.js dist/codec.test.js"
   },
   "devDependencies": {
-    "@types/node": "^24.1.0",
-    "typescript": "^5.9.3"
+    "@types/node": "^26.6.3",
+    "typescript": "^7.0.2"
   },
   "repository": {
     "type": "git",
