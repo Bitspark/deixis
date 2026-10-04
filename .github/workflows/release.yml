@@ -180,7 +180,9 @@ jobs:
               echo "$pkg@${TAG#v} already on crates.io; skipping"; continue
             fi
             (cd "$c" && cargo publish $DRY --locked)
-            [ -z "$DRY" ] && wait_for_index "$pkg" "${TAG#v}"
+            # An `if`, not `[ -z "$DRY" ] && …`: as the loop's last command that test is the
+            # step's exit status, and in a rehearsal it is 1, so every rehearsal failed here.
+            if [ -z "$DRY" ]; then wait_for_index "$pkg" "${TAG#v}"; fi
           done
 
       - name: The round trip against what was published
