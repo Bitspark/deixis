@@ -143,8 +143,9 @@ top of it, the probative instance. Each has a nameable owner; neither is named h
 
 ## What this note does not do
 
-It assigns no owner — that is the operator's standing question (proposal Q1), and a
-survey's job is to make the options legible, not to take them. It reserves no names:
+It assigns no owner. That is proposal Q1, which this repository's lanes decide together with
+the repositories that would own the instance (since 2026-10-04 it no longer waits on the
+operator), and a survey's job is to make the options legible, not to take them. It reserves no names:
 "capability surface," "named-data floor," and "vocabulary tree" name kinds of agreement,
 not profiles. And it ratifies nothing: every claim above is a claim about *perceivable*
 agreement, falsified the ordinary way — by the second party never arriving.
