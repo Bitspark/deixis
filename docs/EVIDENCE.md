@@ -373,8 +373,9 @@ have been used up. Waiting does not spend the option, so row 11 stays a gap.
 
 ⚠ **What row 11 needs cannot be measured here.** It needs someone *willing* to enumerate the
 identity surface without having read `CODEC.md`. Whether such a person exists is a question
-someone has to ask, not a quantity any log can show, so row 11 is routed to the maintainers
-rather than left as a pending item that no reader could discharge.
+someone has to ask, not a quantity any log can show. So row 11 is active work for this
+repository's lanes, finding candidates and asking them; it is not a decision handed to
+anyone else, and not a pending item that no reader could discharge.
 
 ### The defect this section shipped, and the gate that now catches it
 
