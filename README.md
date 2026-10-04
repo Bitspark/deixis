@@ -1,8 +1,17 @@
-# deixis
+<!-- design:figure id=deixis-wordmark -->
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="./docs/img/deixis-wordmark-dark.svg">
+    <img alt="deixis — pointing, showing. The deixis wordmark: a keyed tree pointed through to its leaf, bare junctions and open slots, the one axiom fill at the leaf the path points at, set beside the lowercase deixis in the family hairline / one-axiom-fill language." src="./docs/img/deixis-wordmark-light.svg" width="280">
+  </picture>
+</p>
+<!-- /design:figure -->
 
-*δεῖξις — pointing, showing.*
+<p align="center"><em>δεῖξις — pointing, showing.</em></p>
 
-The structure of a tree, and nothing about what a tree holds.
+---
+
+**deixis is the structure of a tree, and nothing about what a tree holds.**
 
 ```
 Node(.) = (.) × (Key ⇀ Node(.))
@@ -102,3 +111,5 @@ not reachable from here. The first public release is v0.6.0.
 Apache License 2.0; see [LICENSE](LICENSE). Contributions are welcome under the same
 license: read [CONTRIBUTING.md](CONTRIBUTING.md) first, and report vulnerabilities as
 [SECURITY.md](SECURITY.md) describes.
+
+<p align="center"><sub><em>A node is what it points at.</em></sub></p>
