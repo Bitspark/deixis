@@ -22,15 +22,18 @@
 // Usage: node tools/conformance/interop.mjs [--seed=N] [--count=N] [--only=rs,go,ts,py] [--fuzz=K]
 //   --fuzz=K adds round C: K mutants per value, judged by every core (law 3, see round C).
 
-import { spawn } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import { createInterface } from "node:readline";
 
 const ROOT = new URL("../../", import.meta.url);
 const exe = process.platform === "win32" ? ".exe" : "";
+// Go runs as a binary built once per run, as in harness.mjs (see its GO_BIN): `go run`
+// would compile and link on every launch.
+const GO_BIN = `target/conformance-go/deixis-conformance-go${exe}`;
 const IMPLEMENTATIONS = [
   { name: "rs", command: `target/debug/deixis-conformance${exe}`, args: [] },
-  { name: "go", command: "go", args: ["run", "./conformance/go"] },
+  { name: "go", command: GO_BIN, args: [], build: ["go", ["build", "-o", GO_BIN, "./conformance/go"]] },
   { name: "ts", command: "node", args: ["conformance/ts/main.mjs"] },
   { name: "py", command: "python", args: ["conformance/py/main.py"] },
 ];
@@ -42,6 +45,16 @@ const count = Number(arg("count") ?? 60);
 const only = arg("only")?.split(",");
 const fuzzN = Number(arg("fuzz") ?? 0);
 const selected = IMPLEMENTATIONS.filter((i) => !only || only.includes(i.name));
+// Build what runs as a binary once, before anything is sent; a failed build fails the run.
+for (const implementation of selected) {
+  if (!implementation.build) continue;
+  try {
+    execFileSync(implementation.build[0], implementation.build[1], { cwd: new URL(".", ROOT), stdio: "inherit" });
+  } catch {
+    console.error(`${implementation.name}: build failed`);
+    process.exit(2);
+  }
+}
 
 // --- the codecs under test (ids from CODEC.md §13 and vectors/README.md) ---------------
 
