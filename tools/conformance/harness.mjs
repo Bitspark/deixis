@@ -6,7 +6,7 @@
 // judgments. Dependency-free Node. Exit 0 iff every implementation answers every
 // request with the expected judgment.
 
-import { spawn } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { createInterface } from "node:readline";
 import { MANDATORY_FILES, mandatoryRequests } from "./mandatory.mjs";
@@ -17,9 +17,15 @@ const vectors = (name) =>
   JSON.parse(readFileSync(new URL(`vectors/${name}`, ROOT), "utf8"));
 
 const exe = process.platform === "win32" ? ".exe" : "";
+// Go runs as a binary built once per run, as rs does. `go run` compiles and links on every
+// launch, and the envelope cases run in a launch of their own bounded at
+// ENVELOPE_TIMEOUT_MS, so the bound measured the toolchain as well as the codec: on a
+// loaded host `go run` alone took 14 to 16 s, and all 13 timed cases failed for a reason
+// that was never the codec's. Building first leaves the bound to time the codec.
+const GO_BIN = `target/conformance-go/deixis-conformance-go${exe}`;
 const IMPLEMENTATIONS = [
   { name: "rs", command: `target/debug/deixis-conformance${exe}`, args: [] },
-  { name: "go", command: "go", args: ["run", "./conformance/go"] },
+  { name: "go", command: GO_BIN, args: [], build: ["go", ["build", "-o", GO_BIN, "./conformance/go"]] },
   { name: "ts", command: "node", args: ["conformance/ts/main.mjs"] },
   { name: "py", command: "python", args: ["conformance/py/main.py"] },
 ];
@@ -623,6 +629,21 @@ const selected = IMPLEMENTATIONS.filter(
 if (selected.length === 0) {
   console.error("no implementations selected");
   process.exit(2);
+}
+
+// Build what runs as a binary once, before anything is sent or timed (see GO_BIN). A
+// build failure fails the run: a stale binary from an earlier build must never answer.
+for (const implementation of selected) {
+  if (!implementation.build) continue;
+  try {
+    execFileSync(implementation.build[0], implementation.build[1], {
+      cwd: new URL(".", ROOT),
+      stdio: "inherit",
+    });
+  } catch {
+    console.error(`${implementation.name}: build failed`);
+    process.exit(2);
+  }
 }
 
 // Resolve the corpus and the pinned laws BEFORE sending anything: a name collision, a

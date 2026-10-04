@@ -52,8 +52,8 @@ const CORES = {
   },
   go: {
     files: ["core/go/deixis.go", "core/go/codec.go", "core/go/codec_flat.go", "core/go/codec_linked.go"],
-    // The harness compiles the CLI itself (`go run`); compiling first tells a plant that
-    // does not build apart from a kill.
+    // The harness builds the CLI itself, once per run (harness.mjs, GO_BIN); compiling
+    // first tells a plant that does not build apart from a kill.
     build: () => [["go", ["build", "-o", join(tmpdir(), `deixis-mutants-go${process.platform === "win32" ? ".exe" : ""}`), "./conformance/go"]]],
     marker: 'println("DEIXIS-REACH"); ', // the builtin println writes to stderr
   },
