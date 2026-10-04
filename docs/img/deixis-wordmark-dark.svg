@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  deixis lockup — a keyed tree pointed through to its leaf, crowning the
+  wordmark (dark). The mark: hairline branching with nothing at the junctions
+  (structure means nothing), open circles at the leaves (the slots), and the one
+  sanctioned axiom fill at the leaf the path points at — a node is what it
+  points at. Arche inverted: origin bare, destination filled. Drawn to the
+  Bitspark/design wordmark spec (brand/wordmark.md). Colours are literal
+  @bitspark/design dark-theme token values:
+    #fafafa = color-fg ; #27272a = color-border ; #a1a1aa = color-fg-muted.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 264" width="280" role="img" aria-label="deixis — pointing, showing">
+  <g fill="none" stroke="#fafafa" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="240" y1="24" x2="211" y2="54"/>
+    <circle cx="206" cy="60" r="5.5"/>
+    <line x1="240" y1="24" x2="266" y2="58"/>
+    <line x1="266" y1="58" x2="272" y2="84"/>
+    <circle cx="274" cy="92" r="5.5"/>
+    <line x1="266" y1="58" x2="245" y2="85"/>
+    <circle cx="240" cy="92" r="6.5" fill="#fafafa" stroke="none"/>
+  </g>
+  <text x="240" y="190" text-anchor="middle"
+        font-family="system-ui, -apple-system, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif"
+        font-size="84" font-weight="700" fill="#fafafa" letter-spacing="-0.02em">deixis</text>
+  <line x1="196" y1="212" x2="284" y2="212" stroke="#27272a" stroke-width="1"/>
+  <text x="240" y="234" text-anchor="middle"
+        font-family="system-ui, -apple-system, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif"
+        font-size="11" font-weight="600" fill="#a1a1aa" letter-spacing="0.16em">δεῖξις · POINTING · WHAT IT POINTS AT</text>
+</svg>
