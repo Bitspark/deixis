@@ -1,0 +1,197 @@
+{
+  "description": "deixis mandatory Node[T] navigation vectors — own, at and valueAt of ADR 0010 §4 and PATH.md. own is total, so its result is the payload itself. at and valueAt are partial: their result is {\"defined\": …} or {\"undefined\": {}}, with no reason spelled. {\"defined\": null} (json slot) and {\"undefined\": {}} are therefore different results. Paths are arrays of hex keys; [] is ε. Every case declares its slot, as defined in vectors/MNODE-PLAN.md. Hand-authored from docs/design/0010-mandatory-node-values.md, docs/TREE.md and docs/PATH.md as merged in 1a9bb6d, and from nothing else. No implementation of the mandatory API existed when these were written. Items X1, X4, X18 and X19; each note names the defect (W) it catches. 24 cases.",
+  "profile": "deixis-mnode-navigation",
+  "cases": [
+    {
+      "name": "m-nav-own-root",
+      "slot": "fixture", "op": "own",
+      "node": { "own": { "class": "r", "representation": "r" }, "children": [["6b", { "own": { "class": "i", "representation": "i" }, "children": [["6a", { "own": { "class": "t", "representation": "t" }, "children": [] }]] }], ["61", { "own": { "class": "s", "representation": "s" }, "children": [] }]] },
+      "result": { "class": "r", "representation": "r" },
+      "note": "X1. own(Node(t,m)) = t (ADR 0010 §4): the payload itself, not a wrapper around it. Catches W1."
+    },
+    {
+      "name": "m-nav-valueat-epsilon-is-root-value",
+      "slot": "fixture", "op": "valueAt",
+      "node": { "own": { "class": "r", "representation": "r" }, "children": [["6b", { "own": { "class": "i", "representation": "i" }, "children": [["6a", { "own": { "class": "t", "representation": "t" }, "children": [] }]] }], ["61", { "own": { "class": "s", "representation": "s" }, "children": [] }]] },
+      "path": [],
+      "result": { "defined": { "class": "r", "representation": "r" } },
+      "note": "X1. valueAt(n,ε) = own(at(n,ε)) = own(n)."
+    },
+    {
+      "name": "m-nav-valueat-interior",
+      "slot": "fixture", "op": "valueAt",
+      "node": { "own": { "class": "r", "representation": "r" }, "children": [["6b", { "own": { "class": "i", "representation": "i" }, "children": [["6a", { "own": { "class": "t", "representation": "t" }, "children": [] }]] }], ["61", { "own": { "class": "s", "representation": "s" }, "children": [] }]] },
+      "path": ["6b"],
+      "result": { "defined": { "class": "i", "representation": "i" } },
+      "note": "X1. The node at [6b] has a child and its own value; PATH says interior paths carry T. Catches W1 and any reading of values as terminal-only."
+    },
+    {
+      "name": "m-nav-valueat-terminal",
+      "slot": "fixture", "op": "valueAt",
+      "node": { "own": { "class": "r", "representation": "r" }, "children": [["6b", { "own": { "class": "i", "representation": "i" }, "children": [["6a", { "own": { "class": "t", "representation": "t" }, "children": [] }]] }], ["61", { "own": { "class": "s", "representation": "s" }, "children": [] }]] },
+      "path": ["6b", "6a"],
+      "result": { "defined": { "class": "t", "representation": "t" } },
+      "note": "X1. Resolution follows the keys in order: at(at(n,[6b]),[6a])."
+    },
+    {
+      "name": "m-nav-at-epsilon-is-self",
+      "slot": "fixture", "op": "at",
+      "node": { "own": { "class": "r", "representation": "r" }, "children": [["61", { "own": { "class": "s", "representation": "s" }, "children": [] }]] },
+      "path": [],
+      "result": { "defined": { "own": { "class": "r", "representation": "r" }, "children": [["61", { "own": { "class": "s", "representation": "s" }, "children": [] }]] } },
+      "note": "X1. at(n,ε) ≡ n (ADR 0010 §4; PATH: a node points at itself with no keys spent)."
+    },
+    {
+      "name": "m-nav-at-interior-returns-whole-subtree",
+      "slot": "fixture", "op": "at",
+      "node": { "own": { "class": "r", "representation": "r" }, "children": [["6b", { "own": { "class": "i", "representation": "i" }, "children": [["6a", { "own": { "class": "t", "representation": "t" }, "children": [] }]] }], ["61", { "own": { "class": "s", "representation": "s" }, "children": [] }]] },
+      "path": ["6b"],
+      "result": { "defined": { "own": { "class": "i", "representation": "i" }, "children": [["6a", { "own": { "class": "t", "representation": "t" }, "children": [] }]] } },
+      "note": "X1. The subtree at [6b] is returned whole: its own value and its child."
+    },
+    {
+      "name": "m-nav-valueat-missing-child",
+      "slot": "fixture", "op": "valueAt",
+      "node": { "own": { "class": "r", "representation": "r" }, "children": [["61", { "own": { "class": "s", "representation": "s" }, "children": [] }]] },
+      "path": ["62"],
+      "result": { "undefined": {} },
+      "note": "X4. [62] is not in D_n. Missing paths refuse; no default value or node is created (ADR 0010 §4)."
+    },
+    {
+      "name": "m-nav-at-below-a-terminal-node",
+      "slot": "fixture", "op": "at",
+      "node": { "own": { "class": "r", "representation": "r" }, "children": [["61", { "own": { "class": "s", "representation": "s" }, "children": [] }]] },
+      "path": ["61", "61"],
+      "result": { "undefined": {} },
+      "note": "X4. The node at [61] is childless, so it resolves no nonempty path, whatever its own value (PATH, resolution)."
+    },
+    {
+      "name": "m-nav-at-missing-below-interior-does-not-create",
+      "slot": "fixture", "op": "at",
+      "node": { "own": { "class": "r", "representation": "r" }, "children": [["6b", { "own": { "class": "i", "representation": "i" }, "children": [["6a", { "own": { "class": "t", "representation": "t" }, "children": [] }]] }]] },
+      "path": ["6b", "62"],
+      "result": { "undefined": {} },
+      "note": "X4. PATH, 'What resolution is not': a miss does not bring a node into being."
+    },
+    {
+      "name": "m-nav-json-valueat-null-leaf",
+      "slot": "json", "op": "valueAt",
+      "node": { "own": "r", "children": [["61", { "own": null, "children": [] }], ["62", { "own": null, "children": [["63", { "own": false, "children": [] }]] }]] },
+      "path": ["61"],
+      "result": { "defined": null },
+      "note": "X4. A legal null payload at an existing path is defined, with value null (PATH valueAt: if T includes null, it is a legal payload at an existing path). Catches W3."
+    },
+    {
+      "name": "m-nav-json-at-null-leaf",
+      "slot": "json", "op": "at",
+      "node": { "own": "r", "children": [["61", { "own": null, "children": [] }], ["62", { "own": null, "children": [["63", { "own": false, "children": [] }]] }]] },
+      "path": ["61"],
+      "result": { "defined": { "own": null, "children": [] } },
+      "note": "X4. The node carrying null exists and is returned. It is Node(null,∅), not a miss."
+    },
+    {
+      "name": "m-nav-json-valueat-missing-sibling-of-null",
+      "slot": "json", "op": "valueAt",
+      "node": { "own": "r", "children": [["61", { "own": null, "children": [] }], ["62", { "own": null, "children": [["63", { "own": false, "children": [] }]] }]] },
+      "path": ["64"],
+      "result": { "undefined": {} },
+      "note": "X4. The pair to m-nav-json-valueat-null-leaf: the same tree, a path that does not exist. The two results must differ."
+    },
+    {
+      "name": "m-nav-json-valueat-null-interior",
+      "slot": "json", "op": "valueAt",
+      "node": { "own": "r", "children": [["61", { "own": null, "children": [] }], ["62", { "own": null, "children": [["63", { "own": false, "children": [] }]] }]] },
+      "path": ["62"],
+      "result": { "defined": null },
+      "note": "X4. An interior node whose value is null. Catches W3."
+    },
+    {
+      "name": "m-nav-json-navigate-through-null-interior",
+      "slot": "json", "op": "valueAt",
+      "node": { "own": "r", "children": [["61", { "own": null, "children": [] }], ["62", { "own": null, "children": [["63", { "own": false, "children": [] }]] }]] },
+      "path": ["62", "63"],
+      "result": { "defined": false },
+      "note": "X4. Resolution walks through a node whose payload is null; the payload does not stop navigation. An implementation that reads null as a missing node cannot reach [62,63]. Catches W3."
+    },
+    {
+      "name": "m-nav-option-valueat-root-none",
+      "slot": "option", "op": "valueAt",
+      "node": { "own": { "none": {} }, "children": [["61", { "own": { "none": {} }, "children": [] }], ["62", { "own": { "some": { "class": "v", "representation": "v" } }, "children": [] }]] },
+      "path": [],
+      "result": { "defined": { "none": {} } },
+      "note": "X4. Under the option slot, none is a legal payload: valueAt returns it as defined. It is not a missing node (TREE: none does not denote a missing node). Catches W1 and W3."
+    },
+    {
+      "name": "m-nav-option-valueat-none-child",
+      "slot": "option", "op": "valueAt",
+      "node": { "own": { "none": {} }, "children": [["61", { "own": { "none": {} }, "children": [] }], ["62", { "own": { "some": { "class": "v", "representation": "v" } }, "children": [] }]] },
+      "path": ["61"],
+      "result": { "defined": { "none": {} } },
+      "note": "X4. A childless node carrying none exists."
+    },
+    {
+      "name": "m-nav-option-valueat-some-is-the-payload",
+      "slot": "option", "op": "valueAt",
+      "node": { "own": { "none": {} }, "children": [["61", { "own": { "none": {} }, "children": [] }], ["62", { "own": { "some": { "class": "v", "representation": "v" } }, "children": [] }]] },
+      "path": ["62"],
+      "result": { "defined": { "some": { "class": "v", "representation": "v" } } },
+      "note": "X1. The payload at [62] is the option value some(v) itself. The core does not unwrap it; T is Option[fixture] here (ADR 0010 §1). Catches an implementation that strips the option."
+    },
+    {
+      "name": "m-nav-option-valueat-missing",
+      "slot": "option", "op": "valueAt",
+      "node": { "own": { "none": {} }, "children": [["61", { "own": { "none": {} }, "children": [] }], ["62", { "own": { "some": { "class": "v", "representation": "v" } }, "children": [] }]] },
+      "path": ["63"],
+      "result": { "undefined": {} },
+      "note": "X4. The navigation failure is represented independently of every legal payload, none included (ADR 0010 §4)."
+    },
+    {
+      "name": "m-nav-unit-valueat-leaf",
+      "slot": "unit", "op": "valueAt",
+      "node": { "own": {}, "children": [["61", { "own": {}, "children": [] }]] },
+      "path": ["61"],
+      "result": { "defined": {} },
+      "note": "X4. Under Node[Unit], every existing node carries the unit."
+    },
+    {
+      "name": "m-nav-unit-valueat-missing",
+      "slot": "unit", "op": "valueAt",
+      "node": { "own": {}, "children": [["61", { "own": {}, "children": [] }]] },
+      "path": ["62"],
+      "result": { "undefined": {} },
+      "note": "X4. The pair to m-nav-unit-valueat-leaf: under Node[Unit] every value is equal, so only definedness separates existing from missing."
+    },
+    {
+      "name": "m-nav-json-payload-spelling-a-node-is-not-entered",
+      "slot": "json", "op": "at",
+      "node": { "own": { "own": "x", "children": [["61", { "own": "y", "children": [] }]] }, "children": [] },
+      "path": ["61"],
+      "result": { "undefined": {} },
+      "note": "X18. The root's payload is a JSON object that happens to spell a node with a child at [61]. It is opaque content: resolution walks children only and never enters a value (PATH). The root is childless."
+    },
+    {
+      "name": "m-nav-json-payload-spelling-a-node-returned-whole",
+      "slot": "json", "op": "valueAt",
+      "node": { "own": { "own": "x", "children": [["61", { "own": "y", "children": [] }]] }, "children": [] },
+      "path": [],
+      "result": { "defined": { "own": "x", "children": [["61", { "own": "y", "children": [] }]] } },
+      "note": "X18. The same node: its value is that object, returned as is."
+    },
+    {
+      "name": "m-nav-empty-key-path",
+      "slot": "fixture", "op": "valueAt",
+      "node": { "own": { "class": "a", "representation": "a" }, "children": [["", { "own": { "class": "b", "representation": "b" }, "children": [] }]] },
+      "path": [""],
+      "result": { "defined": { "class": "b", "representation": "b" } },
+      "note": "X19. [\"\"] is the path of one empty key and reaches the child; ε would give the root's a. The empty key is a key."
+    },
+    {
+      "name": "m-nav-non-utf8-key-exact",
+      "slot": "fixture", "op": "valueAt",
+      "node": { "own": { "class": "a", "representation": "a" }, "children": [["ff00", { "own": { "class": "c", "representation": "c" }, "children": [] }]] },
+      "path": ["ff"],
+      "result": { "undefined": {} },
+      "note": "X19. The only child key is ff00. The byte string ff is a different key, not a prefix match. Keys are exact bytes and need not be UTF-8."
+    }
+  ]
+}

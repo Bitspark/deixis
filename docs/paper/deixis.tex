@@ -1,0 +1,1602 @@
+% deixis — the whitepaper. Theory backing docs/TREE.md, SLOTS.md, PATH.md and the
+% design records 0001–0005. Plain LaTeX: article + AMS packages only, so any
+% distribution (TeX Live, MiKTeX, tectonic) compiles it without ceremony.
+\documentclass[11pt]{article}
+
+\usepackage[margin=1.15in]{geometry}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{booktabs}
+\usepackage[hidelinks]{hyperref}
+\hypersetup{pdfauthor={Julian Matschinske (julian@matschinske.com)},
+  pdftitle={deixis: A Minimal Floor for Keyed Tree Structure}}
+\usepackage{enumitem}
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{example}[theorem]{Example}
+\newtheorem{remark}[theorem]{Remark}
+\newtheorem{stipulation}[theorem]{Stipulation}
+
+% ----- notation ---------------------------------------------------------------
+\newcommand{\Bytes}{\mathbb{B}}                    % finite byte strings
+\newcommand{\NodeT}[1]{\mathrm{Node}(#1)}
+\newcommand{\Leaf}{\mathrm{Leaf}}
+\newcommand{\Struct}{\mathrm{Struct}}
+\newcommand{\dom}{\mathrm{dom}\,}
+\newcommand{\eqS}{=_{\approx}}                     % lifted identity
+\newcommand{\finmap}[2]{#1 \rightharpoonup_{\mathrm{fin}} #2}
+\newcommand{\lex}{<_{\mathrm{lex}}}
+\newcommand{\magn}{\mathrm{mag}}
+\newcommand{\enc}{\mathsf{enc}}
+\newcommand{\encD}{\mathsf{enc}_{\!D}}
+\newcommand{\Paths}{\mathrm{Paths}}
+\newcommand{\VO}{V_{\mathrm{o}}}                   % ontos values
+\newcommand{\Atom}{\mathrm{Atom}}
+\newcommand{\Tup}{\mathrm{Tuple}}
+\newcommand{\eqO}{=_{\mathrm{o}}}
+
+\title{deixis: A Minimal Floor for Keyed Tree Structure\\
+  \large Identity, pointing, and readings over one container}
+\author{Julian Matschinske \quad
+  \href{mailto:julian@matschinske.com}{\small\texttt{julian@matschinske.com}}}
+\date{September 2026 — draft v4.1, mandatory node values (ADR 0010)}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+deixis is a specification of finite byte-keyed trees over one opaque slot:
+$\NodeT{T} = T \times (\Bytes \rightharpoonup_{\mathrm{fin}} \NodeT{T})$, so that every
+node carries exactly one own value and a finite map of children; where absence is wanted,
+it is a choice of slot. It fixes
+the structural half of a data floor --- shape, keys, paths, canonical order --- and
+commits to nothing about what a tree holds. Construction and navigation need only a
+carrier; identity additionally uses a supplied equivalence. This paper gives the theory the specification
+rests on. We define the tree as the initial algebra of a container functor, lift a
+slot equality to a node identity and prove the lifting a congruence, characterize
+identity by pointing (paths and the values at them), and give resolution as a partial
+action of the free monoid of keys. We prove that a node is exactly its parts, and that
+every node can gain a child under a fresh key while every existing path and value is
+kept. The model of this paper's earlier drafts, in which a node either holds a value or
+has children, embeds into the optional instantiation $\NodeT{\mathrm{Option}(T)}$, and
+for any inhabited slot no map in the other direction preserves paths and own values. We isolate the admission conditions a slot must meet per capability
+tier, proving that a byte-valued complete invariant exists iff the slot quotient is
+countable, and that existence and computability come apart. We prove the three laws of the positional
+spelling $\kappa$ (injective, prefix-free, order-preserving), from which sequence
+semantics embed into the key space at zero interpretive cost. We then develop the
+reading principle: collection and positional semantics (order, sets, multiplicity,
+records) enter as \emph{structure profiles} --- embedding/retraction pairs into the
+key space --- rather than as constructors or type parameters, and we prove the
+transport laws for the sequence and set profiles at their stated scope. Finally we
+exhibit the ontos value model as an exact profile of
+$\NodeT{\mathrm{Option}(\Bytes)}$. Its mathematical projection and recognizer extend
+the earlier bridge; the shipping bridge still targets the previous core API.
+\end{abstract}
+
+\medskip
+\noindent\fbox{\parbox{\dimexpr\linewidth-2\fboxsep-2\fboxrule\relax}{\small\raggedright
+\textbf{Scope of draft v4 (2026-09-23).} This paper states ADR~0010's mandatory-value
+floor, $\NodeT{T} = T \times (\finmap{\Bytes}{\NodeT{T}})$. The previous optional floor
+is its explicit instantiation at $\mathrm{Option}(T)$; the earlier leaf/structure
+model embeds into that instantiation (Remark~\ref{rem:previous}). The proofs are
+mathematical arguments, not proof-assistant verification. The encoder in
+\S\ref{sec:codec} is an abstract construction demonstrating the lifted invariant
+law, not a specification of published bytes. The candidate \texttt{CODEC.md} now
+states \texttt{deixis-codec-v2}, a grammar for this model (ADR~0011); its proofs,
+vectors and freeze obligations are separate from this paper. Consumer implementations
+are not certified by these structural proofs.}}
+
+\clearpage
+\section{Introduction}
+
+\paragraph{Mathematical scope and review.}
+The aim is expressive power through a small, coherent set of concepts. Defined
+objects have their defining properties; constructions and derived laws are
+assessed within their stated domains and assumptions. There is no failure until
+the model defines a failure concept. Partial selection and expressly defined
+recognizer refusals remain part of the mathematics; physical contingencies enter
+only through an explicit model that introduces them. A calculator losing power
+does not qualify $2+2=4$, and an unmodeled stuck tape does not qualify a Turing
+machine's transition rule.
+
+Review this paper for internal consistency, precise definitions, well-defined
+constructions, valid derivations, expressive reach, and economy of concepts.
+A defining law states what an admitted object is; a claim that a particular
+construction supplies such an object still needs justification. Counterexamples
+must satisfy the stated premises. Do not add feedback about phenomena the model
+does not contain, or make implementation a prerequisite for theoretical value.
+Constructions, embeddings, and composition results can establish that value
+mathematically. Separate implementation claims concern whether particular
+artifacts realize the model. Draft v4.1 adds this methodological clarification to
+v4 without changing its definitions or theorems; the
+\href{https://github.com/Bitspark/deixis/blob/main/docs/paper/README.md}{paper's README}
+states the common scope.
+
+Systems that let independent parties agree without trusting each other need, at the
+bottom, a notion of \emph{value} whose identity can be decided by looking --- no
+context, no clock, no authority. Every layer above such a floor (canonical encodings,
+content addressing, re-checkable derivations, typed contracts, revocable mandates)
+inherits its identity from below and can weaken but never repair it. The floor is
+therefore where stipulation is cheapest and where every avoidable commitment is
+dearest: a constructor added to the floor is inherited by everyone forever; a meaning
+attached to the floor is an opinion everyone must share.
+
+deixis is a floor designed under that discipline, one level beneath a byte-atom value
+model in production use (ontos, \S\ref{sec:ontos}). Its design bets are:
+
+\begin{enumerate}[leftmargin=1.6em]
+\item \textbf{One container, closed.} A node is an own value and a finite map from byte
+  keys to nodes. There is one constructor and no node kind, no edge metadata
+  beyond the key itself, no ordered sibling list --- and the collection and positional readings a consumer
+  reaches for are recovered as proved embeddings (\S\ref{sec:profiles}; the general
+  reading principle is stated there with its current scope, not as a universality
+  theorem).
+\item \textbf{One hole, minimal interface.} The slot, the own value every node carries,
+  admits any carrier whatsoever, an optional one included; deixis interacts with it through a single supplied relation, and each
+  further capability (decidability, canonical bytes, decodability) is priced as one
+  further supplied operation (\S\ref{sec:slots}).
+\item \textbf{Keys are bytes, not a parameter.} Byte keys discharge, once and for
+  everyone, the two obligations any key sort owes: an exact decidable equality (for
+  identity) and a total order (for canonicalization). This is an engineering economy
+  rather than a mathematical necessity (Remark~\ref{rem:keys}); what keys \emph{mean}
+  is left to readings above the floor (\S\ref{sec:pos}).
+\item \textbf{Structural identity is fixed; its value clause is supplied.} deixis
+  fixes exact key domains and pointwise recursion, and parameterizes exactly the
+  comparison of own values by the supplied equivalence. That no layer above
+  may coarsen or refine the result is a \emph{protocol rule} the ecosystem enforces on
+  its observers (Remark~\ref{rem:extensional}), not a property of the raw type.
+\end{enumerate}
+
+The contributions of this paper are the proofs: that the lifting is a congruence
+(Thm.~\ref{thm:equiv}, \ref{thm:congruence}); that identity is exactly co-pointing
+(Thm.~\ref{thm:pointing}); that resolution is a partial monoid action respecting
+identity (Prop.~\ref{prop:action}); that a node is exactly its parts and that split
+and plug are inverse (Prop.~\ref{prop:parts}, \ref{prop:splitplug}); that fresh
+attachment is exact and available at every node (Thm.~\ref{thm:attach},
+Cor.~\ref{cor:attach}), and that for an inhabited slot no path- and value-preserving map
+back to the previous model exists (Prop.~\ref{prop:nonembed}); the countability boundary for complete invariants
+and its computability gap (Thm.~\ref{thm:countable}, Prop.~\ref{prop:gap}); the
+correctness of the canonical encoding combinator (Thm.~\ref{thm:codec}); the three
+$\kappa$ laws (Thm.~\ref{thm:kappa}); the transport laws for the sequence and set
+profiles (Prop.~\ref{prop:pos-transport}, \ref{prop:set-transport}); and the exactness
+of the ontos projection (Thm.~\ref{thm:ontos}).
+
+\section{The tree}\label{sec:tree}
+
+\emph{Metatheory.} The semantic results of this paper (\S\ref{sec:tree}--%
+\S\ref{sec:profiles}, \S\ref{sec:ontos}) are stated in ordinary classical set theory:
+sets, quotients, and setoids as carriers-with-equivalence, with no constructive or
+computability commitments. Statements about \emph{effectiveness} are separate and
+explicit: they are read in ordinary computability over $\mathbb{N}$ and $\Bytes$,
+algorithms consume the named representations (byte strings; program indices where
+indicated), and partiality conventions are stated where used
+(Prop.~\ref{prop:gap} spells out its two readings of ``computable on $T$''). No
+represented-space machinery is invoked, and no claim in this paper depends on one.
+
+Fix $\Bytes$, the set of finite octet strings, with decidable equality and the total
+unsigned-lexicographic order $\lex$. For sets $K, X$ write $\finmap{K}{X}$ for the set
+of finite partial maps $K \rightharpoonup X$.
+
+Write $\mathrm{Option}(T) = \mathbf{1} \sqcup T$, with elements $\mathrm{None}$ and
+$\mathrm{Some}(x)$ for $x \in T$. It is not part of the floor. It is one choice of slot
+(Remark~\ref{rem:instances}), used below for the previous model and for the container
+profiles.
+
+\begin{definition}[The functor]\label{def:functor}
+For a set $T$, let $F_T(X) \;=\; T \times (\finmap{\Bytes}{X})$.
+\end{definition}
+
+Since $\finmap{\Bytes}{X} \cong \sum_{K \in \mathcal{P}_{\mathrm{fin}}(\Bytes)} X^{K}$,
+$F_T(X) \cong \sum_{(o, K)} X^{K}$ over $(o, K) \in T \times
+\mathcal{P}_{\mathrm{fin}}(\Bytes)$: $F_T$ is a container (polynomial) functor with
+shapes $T \times \mathcal{P}_{\mathrm{fin}}(\Bytes)$ and positions $K$
+at shape $(o, K)$. Its initial algebra exists and is the corresponding W-type
+\cite{martinlof,aag}.
+
+\begin{definition}[Nodes]\label{def:node}
+$\NodeT{T}$ is the initial $F_T$-algebra. We write its single constructor
+$\mathrm{Node} : T \times (\finmap{\Bytes}{\NodeT{T}}) \to \NodeT{T}$.
+In $\mathrm{Node}(o, m)$, $o \in T$ is the node's \emph{own value} and $m$ its
+\emph{children}.
+\end{definition}
+
+Every node carries exactly one own value and a finite map of children, which may be
+empty. A node with children keeps its own value, and a node without children still has
+one. There are no node kinds: ``leaf'' names a node without children, which is a fact
+about shape and says nothing about the value. A missing node is a result of navigation
+(\S\ref{sec:path}), never a special value of $T$.
+
+Initiality gives the two structural facts the specification stipulates rather than
+derives, and it is worth recording why stipulation is nevertheless the honest
+presentation: the specification addresses implementations in languages whose type
+systems do not exhibit initial algebras, so the floor asserts the consequences
+directly and this paper certifies that a model exists in which all of them hold.
+
+\begin{stipulation}[Structural facts]\label{stip:structural}
+(i) \emph{Injectivity}: $\mathrm{Node}$ is injective.
+(ii) \emph{Finiteness and well-foundedness}: every node is a finite tree; there is no
+infinite descent through children, and structural induction and recursion are valid.
+\end{stipulation}
+
+Both hold in the initial algebra. The initial algebra's structure map is injective
+by Lambek's lemma, and W-types are well-founded by construction. Note what is \emph{not}
+present: no node kinds, no node metadata beyond the own value, no edge labels, and no
+ordering among siblings. The only degrees of freedom of a node are its own value, its key
+set, and its children.
+
+\begin{remark}[Optionality is a slot choice]\label{rem:instances}
+The floor imposes no absence convention. A consumer that wants one instantiates the slot
+with it. $\NodeT{\mathrm{Option}(A)}$ carries an explicit $\mathrm{None}$ or
+$\mathrm{Some}(a)$ at every node, and under the usual tag-respecting equality
+$\mathrm{None} \neq \mathrm{Some}(a)$ even when $a$ is ``empty''. That inequality belongs
+to the slot and is declared by its supplier; the floor does not stipulate it.
+$\NodeT{\mathbf{1}}$ is pure keyed shape. $\NodeT{\mathbf{0}}$ is empty, since every tree
+has a root value. In every instantiation a sentinel inside the slot is a value at an
+existing node, never the absence of a node.
+\end{remark}
+
+\begin{remark}[The previous model]\label{rem:previous}
+Earlier drafts of this paper took $F_T(X) = T \sqcup (\finmap{\Bytes}{X})$, with
+constructors $\Leaf$ and $\Struct$; write $L(T)$ for its initial algebra. It embeds into
+this model at the slot $\mathrm{Option}(T)$, not at $T$ itself, by
+$E : L(T) \to \NodeT{\mathrm{Option}(T)}$ with
+\[
+E(\Leaf(x)) = \mathrm{Node}(\mathrm{Some}(x), \emptyset), \qquad
+E(\Struct(m)) = \mathrm{Node}(\mathrm{None},\, k \mapsto E(m(k))).
+\]
+The image of $E$ is exactly the trees over $\mathrm{Option}(T)$ in which $\mathrm{Some}$
+occurs only at nodes without children. That was the previous model's one restriction: a
+node could not hold a value and have children. No embedding is promised at an unchanged
+slot $T$. An intermediate design (ADR~0009 of the specification) made
+$\mathrm{Option}(T) \times (\finmap{\Bytes}{X})$ the floor itself; that model is exactly
+$\NodeT{\mathrm{Option}(T)}$, without the restriction. In the previous model a node holding
+a value could gain a child only by being replaced, which moved its value to another path.
+\end{remark}
+
+\begin{remark}[Keys are not a parameter]\label{rem:keys}
+A two-parameter floor $\mathrm{Node}[K, T]$ was considered and rejected in the
+specification's first design record. The honest form of the argument is an obligation
+count, not an impossibility: a key sort $K$ could, like the slot, owe only an equality
+at the identity tier and a lawful encoder at the canonicalization tier --- the
+encoder's bytes would then \emph{supply} the total order. What fixing $K = \Bytes$
+buys is that both obligations are discharged once, by the type itself, for every
+consumer forever, and the one-hole notation survives. An engineering economy,
+deliberately taken; \S\ref{sec:pos} shows nothing positional is lost.
+
+The total order also does quiet foundational work. With a decidable total order,
+$\mathcal{P}_{\mathrm{fin}}(\Bytes)$ has canonical representatives --- strictly
+sorted, duplicate-free entry lists --- so the branching functor is a \emph{strict}
+polynomial functor rather than a quotient of one: $\NodeT{T}$ mechanizes as a plain
+inductive type carrying a decidable, hence proof-irrelevant, sortedness invariant,
+and no \emph{structural} setoid arises before the slot setoid is even in play. (This
+is exactly the shipped representation: sorted-unique entry vectors.) For an
+arbitrary key sort with mere decidable equality, finite maps are a quotient of entry
+lists up to reordering, and every mechanization would inherit setoid structure at
+the structural level.
+\end{remark}
+
+\section{Identity}\label{sec:identity}
+
+deixis does not define identity; it lifts one. The slot is not a type but a
+\emph{setoid}: a pair $(T, \approx)$ of a carrier and a relation. Nothing else about
+the slot is ever consulted.
+
+\begin{definition}[Lifted identity]\label{def:lift}
+Given $(T, \approx)$, define $\eqS$ on $\NodeT{T}$ by structural recursion:
+\[
+\mathrm{Node}(o, m) \eqS \mathrm{Node}(o', n) \iff
+  o \approx o' \;\wedge\; \dom m = \dom n \;\wedge\; \forall k \in \dom m.\;
+  m(k) \eqS n(k).
+\]
+Key comparison in $\dom m = \dom n$ is octet equality; the recursion is well-founded
+by Stipulation~\ref{stip:structural}(ii).
+\end{definition}
+
+\begin{theorem}[The lifting preserves equivalence]\label{thm:equiv}
+If $\approx$ is reflexive (resp.\ symmetric, transitive), so is $\eqS$. In particular
+if $(T,\approx)$ is a setoid, $(\NodeT{T}, \eqS)$ is a setoid.
+\end{theorem}
+
+\begin{proof}
+Each property of $\eqS$ separately, by induction on the node, which is one case since
+there is one constructor. Reflexivity: $\mathrm{Node}(o, m) \eqS \mathrm{Node}(o, m)$
+needs $o \approx o$, which is reflexivity of $\approx$,
+$\dom m = \dom m$, and $m(k) \eqS m(k)$, the last by the inductive hypothesis on the
+strictly smaller $m(k)$. Symmetry and transitivity are the same induction, using the
+same property of $\approx$ on own values, symmetry and transitivity of set equality on
+domains, and
+the inductive hypothesis pointwise. (The converse direction of the slogan ``deixis lifts
+what it is given and does not repair it'' is immediate: if $x \not\approx x$ then
+$\mathrm{Node}(x, \emptyset) \not\eqS \mathrm{Node}(x, \emptyset)$.)
+\end{proof}
+
+\begin{remark}[The admission rule: three classes of maps]\label{rem:extensional}
+The raw type $\NodeT{T}$ still distinguishes what $\eqS$ merges:
+$\mathrm{Node}(x, \emptyset) \neq \mathrm{Node}(y, \emptyset)$
+as elements even when $x \approx y$, and an observer that inspects raw slot
+representations can tell them apart. Every ``merged is merged forever'' statement in
+this paper is therefore relative to \emph{extensional} observers --- functions that
+are setoid morphisms, respecting $\approx$ and $\eqS$.
+
+The specification's rule that no layer may coarsen or refine identity has two halves
+with \emph{different} enforcers, and an earlier draft of this remark conflated them.
+The no-\emph{refinement} half is exactly extensionality: a setoid morphism cannot
+separate what $\eqS$ merges. The no-\emph{coarsening} half is \textbf{not} ---
+a constant observer is extensional and maximally coarsening. Coarsening is instead
+excluded, where it must be, by requiring the map to \emph{reflect} equality as well
+as preserve it: $f(N) = f(M) \Rightarrow N \eqS M$. The ecosystem accordingly admits
+three classes of maps, with graded obligations:
+
+\begin{enumerate}[label=(\alph*), leftmargin=2.2em]
+\item \emph{Observations} --- extensional only. A size, a leaf count, a predicate is
+  naturally lossy; nothing downstream treats its output as an identity surrogate.
+\item \emph{Identity-bearing representations and migrations} --- extensional
+  \emph{and} equality-reflecting; equivalently, embeddings of quotient setoids. The
+  lawful-invariant law \eqref{eq:codeclaw}, profile identity transport
+  (Def.~\ref{def:profile}(iii)), and the ontos embedding
+  (Thm.~\ref{thm:ontos}(iii)) are exactly this two-sided condition. Reflection does
+  not survive post-composition: a pipeline's membership in this class must be
+  re-established end to end, or composed from certified reflecting stages --- the
+  label is a claim about a whole map, never an inheritance from its parts.
+\item \emph{Recognizers and decoders} --- exact partial inverses.
+  Definition~\ref{def:profile}(i),(ii) states their laws; they refuse rather than repair.
+\end{enumerate}
+
+Raw observation is not a fourth class but the \emph{boundary} of the taxonomy, and the
+specification permits it. An own-value accessor may inspect the representative;
+that is what makes a debugger, a wire dump or a diagnostic possible at all, and a doctrine
+forbidding it would forbid tooling. What such an observer may not do is launder its result.
+A quantity that depends on the representative is not a function of the floor value, and the
+obligation attaches to the \emph{claim} rather than to the inspection: a
+representative-sensitive result may never be presented as value-determined. Where a map is
+offered as a function of the value it must be $\approx$-congruent, which places it in class
+(a); where it is not, it must say which it is. This is the discipline of (c) stated for
+observers rather than for decoders --- the failure mode is not looking, it is looking and
+then claiming more than was seen.
+
+This is a protocol obligation the ecosystem enforces (and its conformance vectors
+test), not a property the raw data type can enforce by itself. Every operation
+defined in this paper is admitted under its class: the observations of
+\S\ref{sec:tree}--\ref{sec:path} are extensional (Prop.~\ref{prop:action}(ii) is the
+case proved for resolution), and the maps this paper treats as identity-bearing are
+proved to reflect.
+\end{remark}
+
+\begin{definition}[Replacement]\label{def:replace}
+For a path $p \in \Bytes^{*}$ (Def.~\ref{def:path}) with $N/p$ defined, let
+$N[p \mapsto M]$ be the node obtained by replacing the subtree at $p$ with $M$,
+defined by recursion on $p$: $N[\varepsilon \mapsto M] = M$, and
+$\mathrm{Node}(o, m)[(k \cdot p) \mapsto M] = \mathrm{Node}(o, m[k \mapsto m(k)[p \mapsto
+M]])$. Every node on the way down keeps its own value $o$ and its other children; only
+the subtree at $p$ is replaced, own value included.
+\end{definition}
+
+\begin{theorem}[Congruence]\label{thm:congruence}
+Let $\approx$ be an equivalence. If $N/p$ is defined and $M \eqS M'$, then
+$N[p \mapsto M] \eqS N[p \mapsto M']$. More generally $\eqS$ is a congruence for
+$\mathrm{Node}$: if $o \approx o'$, $\dom m = \dom n$ and $m(k) \eqS n(k)$ pointwise
+then $\mathrm{Node}(o, m) \eqS \mathrm{Node}(o', n)$.
+\end{theorem}
+
+\begin{proof}
+The general statement is Definition~\ref{def:lift} read as an introduction rule. The
+replacement statement follows by induction on $p$: for $\varepsilon$ it is the
+hypothesis; for $k \cdot p$, the two results share the own value $o$ of the node being
+descended through, which is related to itself by reflexivity of $\approx$, and their child
+maps agree on every key except $k$, where the inductive hypothesis applies. Reflexivity
+(Thm.~\ref{thm:equiv}) covers the untouched entries.
+\end{proof}
+
+\subsection{Functoriality in the slot}
+
+The slot is a parameter, and the parametricity is itself lawful: $\NodeT{-}$ is a
+functor, and the identity theory transports along it.
+
+\begin{definition}[Map]\label{def:map}
+For $f : T \to U$ define $\mathrm{map}\,f : \NodeT{T} \to \NodeT{U}$ by structural
+recursion:
+\[
+\mathrm{map}\,f\,(\mathrm{Node}(o, m)) = \mathrm{Node}(f\,o,\; k \mapsto \mathrm{map}\,f\,(m(k))).
+\]
+Keys are untouched. $\mathrm{map}$ applies $f$ to the own value of \emph{every} node, and
+never adds or removes a node. At $T = \mathrm{Option}(A)$ it may therefore change
+$\mathrm{None}$; the presence-preserving mapping is the explicit specialization
+$\mathrm{map}\,(\mathrm{Option}.\mathrm{map}\,g)$.
+\end{definition}
+
+\begin{proposition}[Functor laws; structure invariance; setoid transport]\label{prop:functor}
+\emph{(i)} $\mathrm{map}\,\mathrm{id} = \mathrm{id}$ and
+$\mathrm{map}\,(g \circ f) = \mathrm{map}\,g \circ \mathrm{map}\,f$.
+\emph{(ii)} $\Paths(\mathrm{map}\,f\,N) = \Paths(N)$, and resolution commutes:
+$(\mathrm{map}\,f\,N)/p \simeq \mathrm{map}\,f\,(N/p)$ (Kleene equality).
+\emph{(iii)} If $f$ is a setoid morphism --- $x \approx_T y \Rightarrow
+f(x) \approx_U f(y)$ --- then $N =_{\approx_T} M \Rightarrow
+\mathrm{map}\,f\,N =_{\approx_U} \mathrm{map}\,f\,M$. Hence
+$(T, \approx) \mapsto (\NodeT{T}, \eqS)$ with $f \mapsto \mathrm{map}\,f$ is an
+endofunctor on the category of setoids, of which Theorem~\ref{thm:equiv} is the
+object part.
+\end{proposition}
+
+\begin{proof}
+All three by structural induction, which has one case. (i) The own values agree because
+$\mathrm{id}\,o = o$ and $(g \circ f)\,o = g\,(f\,o)$, and the children agree pointwise
+by the inductive hypothesis. (ii) $\mathrm{map}$ rewrites no key, so path sets coincide;
+the resolution clause follows by induction on $p$.
+(iii) Own values: related by the morphism property. Children: untouched, equal domains and pointwise-related subtrees by the
+inductive hypothesis --- exactly Definition~\ref{def:lift}.
+\end{proof}
+
+\begin{corollary}[Embeddings lift]\label{cor:embed}
+Let $f$ be a \emph{setoid embedding}: it preserves equality ($x \approx_T y
+\Rightarrow f(x) \approx_U f(y)$) \emph{and} reflects it ($f(x) \approx_U f(y)
+\Rightarrow x \approx_T y$) --- the identity-bearing class of
+Remark~\ref{rem:extensional}. Then $\mathrm{map}\,f$ is a setoid embedding as well:
+preservation is Prop.~\ref{prop:functor}(iii), and for reflection, by the pointing
+characterization (Thm.~\ref{thm:pointing}),
+$\mathrm{map}\,f\,N =_{\approx_U} \mathrm{map}\,f\,M$ forces equal path sets (untouched by
+$\mathrm{map}$) and $\approx_U$-equal images at every path, which reflection returns to
+$\approx_T$-equal own values. Slot-level embeddings
+lift to node-level embeddings; neither direction alone would suffice for the claim.
+\end{corollary}
+
+\begin{theorem}[Lifting commutes with quotienting]\label{thm:quotient}
+Let $q : T \to T/\!\approx$ be the projection onto the quotient setoid (whose
+equality is discrete equality of classes). Then $\mathrm{map}\,q$ induces an
+isomorphism of setoids
+\[
+\NodeT{T}/\!\eqS \;\cong\; \NodeT{T/\!\approx}.
+\]
+\end{theorem}
+
+\begin{proof}
+$q$ preserves and reflects equality by definition of the quotient, so
+$\mathrm{map}\,q$ is a setoid embedding (Cor.~\ref{cor:embed}) and descends to an
+injection $\NodeT{T}/\!\eqS \hookrightarrow \NodeT{T/\!\approx}$. Surjectivity:
+given $M \in \NodeT{T/\!\approx}$, choose a representative for each of its finitely
+many value classes, one per path --- finite choice, a theorem of ZF, within the classical
+metatheory of \S\ref{sec:tree}; at the decodable tier no choice is needed, the
+exact partial decoder supplying the representative (cf.\
+Prop.~\ref{prop:set-transport}) --- and the resulting $N \in \NodeT{T}$ has
+$\mathrm{map}\,q\,N = M$ by structural induction.
+\end{proof}
+
+\begin{remark}[The protocol stance is the quotient semantics]\label{rem:hofmann}
+Theorem~\ref{thm:quotient} is the precise sense in which the admission discipline of
+Remark~\ref{rem:extensional} \emph{is} quotient semantics rather than a substitute
+for it: the setoid model interprets quotient types \cite{hofmann}, and every
+extensional observer of $\NodeT{T}$ factors uniquely through $\NodeT{T/\!\approx}$.
+A mechanization in a prover with quotient types can work on the quotient side and
+transport every result across this isomorphism.
+\end{remark}
+
+\begin{remark}[Transport of profiles]
+A structure profile (\S\ref{sec:profiles}) is a condition on keys, so
+$\mathrm{map}\,f$ preserves a positional image verbatim. A profile whose recognizer
+consults own values --- the set profile's coherence $k = \enc(x)$ for a member
+$\mathrm{Node}(\mathrm{Some}(x), \emptyset)$ of its optional carrier --- transports
+along $\mathrm{map}\,(\mathrm{Option}.\mathrm{map}\,f)$ exactly when the member encoders
+agree, $\enc_U \circ f = \enc_T$;
+otherwise the image is honestly left rather than repaired.
+\end{remark}
+
+\subsection{Identity is pointing}
+
+\begin{definition}[Paths of a node]\label{def:paths}
+$\Paths(N) \subseteq \Bytes^{*}$:\; $\varepsilon \in \Paths(N)$ always, and
+$k \cdot p \in \Paths(\mathrm{Node}(o, m))$ iff $k \in \dom m$ and $p \in \Paths(m(k))$.
+Write $\mathrm{val}_N(p) \in T$ for the own value of $N/p$; it is defined at every
+$p \in \Paths(N)$. A path is \emph{terminal} iff $N/p$ has no children, and terminal and
+interior paths alike carry a value.
+\end{definition}
+
+\begin{theorem}[Pointing characterization]\label{thm:pointing}
+Let $\approx$ be an equivalence. $N \eqS M$ iff
+\emph{(a)} $\Paths(N) = \Paths(M)$, and
+\emph{(b)} $\mathrm{val}_N(p) \approx \mathrm{val}_M(p)$ for every $p \in \Paths(N)$.
+\end{theorem}
+
+\begin{proof}
+Write $N = \mathrm{Node}(o, m)$ and $M = \mathrm{Node}(o', n)$.
+($\Rightarrow$) By induction on $N$. At $\varepsilon$, $o \approx o'$ is (b) at
+$\varepsilon$. Then $\dom m = \dom n$ makes the length-one prefixes agree, and the
+inductive hypothesis on each $m(k) \eqS n(k)$ extends (a) and (b) under the prefix $k$.
+($\Leftarrow$) By induction on $N$. (b) at $\varepsilon$ is $o \approx o'$. Next, $k \in \dom m$ iff $k \in \Paths(N)$ iff (by (a)) $k \in \Paths(M)$
+iff $k \in \dom n$, so the domains agree. For each shared $k$, the sets
+$\{p : k \cdot p \in \Paths(\cdot)\}$ and the restricted (b) are exactly conditions
+(a) and (b) for $m(k), n(k)$, and the inductive hypothesis yields $m(k) \eqS n(k)$.
+\end{proof}
+
+\begin{example}[Neither condition is redundant]
+For any $x \in T$, the nodes
+\[
+\mathrm{Node}(x, \{a \mapsto \mathrm{Node}(x, \emptyset)\})
+\quad\text{and}\quad \mathrm{Node}(x, \emptyset)
+\]
+carry related values wherever both have a path, but their path sets differ ($a$ is in
+one and not the other). Conversely, for $x \not\approx y$, $\mathrm{Node}(x, \emptyset)$
+and $\mathrm{Node}(y, \emptyset)$ have the same path set $\{\varepsilon\}$ and are
+separated only by (b). At $T = \mathrm{Option}(A)$ the first pair can carry
+$\mathrm{None}$ throughout: a path whose value reads as absence is still a path.
+\end{example}
+
+The theorem is the origin of the name: a node is what it points at, and nothing else.
+
+\begin{remark}[What identity is not]
+Two non-theorems are design content. $\eqS$ is not \emph{object} identity: no address,
+history, or sharing enters (sharing of equal subtrees is representation and
+unobservable). And $\eqS$ is not coarser than the lifting: no equation such as
+``a one-child node equals its child'' or ``a node whose value is some empty sentinel
+equals no node at all'' is imposed; each would import a consumer's
+theory into the floor.
+\end{remark}
+
+\section{Resolution}\label{sec:path}
+
+\begin{definition}[Paths and resolution]\label{def:path}
+$\mathrm{Path} = \Bytes^{*}$, the free monoid under concatenation with unit
+$\varepsilon$. Resolution $N/p$ is the partial function
+\[
+N/\varepsilon = N,\qquad
+\mathrm{Node}(o, m)/(k \cdot p) = m(k)/p \ \ (k \in \dom m),\qquad
+\text{undefined otherwise.}
+\]
+\end{definition}
+
+\begin{proposition}[Partial monoid action, respected by identity]\label{prop:action}
+(i) $N/(p \cdot q) \simeq (N/p)/q$ (Kleene equality: both sides defined together and
+equal when defined). (ii) If $N \eqS M$ then for every $p$: $N/p$ is defined iff
+$M/p$ is, and $N/p \eqS M/p$ when defined.
+\end{proposition}
+
+\begin{proof}
+(i) Induction on $p$. (ii) Definedness of $N/p$ is $p \in \Paths(N)$, invariant by
+Thm.~\ref{thm:pointing}(a); the value clause follows by induction on $p$ from
+Definition~\ref{def:lift}'s pointwise condition.
+\end{proof}
+
+Resolution adds no values, constructs nothing on a miss (no autovivification, no
+default: whatever $T$ holds, including a null-like payload, is the own value of a node
+that exists, never a stand-in for a node that does not), never enters an own value (it walks children, and only children), and
+defines no equality. It is a reading of structure
+that is already there.
+
+\section{Composition}\label{sec:composition}
+
+A node is exactly its parts, and every existing node can gain a child without anything
+else changing. This section states the laws that make both precise. They are the reason
+the floor is a product rather than the previous sum (Remark~\ref{rem:previous}). The
+operations named here are mathematical descriptions, not required methods of an
+implementation.
+
+\begin{proposition}[Complete parts]\label{prop:parts}
+Let
+\[
+\begin{aligned}
+\mathrm{decompose}_T &: \NodeT{T} \longrightarrow
+  T \times (\finmap{\Bytes}{\NodeT{T}}),\\
+\mathrm{compose}_T &: T \times (\finmap{\Bytes}{\NodeT{T}})
+  \longrightarrow \NodeT{T},
+\end{aligned}
+\]
+with
+\[
+\mathrm{decompose}(\mathrm{Node}(o, m)) = (o, m), \qquad
+\mathrm{compose}((o, m)) = \mathrm{Node}(o, m).
+\]
+Then $\mathrm{compose} \circ \mathrm{decompose} = \mathrm{id}$ and
+$\mathrm{decompose} \circ \mathrm{compose} = \mathrm{id}$.
+\end{proposition}
+
+\begin{proof}
+$\mathrm{compose}$ is the structure map of the initial algebra, which is an isomorphism by
+Lambek's lemma, and $\mathrm{decompose}$ is its inverse.
+\end{proof}
+
+The child map holds whole subtrees, not their own values, and holds every child under its
+exact key. A parent's own value is an \emph{input} to reconstruction and is never inferred
+from its children: $\mathrm{Node}(o, m)$ and $\mathrm{Node}(o', m)$ with $o \not\approx o'$
+have identical children and are different nodes. So a new parent needs a supplied value:
+for a generic $T$ nothing can be chosen, while $\NodeT{\mathrm{Option}(T)}$ may supply
+$\mathrm{None}$ and $\NodeT{\mathbf{1}}$ the unit (Remark~\ref{rem:instances}).
+
+\begin{definition}[Contexts, split and plug]\label{def:context}
+Contexts at a path are defined by recursion on the path. The only context at
+$\varepsilon$ is the hole $\square$. A context at $k \cdot p$ is a triple $(o, m, C')$ of an
+own value, a finite map with $k \notin \dom m$, and a context $C'$ at $p$. Plugging a node
+$s$ into a context gives a node:
+\[
+\mathrm{plug}(\square, s) = s, \qquad
+\mathrm{plug}((o, m, C'), s) = \mathrm{Node}(o,\; m \cup \{k \mapsto \mathrm{plug}(C', s)\}).
+\]
+Splitting is the partial inverse: $\mathrm{split}_{\varepsilon}(N) = (\square, N)$, and
+$\mathrm{split}_{k \cdot p}(\mathrm{Node}(o, n)) = ((o,\, n \setminus k,\, C'),\, s)$ where
+$(C', s) = \mathrm{split}_p(n(k))$ and $n \setminus k$ is $n$ with the key $k$ removed; it is
+defined when $k \in \dom n$ and the recursive split is.
+A context retains every ancestor's own value, the keys leading to the hole, and every
+sibling subtree. Writing $\mathrm{Ctx}_T(p)$ for these contexts makes the types explicit:
+\[
+\begin{aligned}
+\mathrm{split}_p &: \NodeT{T} \rightharpoonup
+  \mathrm{Ctx}_T(p) \times \NodeT{T},\\
+\mathrm{plug}_p &: \mathrm{Ctx}_T(p) \times \NodeT{T} \longrightarrow \NodeT{T}.
+\end{aligned}
+\]
+The path index supplies the key $k$ in each recursive context layer. The domain of
+$\mathrm{split}_p$ is exactly the nodes in which $p$ exists.
+\end{definition}
+
+\begin{proposition}[Split and plug are inverse]\label{prop:splitplug}
+For every $N$ and every $p \in \Paths(N)$, and for every context $C$ at $p$ and every
+node $s$,
+\[
+\mathrm{plug}(\mathrm{split}_p(N)) = N, \qquad
+\mathrm{split}_p(\mathrm{plug}(C, s)) = (C, s).
+\]
+Consequently, writing $N[p \mapsto s]$ for $\mathrm{plug}(C, s)$ with $C$ the context of
+$N$ at $p$, which agrees with Definition~\ref{def:replace}:
+\[
+N[p \mapsto s]/p = s, \qquad N[p \mapsto N/p] = N, \qquad
+N[p \mapsto s][p \mapsto t] = N[p \mapsto t].
+\]
+\end{proposition}
+
+\begin{proof}
+Both inverse laws by induction on $p$; at $\varepsilon$ both are the identity. At
+$k \cdot p$, plugging the split of $\mathrm{Node}(o, n)$ gives
+$\mathrm{Node}(o, (n \setminus k) \cup \{k \mapsto \mathrm{plug}(\mathrm{split}_p(n(k)))\})
+= \mathrm{Node}(o, n)$ by the inductive hypothesis. Conversely,
+$\mathrm{plug}((o, m, C'), s)$ has $k$ in its domain, removing $k$ gives back $m$ because
+$k \notin \dom m$, and the inductive hypothesis gives back $(C', s)$. The replacement laws
+follow: resolution of $\mathrm{plug}(C, s)$ at $p$ is $s$ by induction on $p$;
+$N[p \mapsto N/p] = \mathrm{plug}(\mathrm{split}_p(N)) = N$; and by the converse law the
+context of $N[p \mapsto s]$ at $p$ is again $C$, so replacing there gives
+$\mathrm{plug}(C, t) = N[p \mapsto t]$.
+\end{proof}
+
+The converse law is the one that is easy to omit. Recovering the context from a result must
+return \emph{the same} context, not merely some context that could have produced the
+result. The same argument, applied at each path of a finite set $F \subseteq \Paths(N)$ of
+which no member is a prefix of another, gives complete cuts. Let $\mathrm{Skel}_T(F)$
+retain the ancestor values, keys and all subtrees outside exactly the holes at $F$;
+let $\NodeT{T}^{F}$ denote maps with domain exactly $F$ into whole subtrees. Then
+\[
+\begin{aligned}
+\mathrm{cut}_F &: \NodeT{T} \rightharpoonup
+  \mathrm{Skel}_T(F) \times \NodeT{T}^{F},\\
+\mathrm{rebuild}_F &: \mathrm{Skel}_T(F) \times \NodeT{T}^{F}
+  \longrightarrow \NodeT{T}.
+\end{aligned}
+\]
+Cutting is defined exactly when all paths in $F$ exist. These maps are inverse on
+their stated domains, including the empty cut and the root-only cut. Different
+complete cuts of one tree rebuild the same tree. The holes lie in disjoint
+subtrees, so the order in which they are cut does not matter.
+
+\begin{definition}[Containment]\label{def:contain}
+$A \sqsubseteq B$ iff $\Paths(A) \subseteq \Paths(B)$ and
+$\mathrm{val}_A(p) \approx \mathrm{val}_B(p)$ for every $p \in \Paths(A)$.
+\end{definition}
+
+Containment preserves positions, edges and values, not merely a set of values with its
+topology forgotten. It is reflexive and transitive, and $A \sqsubseteq B \sqsubseteq A$
+gives equal path sets and related values, so $A \eqS B$ by
+Theorem~\ref{thm:pointing}: $\sqsubseteq$ is a partial order up to $\eqS$. It needs no order
+on $T$ beyond $\approx$. At $T = \mathrm{Option}(A)$ with tag-respecting equality it keeps an
+old $\mathrm{None}$ as $\mathrm{None}$; an order in which $\mathrm{None}$ may gain a value is a
+different relation, which belongs to the optional interpretation.
+
+\begin{proposition}[Compatible overlay]\label{prop:overlay}
+Assume $\approx$ is an equivalence. Trees $A$ and $B$ have a common upper bound
+under $\sqsubseteq$ iff
+\[
+\forall p \in \Paths(A) \cap \Paths(B),\quad
+\mathrm{val}_A(p) \approx \mathrm{val}_B(p).
+\]
+For such a pair their partial overlay $A \sqcup B$ is the least upper bound,
+with path set $\Paths(A) \cup \Paths(B)$ and the respective values at those paths,
+up to $\approx$. Overlay is commutative, idempotent and associative up to
+$\eqS$, with equal definedness for the two associativity expressions.
+\end{proposition}
+
+\begin{proof}
+A common upper bound relates both values at any shared path to its value there;
+symmetry and transitivity give the compatibility condition. Conversely, the union
+of the two finite nonempty prefix-closed path sets is again such a set. Assign the
+value from $A$ where its path exists, and from $B$ elsewhere. This assignment and
+path set determine a finite tree, by grouping nonempty paths at their first key.
+Compatibility makes it an upper bound of both trees. Every common upper bound
+contains these paths and related values, so it contains their union; this proves
+leastness. Commutativity and idempotence follow from the union description.
+Either association of three operands is defined exactly when all three pairs
+agree on their common paths; when defined, both have the same union of paths and
+equivalent values. This proves associativity and equal definedness.
+\end{proof}
+
+There is no universal root-only identity for arbitrary $T$: every upper bound must
+preserve the root value. $\mathrm{Node}(t,\emptyset)$ is neutral within the component
+of trees with root equivalent to $t$. A global least tree exists only when
+$T/\!\approx$ has exactly one class. In an optional interpretation the different
+order $\mathrm{None}\leq\mathrm{Some}(t)$ may supply an absence-filling overlay;
+it is not the relation just proved. Overlay also loses operand provenance:
+for $e=\mathrm{Node}(t,\emptyset)$ and $s=\mathrm{Node}(t,\{k\mapsto e\})$,
+$e\sqcup s = s\sqcup e = s\sqcup s$ up to identity. The inverse laws for complete
+parts do not recover operands of an overlay, edit history, or external effects.
+
+\begin{theorem}[Exact fresh attachment]\label{thm:attach}
+For nodes $A, B$, a path $p$ and a key $k$, write $r = p \cdot k$. The operation
+$\mathrm{attach}(A, p, k, B)$ has as its domain exactly the arguments with $p \in \Paths(A)$
+and $r \notin \Paths(A)$; there, with $A/p = \mathrm{Node}(o, m)$,
+\[
+\mathrm{attach}(A, p, k, B) \;=\; A[p \mapsto \mathrm{Node}(o,\; m \cup \{k \mapsto B\})].
+\]
+The right-hand side is defined on the whole domain (availability), and
+$C = \mathrm{attach}(A, p, k, B)$ satisfies, exactly,
+\[
+\Paths(C) = \Paths(A) \cup \{r \cdot q : q \in \Paths(B)\},
+\]
+\[
+\mathrm{val}_C(p') = \mathrm{val}_A(p') \ \ (p' \in \Paths(A)), \qquad
+\mathrm{val}_C(r \cdot q) = \mathrm{val}_B(q).
+\]
+Outside the domain, that is when $p \notin \Paths(A)$ or $r \in \Paths(A)$, it is undefined.
+\end{theorem}
+
+\begin{proof}
+Definedness: $A/p$ is defined because $p \in \Paths(A)$, and $k \notin \dom m$ because
+$r \notin \Paths(A)$, so $m \cup \{k \mapsto B\}$ is a finite partial map and replacement at
+$p$ is defined. Undefinedness outside the domain is by definition, not by accident of the
+formula: an occupied key is refused even when $B = m(k)$, where the union would still be
+a function. Attachment is not an upsert. Paths and
+values: replacement keeps the own value and the other children of every node above $p$
+(Definition~\ref{def:replace}), and the new node at $p$ keeps $o$ and $m$ and adds exactly
+the subtree $B$ under $k$. The new paths $r \cdot q$ cannot coincide with old ones, since
+an old path extending $r$ would make $r$ old by prefix closure.
+\end{proof}
+
+\begin{corollary}[Consequences of attachment]\label{cor:attach}
+In the situation of Theorem~\ref{thm:attach}: $A \sqsubseteq C$; $C/r = B$; the own value
+at $p$ is unchanged; restricting $C$ to the paths of $A$, keeping those paths and their
+own values, gives back $A$, so every old value is retained as it was, at its old path; and
+attachments at $p$ under distinct fresh keys
+$k \neq j$ commute:
+$\mathrm{attach}(\mathrm{attach}(A, p, k, a), p, j, b) =
+\mathrm{attach}(\mathrm{attach}(A, p, j, b), p, k, a)$.
+\end{corollary}
+
+\begin{proof}
+All but the last are read off the exact paths and values in Theorem~\ref{thm:attach}. The
+restriction statement is stronger than $A \sqsubseteq C$, which relates old values only up
+to $\approx$; attachment keeps them exactly. For commutation, both orders put
+$\mathrm{Node}(o, m \cup \{k \mapsto a, j \mapsto b\})$ at $p$ and change nothing else.
+\end{proof}
+
+Availability is the half that separates this model from the previous one, and a law
+stated only for successful attachments would not capture it: an operation that refused
+every childless parent, or that returned $A$ unchanged, would satisfy $A \sqsubseteq C$
+vacuously or trivially. Inside the target of $E$ (Remark~\ref{rem:previous}), a child
+can be attached below $\mathrm{Node}(\mathrm{Some}(x), \emptyset)$, the image of
+$\Leaf(x)$, and the result lies outside the image of $E$. In the previous model the same node could gain a child only by
+being replaced, which moved its value to another path.
+
+\begin{proposition}[No path- and value-preserving map to the previous model]\label{prop:nonembed}
+Let $T$ be inhabited. Read the previous model's observations through $E$: a previous tree
+$L$ has the paths of $E(L)$, and the optional value $\mathrm{val}_{E(L)}(p)$ at each of them.
+Then there is no function $\Phi : \NodeT{T} \to L(T)$ with
+\[
+\Paths(\Phi(N)) = \Paths(N) \quad\text{and}\quad
+\mathrm{val}_{E(\Phi(N))} = \mathrm{Some} \circ \mathrm{val}_N
+\]
+for every $N$.
+\end{proposition}
+
+\begin{proof}
+Take $x \in T$ and $N = \mathrm{Node}(x, \{k \mapsto \mathrm{Node}(x, \emptyset)\})$. If
+$\Phi$ existed, $E(\Phi(N))$ would have the value $\mathrm{Some}(x)$ at $\varepsilon$ and the
+path set $\{\varepsilon, k\}$. A previous tree with
+a value at $\varepsilon$ is $\Leaf(x')$ for some $x'$, and $E(\Leaf(x')) =
+\mathrm{Node}(\mathrm{Some}(x'), \emptyset)$ has the path set $\{\varepsilon\}$. So no
+previous tree has both observations, and $\Phi(N)$ cannot exist.
+\end{proof}
+
+The statement is about the required interface, not about bijections between underlying
+sets: a lossless profile of this model inside the previous one exists, at the cost of
+changed native paths. The design records give this argument informally; the proposition
+makes it formal, and slightly stronger, since it rules out every function
+with those properties and not only isomorphisms.
+
+\section{Slots: admission and its tiers}\label{sec:slots}
+
+Every requirement deixis places on a slot is a requirement on the pair $(T, \approx)$,
+never on the carrier alone. The capabilities form a ladder of tiers --- and, answering
+a gap between the specification's motivation (``identity decided by looking'') and its
+formal minimum (an equivalence), the effective tiers are now explicit:
+
+\begin{center}
+\begin{tabular}{@{}lll@{}}
+\toprule
+supplied & available & \\
+\midrule
+carrier $T$ & shape, keys, paths, navigation & \S\ref{sec:tree}--\ref{sec:path}\\
+$+\ \approx$ an equivalence & \emph{semantic} identity $\eqS$ & \S\ref{sec:identity}\\
+$+$ a decision procedure for $\approx$ & \emph{effective} identity & Prop.~\ref{prop:decidable}\\
+$+\ \enc : T \to \Bytes$ lawful, computable & canonical bytes, hashing, addressing & \S\ref{sec:codec}\\
+$+$ an exact partial inverse for $\enc$ & decodable canonical representation & \S\ref{sec:codec}\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent where \emph{lawful} means the complete-invariant law
+\begin{equation}\label{eq:codeclaw}
+x \approx y \iff \enc(x) = \enc(y),
+\end{equation}
+i.e.\ $\enc$ factors through the quotient $T/\!\approx$ and is injective on it. One
+inclusion between the tiers is a theorem: a computable lawful $\enc$ automatically
+supplies a decision procedure for $\approx$ (compute and compare), so the
+canonical-bytes tier contains the effective tier. We claim \emph{no} strictness in
+the other direction. Prop.~\ref{prop:gap} separates a different pair of notions ---
+set-theoretic existence from computable existence, over a slot whose $\approx$ is
+undecidable --- and says nothing about whether decidable equality falls short of a
+computable invariant. Indeed, in natural effective presentations the gap can close
+outright: on $\mathbb{N}$ with any decidable equivalence $E$, the least-representative
+map $c(n) = \min\{\, m \le n : m \mathrel{E} n \,\}$ is a computable complete
+invariant. Whether some fixed effective model makes the separation strict is a
+question about that model's definition of ``computable on $T$,'' and this paper does
+not pose one. A slot admitted only at the semantic tier remains mathematically
+legitimate and operationally mute: its node identity is well-defined and
+undecidable.
+
+\begin{theorem}[Existence boundary, non-effective]\label{thm:countable}
+A function $\enc$ satisfying \eqref{eq:codeclaw} exists (as a set-theoretic function,
+with no computability claim) iff $T/\!\approx$ is countable.
+\end{theorem}
+
+\begin{proof}
+$\Bytes$ is countably infinite. A lawful $\enc$ induces an injection
+$T/\!\approx\ \hookrightarrow \Bytes$, forcing countability; conversely any injection
+of the quotient into $\Bytes$, composed with the projection, is lawful.
+\end{proof}
+
+\begin{proposition}[Existence and computability come apart]\label{prop:gap}
+Let $T \subseteq \mathbb{N}$ be the set of indices of total computable functions
+$\mathbb{N} \to \mathbb{N}$ and $i \approx j$ iff $\varphi_i = \varphi_j$
+extensionally. Then $T/\!\approx$ is countable, so a lawful $\enc$ exists
+(Thm.~\ref{thm:countable}); but there is no computable procedure that halts on every
+$i \in T$ and is lawful there --- neither a total computable function on all indices
+whose restriction to $T$ is lawful, nor a promise procedure guaranteed to halt on the
+promise $T$. (Since $T$ is not decidable, ``computable on $T$'' must be one of these
+two readings; the proof covers both.)
+\end{proposition}
+
+\begin{proof}
+Countability is immediate. Suppose $\enc$ is computable in either reading and lawful
+on $T$. Fix an index $z \in T$ of the constant-zero function. Given any program $e$
+and input $x$, the s-m-n theorem \cite{soare} effectively yields an index $g(e,x)$ of
+\[
+f_{e,x}(n) =
+\begin{cases}
+1, & \text{if } e(x) \text{ halts within } n \text{ steps},\\
+0, & \text{otherwise,}
+\end{cases}
+\]
+which is total for \emph{every} $e, x$ --- so $g(e,x) \in T$ always, and the promise
+is met. Now $f_{e,x} = \varphi_z$ (extensionally) iff $e(x)$ never halts. Computing
+and comparing $\enc(g(e,x))$ and $\enc(z)$ --- both calls halt, since both indices
+satisfy the promise --- decides, by lawfulness on $T$, whether $g(e,x) \approx z$,
+hence whether $e(x)$ halts. That decides the halting problem; contradiction.
+\end{proof}
+
+\begin{proposition}[Decidability transports]\label{prop:decidable}
+$\eqS$ is decidable iff $\approx$ is. (From $\approx$ to $\eqS$ by structural recursion:
+key comparison and domain comparison are decidable outright, and own values are compared
+by $\approx$. Conversely, $x \approx y$ iff
+$\mathrm{Node}(x, \emptyset) \eqS \mathrm{Node}(y, \emptyset)$.)
+\end{proposition}
+
+Two consequences frame the design space. Since every carrier admits at least the
+discrete and the total relation, \emph{no carrier is inadmissible}; only relations are
+(a non-equivalence lifts to a non-equivalence,
+Thm.~\ref{thm:equiv}). And since whatever $\approx$ merges is merged for every layer
+above --- Prop.~\ref{prop:action}(ii) shows no \emph{extensional} observation through
+the structure separates merged values, and Remark~\ref{rem:extensional}'s admission
+classes ensure every admitted map is at least extensional --- the choice of $\approx$
+is unrecoverable in the disciplined ecosystem, which is why the specification
+counsels choosing it as fine as any consumer will need.
+
+\section{Canonical bytes: the codec combinator}\label{sec:codec}
+
+deixis owns only half an encoding: the structural half (tags, counts, key bytes,
+entry order --- discharged by $\Bytes$ and $\lex$); the slot half is the supplied
+$\enc$. What the floor can define is a combinator.
+
+\begin{definition}[Framing assumptions]\label{def:framing}
+Fix a length code $\langle \cdot \rangle : \mathbb{N} \to \Bytes$ that is
+\emph{injective}, \emph{prefix-free}, and equipped with a unique exact partial
+decoder --- for every byte stream, at most one prefix is in the code's image, and the
+decoder recovers its unique preimage and rejects everything else, including
+non-canonical spellings of a length (e.g.\ shortest-form unsigned LEB128 with
+non-shortest forms rejected) --- and a fixed marker string $\tau$, which may be empty.
+\end{definition}
+
+\begin{definition}[The combinator]\label{def:encd}
+Given lawful $\enc$, define $\encD : \NodeT{T} \to \Bytes$ by structural recursion:
+\[
+\begin{array}{lcl}
+\encD(\mathrm{Node}(o,m)) &=&
+  \tau \cdot \langle |\enc(o)| \rangle \cdot \enc(o) \cdot \langle |m| \rangle\\[2pt]
+&& {}\cdot
+  \displaystyle\prod_{k \in \dom m}^{\lex\text{-ascending}}
+  \langle |k| \rangle \cdot k \cdot \encD(m(k))
+\end{array}
+\]
+where the product concatenates entries in strictly $\lex$-ascending key order (keys
+are unique, so the order is total and the sequence strict). This is an abstract
+encoder family over the mandatory-value model. ADR~0011 of the specification selects
+$\tau$ empty for \texttt{deixis-codec-v2}; that codec's contract, not this paper, fixes
+the byte layout, identifier, linked form and refusal protocol. Nothing below depends on
+those choices, or on the length of $\tau$.
+\end{definition}
+
+\begin{lemma}[Self-delimitation]\label{lem:selfdelim}
+$\encD$ is a prefix code: for all $N, M$, if $\encD(N)$ is a prefix of $\encD(M)$
+then $\encD(N) = \encD(M)$; moreover a byte stream determines its parse as
+(tag, framed fields) uniquely.
+\end{lemma}
+
+\begin{proof}
+By induction on nodes, using prefix-freeness of $\langle\cdot\rangle$. After the
+fixed marker, the own-value length determines that payload's extent. The child
+count fixes how many entries follow; each key-length field fixes its key's extent,
+and the inductive hypothesis fixes its child's extent. This determines a unique
+end for the whole node, including one with no children, so no complete encoding
+can be a proper prefix of another.
+\end{proof}
+
+\begin{theorem}[Lifted codec law]\label{thm:codec}
+Let $\enc$ be lawful for the slot setoid $(T,\approx)$.
+Its lifted encoder is lawful for nodes:
+\[
+N \eqS M \iff \encD(N) = \encD(M).
+\]
+\end{theorem}
+
+\begin{proof}
+($\Rightarrow$) Induction. Related own values encode equally by
+\eqref{eq:codeclaw}. Equal domains yield the identical $\lex$-sorted key sequence;
+pointwise $\eqS$ children encode equally by the inductive hypothesis; the
+concatenations coincide.
+($\Leftarrow$) Equal byte strings parse identically (Lemma~\ref{lem:selfdelim}):
+equal own-value payloads give related values by \eqref{eq:codeclaw};
+equal counts, then entry-by-entry equal keys and equal child
+encodings, giving equal domains and, by the inductive hypothesis, pointwise
+$\eqS$ children --- exactly Definition~\ref{def:lift}.
+\end{proof}
+
+\begin{corollary}[Content addressing, computational]
+Let $H$ be a digest. Unconditionally, $N \eqS M \Rightarrow H(\encD(N)) =
+H(\encD(M))$: equal nodes always share an address. The converse is not a mathematical
+fact --- no fixed-size digest is injective on an infinite domain --- but a
+computational one: under a collision-resistance assumption on $H$, exhibiting
+$N \not\eqS M$ with $H(\encD(N)) = H(\encD(M))$ is infeasible. Address equality is
+therefore evidence, not proof, of node identity: retrieved content must be rehashed
+against its address, and where identity is load-bearing, its canonical bytes
+revalidated. With that discipline, hash-keyed leaves recover shared substructure and
+DAGs without a cycle ever entering a value.
+\end{corollary}
+
+\begin{remark}[Encoder versus codec]\label{rem:codecword}
+What Theorem~\ref{thm:codec} delivers is a computable \emph{complete invariant} ---
+an encoder. A \emph{codec} additionally ships the exact partial decoder: a normative
+parser that reconstructs the node \emph{up to identity} and rejects, with stable
+reasons, every byte string outside the canonical image --- malformed or non-canonical
+lengths, malformed slot-codec identifiers, unsorted or duplicate keys, counts
+inconsistent with the stream, payloads outside the slot codec's image, trailing bytes,
+and resource-limit breaches (depth, size) as implementation policy distinct from the
+value set. The decoder laws are setoid-level, because a
+lawful $\enc$ is injective only on the quotient: $D(\encD(N)) \eqS N$ (never raw
+equality of syntax trees --- a slot relation coarser than representation makes raw
+recovery impossible by design), and $\encD(D(b)) = b$ byte-exactly on the decoder's
+domain. Countability (Thm.~\ref{thm:countable}) bounds the existence of
+\emph{invariants}; an effective codec needs the decodable tier of \S\ref{sec:slots}.
+The specification deliberately freezes no byte layout yet. Its candidate,
+\texttt{deixis-codec-v2} (\texttt{CODEC.md}, ADR~0011), instantiates this model with
+one node production --- the node's own payload, length-framed, then its count and
+entries --- and $\tau$ empty. Its framing and identity laws are proved separately, in
+prose, against that concrete grammar (\texttt{CODEC-proofs.md}), and are pinned by
+independently authored vectors. The earlier leaf/structure grammar survives only as the
+withdrawn \texttt{deixis-codec-v1}. Until the freeze (a clean-room implementation and
+a signed manifest) the grammar remains a candidate; this theorem does not discharge
+that delivery gate. A \emph{deployed} content address must additionally
+bind the codec version, the slot codec identifier, and the digest algorithm (domain
+separation or a typed envelope) --- an interoperability obligation of the frozen
+artifact, outside this paper's scope.
+\end{remark}
+
+\section{The positional spelling}\label{sec:pos}
+
+Sequence semantics enter deixis by writing positions into keys. The profile
+\texttt{deixis-pos-v1} fixes the spelling once, generically.
+
+\begin{definition}[$\magn$ and $\kappa$]\label{def:kappa}
+For $i \in \mathbb{N}$ let $\magn(i)$ be the shortest unsigned big-endian encoding of
+$i$, except $\magn(0) = \mathtt{00}$ (one octet; the only magnitude with a leading
+zero octet). With $r(i) = |\magn(i)| - 1$:
+\[
+\kappa(i) \;=\; \mathtt{ff}^{\,r(i)} \cdot \mathtt{00} \cdot \magn(i),
+\qquad |\kappa(i)| = 2\,|\magn(i)|.
+\]
+\end{definition}
+
+The spelling has an honest lineage: $\kappa$ is a byte-alphabet Elias-gamma code
+\cite{elias} with the unary length prefix written in the \emph{maximal} symbol.
+Gamma over bits ($0^{k}1 \cdot \mathrm{bin}(i)$) is prefix-free but
+order-\emph{reversing} under lexicographic comparison, since leading zeros sort low;
+writing the run in $\mathtt{ff}$ is exactly the inversion that makes length dominate
+in the right direction. The construction belongs to the ordered-key family; the
+contribution here is its ratification as a named, versioned profile with the three
+laws proved and vector-pinned.
+
+\begin{theorem}[The three $\kappa$ laws]\label{thm:kappa}
+\emph{(i)} $\kappa$ is injective.
+\emph{(ii)} $\kappa$ is prefix-free: no $\kappa(i)$ is a proper prefix of a
+$\kappa(j)$.
+\emph{(iii)} $\kappa$ is order-preserving: $i < j \iff \kappa(i) \lex \kappa(j)$.
+\end{theorem}
+
+\begin{proof}
+Write $r_i = r(i)$. Observe first that the $\mathtt{ff}$-run length of $\kappa(i)$ is
+exactly $r_i$: the run is terminated by the $\mathtt{00}$ octet, and $\magn(i)$'s
+leading octet is $\mathtt{ff}$ only when it would extend the run --- but then the
+parse below still recovers $r_i$ from the terminator position, which is octet
+index $r_i$ by construction.\footnote{Concretely: octets $0,\dots,r_i-1$ are
+$\mathtt{ff}$ and octet $r_i$ is $\mathtt{00}$; whether later octets are
+$\mathtt{ff}$ is irrelevant to the claims, which only compare octets up to index
+$\max(r_i, r_j)$ and, on equal $r$, the magnitudes.}
+
+(ii) Suppose $r_i < r_j$. At octet index $r_i$, $\kappa(i)$ carries $\mathtt{00}$
+while $\kappa(j)$ carries $\mathtt{ff}$ (still inside $j$'s run). They differ at an
+index interior to both, so neither is a prefix of the other. If $r_i = r_j$, the two
+have equal length $2(r_i{+}1)$, and a prefix relation forces equality.
+
+(i) If $\kappa(i) = \kappa(j)$ then $r_i = r_j$ (terminator position) and
+$\magn(i) = \magn(j)$; shortest-form magnitudes of equal length are equal iff the
+numbers are, and the $\magn(0)$ exception is the unique single-octet magnitude with
+leading $\mathtt{00}$.
+
+(iii) If $r_i < r_j$: numerically, shortest form gives
+$i < 256^{\,r_i+1} \le 256^{\,r_j} \le j$ (the middle inequality since
+$r_i + 1 \le r_j$; the last since $|\magn(j)| = r_j{+}1$ forces $j \ge 256^{r_j}$,
+noting $r_j \ge 1$ here); lexicographically, the first differing octet is index
+$r_i$, where $\mathtt{00} < \mathtt{ff}$. So larger run implies both larger number
+and lexicographically larger key. If $r_i = r_j$: the prefixes agree through the
+terminator, and equal-length big-endian magnitude comparison is numeric comparison.
+Together with (i), trichotomy on both sides yields the equivalence.
+\end{proof}
+
+\begin{corollary}[Sequences at zero interpretive cost]\label{cor:pos}
+For a node whose child domain is
+$\{\kappa(0), \dots, \kappa(n{-}1)\}$, canonical
+($\lex$-ascending) entry order equals index order. Consequently: a consumer walking a
+sequence generates $\kappa(0), \kappa(1), \dots$ and compares octets --- no key is
+ever parsed, and no decoder need exist. Membership of an arbitrary byte string in
+$\mathrm{im}\,\kappa$ is decidable by the run/terminator/shortest-form checks alone.
+\end{corollary}
+
+The specification's recognition discipline --- \emph{exact or refusal} --- is a
+corollary of the profile laws, not of extensionality alone: a reader that
+``repairs'' a non-canonical spelling (e.g.\ reads $\mathtt{ff000001}$ as position
+$1$) is a recognizer that identifies two nodes $\eqS$ distinguishes --- it coarsens
+identity \emph{through the reading}, breaking exactness and identity transport
+(Def.~\ref{def:profile}(ii),(iii)). Extensionality would not forbid it (a repairing
+reader can be perfectly extensional); the identity-bearing obligations of
+Remark~\ref{rem:extensional}(b),(c) do --- and once such a reading is deployed, no
+extensional observer downstream could detect or undo the coarsening, which is why the
+refusal is placed at the recognizer.
+
+\begin{remark}[Where prefix-freeness earns its keep]\label{rem:prefixfree}
+The floor's path type never concatenates keys --- a path is a \emph{sequence} of
+already-delimited keys, and resolution consumes them one at a time --- so the
+sequence embedding below uses only injectivity and order preservation. Prefix-freeness
+is provided for the \emph{flattened} contexts profiles may define: spelling a whole
+key path as a single byte string (single-string path names, radix layouts, streamed
+prefixes), where unambiguous parsing of concatenated keys is exactly the prefix-free
+property. It costs $\kappa$ nothing and licenses those readings in advance.
+\end{remark}
+
+\section{Structure profiles: container semantics as embeddings}\label{sec:profiles}
+
+The branching functor of Def.~\ref{def:functor} is one point in the space of
+containers; abstractly one could parameterize it,
+$\mathrm{Node}(C, T) = \mu X.\ T \times C(X)$, obligating each $C$ to a lifted
+congruence and a canonicalization (a \emph{setoid functor}). deixis refuses the
+parameter: distinct instances would be distinct floors with incomparable identities,
+and the floor's value is its uniqueness. Instead:
+
+\begin{definition}[Structure profile]\label{def:profile}
+Let $(A, =_A)$ be the carrier of a reading's semantics (a setoid). A
+\emph{structure profile} for $A$ over the slot $(T, \approx)$ is a named, versioned
+pair
+\[
+P : A \to \NodeT{T}, \qquad R : \NodeT{T} \rightharpoonup A
+\]
+of extensional maps satisfying:
+\begin{enumerate}[label=(\roman*), leftmargin=2.2em]
+\item \emph{retraction}: $R(P(a)) =_A a$ for all $a$;
+\item \emph{exactness}: if $R(n)$ is defined then $P(R(n)) \eqS n$ --- recognition
+  inverts onto the same node, so $\mathrm{dom}\,R$ is, up to $\eqS$, exactly
+  $\mathrm{im}\,P$;
+\item \emph{identity transport}: $a =_A b \iff P(a) \eqS P(b)$ --- the reading's
+  identity reduces to node identity, never extends it;
+\item \emph{recognition}: $R$ is extensional ($n \eqS n'$ implies equidefinedness and
+  $=_A$-equal results) and refuses rather than repairs --- no normalization of a node
+  outside $\mathrm{im}\,P$ into it is permitted. Effectiveness of recognition is the
+  \emph{profile's own} obligation, stated relative to the slot's tiers and discharged
+  per profile (the sequence profile by its dense-domain test, the set profile by its
+  coherence assumptions); it does not follow automatically from the slot being
+  effective;
+\end{enumerate}
+together with the spelling laws its container's semantics require of the keys $P$
+writes: \emph{injectivity} always; \emph{order preservation} iff the reading carries
+order (so canonical entry order restates it); \emph{prefix-freeness} where flattened
+spellings are intended (Remark~\ref{rem:prefixfree}). This is the ontos bridge's
+$(P, R)$ structure (\S\ref{sec:ontos}), promoted to the general interface.
+\end{definition}
+
+A profile declares its carrier. A container node needs an own value like every node,
+and the floor supplies none (Remark~\ref{rem:instances}). The two profiles below take
+the slot to be $\mathrm{Option}(U)$: $\mathrm{None}$ marks the container node, and a node
+carrying $\mathrm{Some}$ is refused as a container. This is the representation the set
+profile's specification record states and its migrated implementations use.
+Another carrier would need its own image and recognizer.
+
+\begin{remark}[Law dependencies; the categorical name]\label{rem:profilelaws}
+The four laws are deliberately redundant, and the dependency structure matters for
+conformance. Law (iii) is derivable: the forward direction is extensionality of $P$;
+backward, $P(a) \eqS P(b)$ gives $a =_A R(P(a)) =_A R(P(b)) =_A b$ by
+(iv)-extensionality of $R$ together with (i). The no-repair clause of (iv) restates
+(ii). A minimal conformance suite therefore generates (i), (ii), and (iv); testing
+(iii) directly remains useful because vectors cannot observe extensionality itself.
+Categorically, a profile is a complemented subobject with chosen complement (the
+refusals) --- equivalently a lawful prism $\NodeT{T} \cong A \sqcup
+\mathrm{Refused}$ on quotients --- and exactness says the idempotent
+$e = P \circ R$ is a \emph{restriction} idempotent in the sense of restriction
+categories \cite{cockettlack}: not merely $e \circ e = e$ but $e(n) \eqS n$ on its
+domain. A repair pass is precisely a split idempotent that is \emph{not} a
+restriction idempotent --- a retraction that moves points onto the image --- which is
+the one-line categorical form of exact-or-refusal.
+\end{remark}
+
+\begin{proposition}[Sequence transport]\label{prop:pos-transport}
+Let $T = \mathrm{Option}(U)$ and take $A = \NodeT{T}^{*}$ with pointwise-and-length
+equality. Define
+$P_{\mathrm{seq}}(N_0, \dots, N_{n-1}) = \mathrm{Node}(\mathrm{None}, \{\kappa(i) \mapsto
+N_i\})$ and let $R_{\mathrm{seq}}(\mathrm{Node}(o, m))$, for $n = |\dom m|$, be defined iff
+$o = \mathrm{None}$ and $\dom m = \{\kappa(0), \dots, \kappa(n-1)\}$, returning the
+children in index order. A node carrying $\mathrm{Some}$ is refused whatever its children:
+accepting it would read two different nodes, differing only in their own values, as the
+same sequence. Then $(P_{\mathrm{seq}}, R_{\mathrm{seq}})$ satisfies
+Definition~\ref{def:profile} (i)--(iv), with identity transport
+\[
+P_{\mathrm{seq}}(\vec{N}) \eqS P_{\mathrm{seq}}(\vec{M})
+\iff |\vec N| = |\vec M| \wedge \forall i.\ N_i \eqS M_i .
+\]
+\end{proposition}
+
+\begin{proof}
+$\kappa$'s injectivity (Thm.~\ref{thm:kappa}(i)) makes $P_{\mathrm{seq}}$ a function
+with $n$ distinct keys; the identity equivalence is Definition~\ref{def:lift} for
+nodes carrying $\mathrm{None}$ plus index-wise key matching. (i) and (ii) are immediate from the
+own-value and dense-domain conditions; (iv): the own-value condition is a tag test and
+the domain condition is decided by generate-and-compare (Cor.~\ref{cor:pos}), and
+extensionality holds because $\eqS$-equal nodes have related own values (so the same
+tag, under the slot's tag-respecting equality), equal domains and pointwise-$\eqS$ children, and no non-dense domain is ever read back into
+a sequence. This is exactly the ontos recognizer of \S\ref{sec:ontos}, with children
+left as nodes.
+\end{proof}
+
+\begin{proposition}[Set transport, repaired]\label{prop:set-transport}
+Let $(S, \approx_S)$ be the member sort, $\enc$ lawful for it
+\eqref{eq:codeclaw}, and let $\hat\mu : S/\!\approx_S \to \NodeT{T}$ be a
+\emph{member-form assignment} --- a function on classes (a chosen member form per
+class; ``assignment'' rather than ``section,'' since it is not a right inverse of any
+given projection), over the slot $T = \mathrm{Option}(U)$. No injectivity of $\hat\mu$ is
+assumed: keys, not children,
+separate classes, since $\enc$ is already injective on the quotient. Take
+$A = \mathcal{P}_{\mathrm{fin}}(S/\!\approx_S)$ with extensional equality, and (with
+$\enc$ constant on classes, written $\enc(c)$):
+\[
+P_{\mathrm{set}}(A) \;=\; \mathrm{Node}(\mathrm{None},\; \{\, \enc(c) \mapsto \hat\mu(c) \;:\; c \in A \,\}).
+\]
+This is literally a finite map --- one entry per class, keys distinct by injectivity
+of $\enc$ on the quotient. Suppose further the slot supplies \emph{decidable
+coherence}: for a key--child pair one can decide whether some (necessarily unique)
+class $c$ has $\enc(c) = k$ and $\hat\mu(c) \eqS \text{child}$ --- e.g.\ via an exact
+partial decoder for $\enc$ (the decodable tier) plus decidable $\approx_S$ and slot
+equality. Let $R_{\mathrm{set}}$ be defined on exactly the nodes carrying $\mathrm{None}$
+all of whose entries cohere, returning the set of their classes. A node carrying
+$\mathrm{Some}$ is refused, since accepting it would make set identity coarser than node
+identity. (Deciding coherence needs
+effective access to the assignment itself --- computing $\hat\mu(c)$ from a decoded
+member --- not only a decoder for the key invariant. At the decodable tier no choice
+is involved at all: take $\hat\mu(c) := \text{member-form}(D(\enc(c)))$ --- the
+exact partial decoder \emph{is} the canonical assignment.) Then
+$(P_{\mathrm{set}}, R_{\mathrm{set}})$ satisfies Definition~\ref{def:profile}
+(i)--(iv); membership transports ($c \in A \iff \enc(c) \in \dom$); and insertion is
+idempotent by construction (a repeated member spells a duplicate key, which the floor
+refuses to express).
+\end{proposition}
+
+\begin{proof}
+$P_{\mathrm{set}}$ is well-defined \emph{as a function into raw nodes} precisely
+because $\hat\mu$ is a function on classes --- this is the repair: with a member form
+chosen per class, no ambiguity of raw children arises. (Injectivity of $\hat\mu$
+plays no role in any clause below.) (iii): equal node identity gives equal
+domains, hence equal class sets by injectivity of $\enc$ on the quotient; conversely
+equal sets give identical maps. (i): each entry of $P_{\mathrm{set}}(A)$ coheres by
+construction and $R_{\mathrm{set}}$ reads its classes back. (ii): if $n$ carries $\mathrm{None}$ and every
+entry coheres then $n$ and $P_{\mathrm{set}}(R_{\mathrm{set}}(n))$ both carry $\mathrm{None}$,
+have equal domains and $\eqS$-equal children (coherence pins each child to $\hat\mu(c)$ up to $\eqS$).
+(iv): coherence is decidable by hypothesis and the own-value condition is a tag test;
+extensionality follows since coherence respects $\eqS$ of children and $\eqS$-equal
+nodes carry the same tag; nothing outside the coherent image is normalized in.
+\end{proof}
+
+\begin{remark}[The setoid-valued variant]
+The shipping specification of the set profile deliberately does \emph{not} choose
+representatives: any $\approx_S$-equal member may sit under the key
+(``representatives are free''), recognition checks coherence entry by entry, and all
+laws hold with $P_{\mathrm{set}}$ valued in $\NodeT{T}/\!\eqS$ rather than in raw
+nodes. The two presentations agree up to $\eqS$; the assignment is what an implementation
+that must \emph{produce} a node uses, and the quotient-valued reading is what
+recognition-first conformance pins. Stating the raw-node version without a chosen
+assignment --- as an earlier draft of this paper did --- is a genuine error: distinct
+representatives yield $\eqS$-equal but unequal nodes, and the comprehension fails to
+define a map at all.
+\end{remark}
+
+\begin{remark}[Representation scale]\label{rem:setscale}
+Proposition~\ref{prop:set-transport} is the \emph{self-keyed} presentation, and its
+laws are exact at every member sort --- but as a physical representation it
+duplicates each member's complete invariant in the key beside the child. For slot
+members with bounded canonical bytes this is a compact spelling; for \emph{node}
+members under $\enc = \encD$ it compounds: the key of a set containing $S$ embeds
+all of $\encD(S)$, so singleton nestings $S_{i+1} = \{S_i\}$ double in size,
+and no linked representation rescues this --- the parent \emph{key} still spells the
+member's complete flat encoding. The duplication is intrinsic to exact direct
+self-keying (an injective key for an arbitrary member must carry enough bytes to
+distinguish it), not to the transport laws: the same finite sets embed lawfully as a
+\emph{sorted positional} spelling --- dense $\kappa$ keys with children strictly
+increasing under a profile-owned total order induced by a complete invariant of
+member identity, one occurrence per class enforced by strictness --- trading
+one-lookup membership for search. Which representation a profile freezes is an
+engineering choice the laws do not make; the shipping specification ratifies
+self-keying for slot members and, for node members, supersedes direct self-keying
+in favor of the sorted positional shape, gated on the frozen codec.
+\end{remark}
+
+\begin{remark}[Scope of the principle]\label{rem:scope}
+Multiplicity (count-valued maps or a positional embedding) and records (authored name
+keys) are further profiles of the same shape. But the principle as \emph{proved}
+extends exactly this far: positional and collection readings --- sequences, sets,
+their composites --- enter as profiles; no universality theorem for arbitrary
+container semantics is claimed. Two obstacles delimit any general statement. A
+container has \emph{shape} as well as positions: two distinct nullary shapes would
+both spell the empty map unless a shape marker (a reserved key namespace) is part of
+the spelling. And the key space is countable, so only countably presented finitary
+containers can embed uniformly. We conjecture, and leave as future work, the scoped
+theorem: every countably presented finitary container with decidable shape codes
+embeds via a shape marker plus per-shape position spellings in disjoint key
+namespaces; quotient-symmetric collections (sets, bags) are not instances of the raw
+polynomial frame at all --- they are \emph{quotient containers} \cite{aagm} --- and
+enter, as above, through a complete invariant of member identity where a lawful
+$\enc$ exists --- as canonical keys (Prop.~\ref{prop:set-transport}) or as a
+canonical order (Rem.~\ref{rem:setscale}): an
+orbit-splitting by a complete invariant, in that vocabulary. Within that scope the moral stands: openness lives in the two
+dimensions identity does not interpret --- the key space and the slot --- readings
+compose in one node under one identity, where parameters would stack functors and
+fragment the floor.
+\end{remark}
+
+\begin{remark}[Signaling and composition --- proposed mechanism]\label{rem:signal}
+How does a consumer learn \emph{which} profile to apply? The floor's commitment is
+precise: deixis does not force a profile tag into every payload node --- a mandatory
+in-node tag would leak semantics into identity (two shape-identical payloads with
+different tags would be different nodes) and would invite exactly the
+tag-versus-shape repairs the discipline forbids. A node may lie in several profile
+images at once, and deliberately so --- overlap is classification, not ambiguity of
+identity: a dense-$\kappa$ node carrying $\mathrm{None}$ \emph{is} a sequence and a degenerate
+record, and
+generic tooling exploits that. Above the floor, two distinct mechanisms are
+\emph{proposed} (design in review; labeled as such, not counted among this paper's
+results). \emph{Out-of-band claim}: a profile descriptor --- named, versioned,
+hashable --- travels beside the payload; it does not alter the payload's node
+identity, has its own identity, and is checked by running the named recognizer.
+\emph{Self-describing wrapper}: a wrapper profile whose reserved key carries the
+payload's descriptor by hash, with the payload under another key --- the descriptor
+then \emph{does} enter the wrapper's structural identity, deliberately, while the
+enclosed payload retains its own. Descriptor fields, canonical encoding, payload
+binding, and behavior under an unavailable profile implementation are obligations of
+that mechanism's own record. Composition at one structural level is governed by the
+spelling laws: each profile writes into a declared key region (dense $\kappa$-keys;
+invariant keys; authored-name keys under a shape marker per Remark~\ref{rem:scope}),
+composed profiles must declare disjoint regions, and a composition whose declared
+regions overlap is refused as ill-formed rather than resolved by precedence. Version
+and digest binding for \emph{deployed} claims is the frozen codec artifact's
+obligation (Remark~\ref{rem:codecword}), outside this paper's scope.
+\end{remark}
+
+\section{The ontos instance}\label{sec:ontos}
+
+ontos is a value model in production use: $\VO = \mu X.\ \Bytes \sqcup X^{*}$, with
+constructors $\Atom$ and $\Tup$, structural identity $\eqO$, and a frozen canonical
+codec. It predates deixis; the claim proved here is that it is, exactly, a
+dense-position profile of $\NodeT{\mathrm{Option}(\Bytes)}$. It is the earlier
+projection followed by $E$ from Remark~\ref{rem:previous}.
+
+Instantiate $T = \mathrm{Option}(\Bytes)$ with tag-respecting octet equality
+(so $\eqS$ is absolute).
+Define the total projection $P$ and partial recognizer $R$:
+\[
+\begin{array}{lcl}
+P(\Atom\,b) = \mathrm{Node}(\mathrm{Some}(b),\emptyset), &&\\[2pt]
+P(\Tup(v_0 \dots v_{n-1})) = \mathrm{Node}(\mathrm{None},\{\kappa(i) \mapsto P(v_i)\}), &&\\[3pt]
+R(\mathrm{Node}(\mathrm{Some}(b),\emptyset)) = \Atom\,b, &&\\[2pt]
+R(\mathrm{Node}(\mathrm{None},m)) = \Tup(R(m(\kappa(0))), \dots, R(m(\kappa(n{-}1)))), && n = |\dom m|.
+\end{array}
+\]
+The tuple clause is defined only when $\dom m = \{\kappa(0), \dots, \kappa(n{-}1)\}$
+and every child recognizes. A node carrying $\mathrm{Some}(b)$ and children refuses.
+The complete types are $P : \VO\to\NodeT{\mathrm{Option}(\Bytes)}$ and
+$R : \NodeT{\mathrm{Option}(\Bytes)}\rightharpoonup\VO$.
+
+\begin{theorem}[Exactness of the bridge]\label{thm:ontos}
+\emph{(i)} $R(P(v)) = v$ for all $v \in \VO$.
+\emph{(ii)} $R(d)$ is defined iff $d \in \mathrm{im}\,P$; and $R(d) = v$ implies
+$P(v) \eqS d$.
+\emph{(iii)} $P$ is an embedding of identities:
+$v \eqO w \iff P(v) \eqS P(w)$.
+\emph{(iv)} Pointing commutes: the index path $(i_0, \dots, i_k)$ resolves in $v$ iff
+the key path $(\kappa(i_0), \dots, \kappa(i_k))$ resolves in $P(v)$, to the
+projection of the same subvalue.
+\end{theorem}
+
+\begin{proof}
+(i) Induction on $v$; the tuple case uses $\kappa$'s injectivity for the domain and
+Corollary~\ref{cor:pos} to read the children back in index order.
+(ii) ($\Leftarrow$) is (i). ($\Rightarrow$) Induction on $d$: the $\mathrm{None}$ case's
+definedness condition forces the domain to be exactly $\{\kappa(0..n{-}1)\}$ and the
+children into $\mathrm{im}\,P$ inductively, so $d = P(R(d))$ up to $\eqS$; at
+$T = \mathrm{Option}(\Bytes)$ with tag-respecting octet equality, $\eqS$-equal nodes
+are equal, giving both claims. The $\mathrm{Some}$ case requires no children and
+is the atom clause exactly.
+(iii) By (i) and functionality of $R$ on its domain: $P(v) \eqS P(w)$ implies (at
+this slot, equality) $v = R(P(v)) = R(P(w)) = w$; the converse is congruence of the
+defining recursion.
+(iv) Induction on the path, unfolding $P$ and Definition~\ref{def:path}; the step
+case is exactly the tuple clause of $P$.
+\end{proof}
+
+\begin{corollary}[Frozen bytes survive the retraction]
+With $\mathrm{enc_o}$ ontos' frozen codec,
+\[
+\mathrm{enc_o}(R(P(v))) = \mathrm{enc_o}(v).
+\]
+This is immediate from
+Thm.~\ref{thm:ontos}(i), and worth stating only for what it does \emph{and does not}
+say. It says the round trip through deixis is invisible to the incumbent encoding:
+project, recognize, and every downstream hash and signature over
+$\mathrm{enc_o}$-bytes is untouched. It does \emph{not} say
+$\encD(P(v)) = \mathrm{enc_o}(v)$ --- no such law is claimed or wanted; the two
+encoders address different structures (a deixis codec must write keys; ontos'
+elides them), and the specification records that their byte strings must differ.
+ontos bytes are preserved \emph{through the retraction into the ontos model}, which is
+the exact guarantee migration needs and the only one on offer.
+\end{corollary}
+
+Two remarks make the correspondence architectural rather than curiosities. First,
+sibling order: ontos holds order to be part of a tuple, deixis holds order not to be
+part of a node --- and Thm.~\ref{thm:kappa}(iii) is why there is no conflict: when a
+key spells a position, the position \emph{is} the key, so the ordering lives in key
+space and canonical order restates it. Second, recognition never repairs: sparse,
+shifted, or non-canonically spelled domains are refused, not normalized ---
+by the same identity-coarsening argument as in \S\ref{sec:pos}. The \emph{earlier}
+projection into $L(\Bytes)$, its recognizer and laws (i)--(iv) were implemented and \emph{conformance-tested} ---
+hand-authored vectors replayed by independent implementations, including replay of
+the frozen ontos codec corpus through $R \circ P$; no proof-assistant verification is
+claimed. The composition with $E$ above is a mathematical transport; this release
+does not claim that the external bridge has adopted the mandatory-value API.\footnote{\texttt{projection/deixis} in the ontos repository; the deixis
+floor, the positional spelling, and the set profile are conformance-tested across
+Rust, Go, TypeScript, and Python against shared hand-authored vectors --- see
+\emph{Artifact availability} below. A machine-checked formalization is future work.}
+
+\section{Related work}\label{sec:related}
+
+Initial-algebra semantics of data types goes back to \cite{gtw}; W-types are
+Martin-L\"of's \cite{martinlof}, and their presentation via containers/polynomial
+functors is \cite{aag}. Setoids as carriers-with-equality are the standard
+constructive treatment of quotients \cite{hofmann}. The mathematical ingredients here
+are individually standard --- structural lifting of an equivalence, a recursive path
+action, injective framed encodings, an elementary countability characterization ---
+and the order-preserving integer trick is folklore in ordered key--value stores;
+the contribution claimed is the synthesis and its discipline, not the ingredients.
+
+The closest engineered precedents deserve a direct comparison. Deterministic CBOR
+\cite{rfc8949} already specifies self-delimiting values and bytewise ordering of
+deterministically encoded map keys; IPLD \cite{ipldcodec} separates a data model
+(with maps \emph{and} lists as kinds) from named codecs, and IPLD Schemas
+\cite{ipldschema} map richer kinds (structs, unions, enums) onto that model through
+representation strategies, with Advanced Data Layouts presenting lensed views over
+generic traversal. deixis differs on four axes. \emph{Identity}: deterministic CBOR provides
+protocol-selected canonical serialization rules \cite{rfc8949}, and IPLD's abstract
+model leaves canonicalization to specific codecs (DAG-CBOR's canonical form and
+rejection requirements, with documented decoder leniencies \cite{dagcbor}) --- in
+both, identity is whatever byte equality of a chosen encoding induces; deixis first
+parameterizes semantic value identity and proves the lift, so equality is defined (and
+proved a congruence) before any encoding exists, and canonical bytes are a priced
+tier above it. \emph{Container inventory}: IPLD's model carries two containers as
+kinds; deixis ships one and recovers the second (and sets, and maps-with-order) as
+named profiles with retraction laws --- so ``is this a list?'' is a checkable
+judgment with a refusal case, not a kind tag. \emph{Recognition}: representation
+strategies specify decodings without algebraic laws attached; profiles carry
+retraction, exactness, and identity-transport laws, with hand-authored vectors
+pinning the refusals. \emph{Migration}: the ontos bridge states and tests retraction
+laws against an incumbent's frozen bytes --- we claim only what is established here,
+a proved and vector-tested retraction against one incumbent, and make no assertion
+about compatibility results neighboring systems may state for theirs. Content
+addressing over trees and DAGs is Merkle's \cite{merkle}; git
+and IPLD exploit it with fixed vocabularies, where deixis deliberately ships one
+container and receives the rest as embeddings.
+
+The profile interface itself has close formal relatives, and the comparison belongs
+at the level of laws. A profile's $(P, R)$ with retraction and exactness is a partial
+isomorphism in the sense used by invertible syntax descriptions
+\cite{rendel}: one total direction, one partial, composing to identity on the
+recognized image. Ornaments \cite{ornaments} likewise present specialized datatypes
+as structured views over a common carrier rather than as new types --- the same
+motive as profiles-over-one-floor, pursued through indexed descriptions where deixis
+uses key spellings. Lenses and prisms \cite{lenses} organize the same territory
+around well-behavedness laws; a profile is prism-shaped (build total, match partial),
+with exact-or-refusal in place of best-effort match and identity transport as an
+added, load-bearing law (Remark~\ref{rem:profilelaws} makes the restriction-idempotent
+form precise). The $(P,R)$-with-laws pattern is also lawful \emph{views}
+\cite{wadler,mckinnaviews}: the answer to ``are profiles just views?'' is --- views,
+plus transport and refusal laws, plus vectors. The Gentle Art of Levitation
+\cite{levitation} is the existence proof for Remark~\ref{rem:signal}'s descriptor
+language living in the substrate it describes, and its hard-won lesson orders the
+roadmap: the descriptor's own identity and decoding must be pinned --- the frozen
+codec --- before any self-describing wrapper is sound. For the set profile's
+effectivity demands, the Kuratowski-versus-Bishop finiteness distinction
+\cite{hottfinsets} is exactly why decidable membership and canonical enumeration are
+required; the listable-and-decidable case is the codec-tier case. IPLD's Advanced
+Data Layouts present synthesized views over substrate data \cite{ipldadl} and are
+the nearest engineered relative; profiles differ in demanding the round-trip and
+transport laws as admission criteria, vectors included, rather than as conventions
+of a codec implementation.
+
+\paragraph{Artifact availability.}
+Release \texttt{v0.1.0} (commit \texttt{7a1193c}) shipped four implementations of
+the previous leaf/structure core, the positional spelling and the slot-member set
+profile, with 103 black-box checks per implementation. That is historical evidence
+for that model. Release \texttt{v0.2.0} supplies the mandatory-value interfaces in
+Rust, Go, TypeScript and Python. Its source tag includes this manuscript and the
+independently authored \texttt{mnode-*.json} expectations for the mandatory model,
+alongside the earlier corpus with its explicit optional-slot interpretation.
+The evidence ledger, \texttt{docs/EVIDENCE.md}, records measured counts and tested
+revisions. It records codec and downstream adoption status separately.
+
+The harness \texttt{tools/conformance/harness.mjs} drives each implementation as a
+subprocess over NDJSON, sending every case \emph{minus its expected judgment}.
+No implementation reads the oracle. Continuous integration runs that harness,
+per-language format, lint, type and unit checks, specification checks, and two
+compilation passes of this manuscript. Those runs are conformance evidence, not
+proof. The mathematical derived operations are exercised through the core
+accessors; they are not all public methods. The external ontos bridge pins the
+v0.2.0 core and position packages in all three of its languages. Its tests run in
+ontos's continuous integration; this repository records that adoption without
+re-running them.
+
+\section{Conclusion}
+
+deixis fixes the structural floor --- one closed grammar, one open slot, keys as
+uninterpreted bytes --- and this paper has stated and proved the core properties the
+layers above lean on: lifted identity is a congruence characterized exactly by
+pointing; resolution is a lawful partial action; a node is exactly its parts, and
+attachment under a fresh key is exact and available at every node; complete-invariant encoders exist
+precisely up to countability, computably only strictly less often, and lift through
+the combinator; positions embed with order preserved by spelling alone; sequence and
+set readings enter as profiles with retraction laws, and the general reading
+principle is stated at its proved scope (Remark~\ref{rem:scope}); and the incumbent
+value floor above is recovered as one dense instance, exactly, its frozen bytes
+preserved through the retraction. What remains open is recorded rather than implied:
+a frozen codec with a normative decoder, the scoped profile-universality theorem, and
+mechanized proofs. The floor's refusals --- no node kinds, no key meanings, no
+repair, structural identity fixed with only its value clause supplied --- are not
+austerity for its own sake; each is what makes an eternity of the guarantees above
+affordable. \emph{A node is what it points at} is, in the end, both the definition
+and the theorem.
+
+\begin{thebibliography}{9}\small\raggedright
+
+\bibitem{gtw} J.~Goguen, J.~Thatcher, E.~Wagner.
+\emph{An initial algebra approach to the specification, correctness and
+implementation of abstract data types}. In: Current Trends in Programming
+Methodology IV, 1978.
+
+\bibitem{martinlof} P.~Martin-L\"of.
+\emph{Intuitionistic Type Theory}. Bibliopolis, 1984.
+
+\bibitem{aag} M.~Abbott, T.~Altenkirch, N.~Ghani.
+\emph{Containers: constructing strictly positive types}.
+Theoretical Computer Science 342(1), 2005.
+
+\bibitem{hofmann} M.~Hofmann.
+\emph{Extensional Constructs in Intensional Type Theory}. Springer, 1997.
+
+\bibitem{soare} R.~I.~Soare.
+\emph{Recursively Enumerable Sets and Degrees}. Springer, 1987.
+
+\bibitem{cockettlack} J.~R.~B.~Cockett, S.~Lack.
+\emph{Restriction categories I: categories of partial maps}.
+Theoretical Computer Science 270(1--2), 2002.
+
+\bibitem{wadler} P.~Wadler.
+\emph{Views: a way for pattern matching to cohabit with data abstraction}.
+POPL 1987.
+
+\bibitem{mckinnaviews} C.~McBride, J.~McKinna.
+\emph{The view from the left}. J.\ Functional Programming 14(1), 2004.
+
+\bibitem{levitation} J.~Chapman, P.-E.~Dagand, C.~McBride, P.~Morris.
+\emph{The gentle art of levitation}. ICFP 2010.
+
+\bibitem{aagm} M.~Abbott, T.~Altenkirch, N.~Ghani, C.~McBride.
+\emph{Constructing polymorphic programs with quotient types}. MPC 2004.
+
+\bibitem{hottfinsets} D.~Frumin, H.~Geuvers, L.~Gondelman, N.~van der Weide.
+\emph{Finite sets in homotopy type theory}. CPP 2018.
+
+\bibitem{elias} P.~Elias.
+\emph{Universal codeword sets and representations of the integers}.
+IEEE Trans.\ Information Theory 21(2), 1975.
+
+\bibitem{rendel} T.~Rendel, K.~Ostermann.
+\emph{Invertible syntax descriptions: unifying parsing and pretty printing}.
+Haskell Symposium, 2010.
+
+\bibitem{ornaments} P.-E.~Dagand, C.~McBride.
+\emph{A categorical treatment of ornaments}. LICS 2013; arXiv:1212.3806.
+
+\bibitem{lenses} J.~N.~Foster, M.~B.~Greenwald, J.~T.~Moore, B.~C.~Pierce,
+A.~Schmitt. \emph{Combinators for bidirectional tree transformations}.
+ACM TOPLAS 29(3), 2007.
+
+\bibitem{rfc8949} C.~Bormann, P.~Hoffman.
+\emph{Concise Binary Object Representation (CBOR)}. RFC 8949, IETF, December 2020.
+
+\bibitem{merkle} R.~Merkle.
+\emph{A digital signature based on a conventional encryption function}.
+CRYPTO 1987.
+
+\bibitem{ipldcodec} Protocol Labs.
+\emph{IPLD documentation: Codecs}. \texttt{https://ipld.io/docs/codecs/}
+(accessed August 2026).
+
+\bibitem{ipldschema} Protocol Labs.
+\emph{IPLD Schemas: representation strategies}.
+\texttt{https://ipld.io/docs/schemas/features/representation-strategies/}
+(accessed August 2026).
+
+\bibitem{ipldadl} Protocol Labs.
+\emph{IPLD: Advanced Data Layouts}.
+\texttt{https://ipld.io/docs/advanced-data-layouts/} (accessed August 2026).
+
+\bibitem{dagcbor} Protocol Labs.
+\emph{DAG-CBOR codec specification}.
+\url{https://ipld.io/specs/codecs/dag-cbor/spec/} (accessed August 2026).
+
+\end{thebibliography}
+
+\end{document}

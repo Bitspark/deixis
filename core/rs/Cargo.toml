@@ -1,0 +1,13 @@
+[package]
+name = "bitspark-deixis-core"
+version = "0.6.0"
+description = "deixis/core: the finite keyed tree Node(T) = T × (Bytes ⇀ Node(T)). The payload carries no bounds; equality is supplied at the call site."
+edition.workspace = true
+license.workspace = true
+
+[lib]
+name = "deixis_core"
+path = "src/lib.rs"
+
+# Intentionally dependency-free.
+[dependencies]

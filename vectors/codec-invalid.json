@@ -1,0 +1,258 @@
+{
+  "description": "deixis-codec-v1 — batch 2: NON-ACCEPTANCE. One case minimum per code, each naming the clause it violates. Octets hand-assembled from docs/CODEC.md §3/§5/§9; no implementation emitted any of them. This file carries the flat-form codes and the class boundary; the link-header codes live in codec-linked.json beside the chunks they malform. Batch 3 is fault PRECEDENCE — two conditions present at once — and is not here.",
+  "spec": "docs/CODEC-v1.md",
+  "status": "HISTORICAL: the withdrawn deixis-codec-v1 candidate (ADR 0011 §5), specified by docs/CODEC-v1.md; kept as its evidence, not rewritten. As authored: DRAFT — batch 2, authored against a CANDIDATE CONTRACT. Not frozen.",
+  "coverage_rule": "For each area, name the case that would FAIL if the rule were broken; if there is none, the area is not covered whatever the case count says. Adopted from the codec lane's vacuity finding (0008) after batch 1 shipped an ordering case with nlinks=1, where the rule it named was structurally unexercisable.",
+  "bundles": {
+    "identity-bytes": {
+      "id": "0001",
+      "header": "64786631020001",
+      "note": "public deixis/identity-bytes. e = id, so im(e) is ALL of Bytes — which is why NO case under this bundle can reach non_canonical_payload. A structural limit of the bundle, not an omission."
+    },
+    "fixture-setoid": {
+      "id": "01fb44faaf3a9db590cbc4cb1abfdadb0201",
+      "header": "647866311201fb44faaf3a9db590cbc4cb1abfdadb0201",
+      "note": "PRIVATE, per vectors/README.md: 0x01 ‖ 16 namespace octets ‖ cuvarint(k=1), namespace = first 16 of sha256(\"deixis vectors fixture setoid v1\") — RECOMPUTED here rather than copied, and it matches. Its e is the UTF-8 of `class` (representation deliberately ignored), so im(e) is exactly the VALID UTF-8 byte strings: decidable as §4 requires, and the only bundle in this corpus that can exhibit non_canonical_payload. cuvarint(18) = 0x12."
+    },
+    "reserved-id": {
+      "id": "ff01",
+      "header": "6478663102ff01",
+      "note": "First octet 0xff is in §13's reserved range 0x02..0xff. Used ONCE, for the class boundary."
+    }
+  },
+  "cases": [
+    {
+      "name": "invalid/unknown-magic",
+      "class": "invalid",
+      "code": "unknown_magic",
+      "fault_locus": "header",
+      "min_profile": "flat-header-validator",
+      "bytes": "647866320200010000",
+      "clause": "§5.1 — the magic is exactly \"dxf1\".",
+      "note": "\"dxf2\" (64 78 66 32): one octet off, and four octets READ. Its discriminating twin is the next case — the same rule refuses a SHORT prefix under a different code.",
+      "pins": [
+        "The magic is exactly `\"dxf1\"`"
+      ]
+    },
+    {
+      "name": "invalid/short-magic-is-eof-not-unknown-magic",
+      "class": "invalid",
+      "code": "unexpected_eof",
+      "fault_locus": "header",
+      "min_profile": "flat-header-validator",
+      "streaming_code": "need_more_input",
+      "bytes": "647866",
+      "clause": "§5.1 — unknown_magic PRESUPPOSES four octets were read; fewer is unexpected_eof (streaming: need_more_input), never unknown_magic.",
+      "note": "THREE octets of a CORRECT magic. §14 makes need_more_input non-terminal, so a decoder that called this unknown_magic would refuse a valid artifact mid-transmission, and a streaming and a whole-buffer decoder would return different codes for identical octets. This is the case that fails if that rule is broken; nothing else in the corpus reaches it.",
+      "pins": [
+        "Fewer than four is `unexpected_eof`\n   (streaming: `need_more_input`), never `unknown_magic`:"
+      ]
+    },
+    {
+      "name": "invalid/unknown-tag",
+      "class": "invalid",
+      "code": "unknown_tag",
+      "fault_locus": "body",
+      "min_profile": "flat-decoder",
+      "bytes": "6478663102000102",
+      "clause": "§5.2 — the tag octet is 0x00 or 0x01.",
+      "note": "Tag 0x02 immediately after a well-formed header. Distinct from unknown_magic: the FRAMING was accepted and the NODE is unreadable.",
+      "pins": [
+        "2. The tag octet is `0x00` or `0x01`. Anything else is `unknown_tag`."
+      ]
+    },
+    {
+      "name": "invalid/malformed-uvarint-truncated",
+      "class": "invalid",
+      "code": "malformed_uvarint",
+      "fault_locus": "body",
+      "min_profile": "flat-decoder",
+      "bytes": "647866310200010080",
+      "clause": "§3 rule 2, second half — input that ends while the continuation bit is set.",
+      "note": "A leaf whose length uvarint is a lone 0x80. ⚠ §3 assigns malformed_uvarint here, NOT unexpected_eof — the two verdicts sit one octet apart in the same position, which is why it is pinned rather than left to instinct.",
+      "pins": [
+        "`uvarint` is unsigned LEB128: seven bits per octet, least-significant group first,\nthe high bit of each octet set on all but the last.",
+        "Every grammar in this specification writes `cuvarint`, never `uvarint` — so"
+      ]
+    },
+    {
+      "name": "invalid/malformed-uvarint-eleventh-octet",
+      "class": "invalid",
+      "code": "malformed_uvarint",
+      "fault_locus": "body",
+      "min_profile": "flat-decoder",
+      "bytes": "64786631020001008080808080808080808000",
+      "clause": "§3 rule 2, first half — at most ten octets.",
+      "note": "Ten 0x80 octets, each continuing, so a decoder must read an ELEVENTH to terminate. The two malformed_uvarint cases split §3 rule 2's halves on purpose: an implementation can enforce the length bound and not the truncation bound, or the reverse, and one case cannot tell you which. ⚠ AUTHORING NOTE FOR THE SPEC: §3 says \"an eleventh continuation octet\", and here the eleventh octet is 0x00 — a terminator, not a continuation octet. What refuses this spelling is the LENGTH bound, and reading that phrase strictly would leave it uncovered. Worth one word in §3.",
+      "pins": [
+        "2. **Length.** At most ten octets.",
+        "`uvarint` is unsigned LEB128: seven bits per octet, least-significant group first,\nthe high bit of each octet set on all but the last.",
+        "Every grammar in this specification writes `cuvarint`, never `uvarint` — so"
+      ]
+    },
+    {
+      "name": "invalid/non-shortest-uvarint",
+      "class": "invalid",
+      "code": "non_shortest_uvarint",
+      "fault_locus": "body",
+      "min_profile": "flat-decoder",
+      "bytes": "64786631020001008000",
+      "clause": "§3 rule 3 — the spelling MUST be the unique shortest encoding of its value.",
+      "note": "Length 0 spelled 80 00 instead of 00. WELL-FORMED and DECODABLE to the correct value — which is the point: a decoder that merely parses accepts it and builds the right tree. §3 makes shortest-form what turns an address into a function of the value, so accepting this mints a second address for one value.",
+      "pins": [
+        "3. **Shortest form.** The spelling MUST be the unique shortest encoding of its value.",
+        "`uvarint` is unsigned LEB128: seven bits per octet, least-significant group first,\nthe high bit of each octet set on all but the last.",
+        "Every grammar in this specification writes `cuvarint`, never `uvarint` — so"
+      ]
+    },
+    {
+      "name": "invalid/uvarint-overflow",
+      "class": "invalid",
+      "code": "uvarint_overflow",
+      "fault_locus": "body",
+      "min_profile": "flat-decoder",
+      "bytes": "6478663102000100ffffffffffffffffff02",
+      "clause": "§3 rule 1 — the value lies in [0, 2^64 − 1]; a well-formed spelling of a larger value is refused.",
+      "note": "Nine 0xff continuation octets then 0x02: TEN octets, so the length rule is satisfied and only the DOMAIN rule fires. Value = 2^64 + 2^63 − 1. ⚠ A host parsing into a 64-bit machine integer WRAPS this to a small number and accepts — §3's implementation note (parse into a type that holds 2^64−1; BigInt, never Number) is exactly what this tests, and a wrapped read yields a plausible short length rather than an error.",
+      "pins": [
+        "1. **Domain.** The value lies in `[0, 2^64 − 1]`.",
+        "`uvarint` is unsigned LEB128: seven bits per octet, least-significant group first,\nthe high bit of each octet set on all but the last.",
+        "Every grammar in this specification writes `cuvarint`, never `uvarint` — so"
+      ]
+    },
+    {
+      "name": "invalid/duplicate-key",
+      "class": "invalid",
+      "code": "duplicate_key",
+      "fault_locus": "body",
+      "min_profile": "flat-decoder",
+      "bytes": "64786631020001010201610001010161000102",
+      "clause": "§5.4 — an entry key equal to its predecessor is duplicate_key; a decoder MUST NOT deduplicate.",
+      "note": "Two entries both keyed 61. The MUST-NOT-deduplicate half is load-bearing: a decoder that silently keeps the last builds a valid-looking tree from invalid octets, and the defect never surfaces anywhere downstream.",
+      "pins": [
+        "4. Entry keys are in **strictly ascending lexicographic order** (§2).",
+        "as unsigned values at each position; at the first difference the smaller octet\n  orders first; if no difference is found before one string ends, the **shorter\n  string orders first**.",
+        "        | 0x01 ‖ cuvarint(count) ‖ entry*              # Struct; count = |entries|"
+      ]
+    },
+    {
+      "name": "invalid/unsorted-keys",
+      "class": "invalid",
+      "code": "unsorted_keys",
+      "fault_locus": "body",
+      "min_profile": "flat-decoder",
+      "bytes": "64786631020001010201620001010161000102",
+      "clause": "§5.4 — an entry key preceding its predecessor is unsorted_keys; a decoder MUST NOT sort on read.",
+      "note": "Keys 62 then 61, plainly descending. The MUST-NOT-sort half is what this pins: a decoder that sorts accepts non-canonical octets and returns the RIGHT value, so nothing downstream ever disagrees with it.",
+      "pins": [
+        "4. Entry keys are in **strictly ascending lexicographic order** (§2).",
+        "as unsigned values at each position; at the first difference the smaller octet\n  orders first; if no difference is found before one string ends, the **shorter\n  string orders first**.",
+        "        | 0x01 ‖ cuvarint(count) ‖ entry*              # Struct; count = |entries|"
+      ]
+    },
+    {
+      "name": "invalid/unsorted-keys-prefix-pair",
+      "class": "invalid",
+      "code": "unsorted_keys",
+      "fault_locus": "body",
+      "min_profile": "flat-decoder",
+      "ref": "flat/prefix-order-a-before-ab",
+      "bytes": "6478663102000101020261620001020161000101",
+      "clause": "§5.4 with §2's key order — a prefix precedes its extension, so \"ab\" before \"a\" is descending.",
+      "note": "THE TWIN of the batch-1 case in `ref`: batch 1 asks whether an ENCODER emits the prefix edge in the right order, this asks whether a DECODER refuses the wrong one. Different defects, different fixes, and a core can pass either alone. ⚠ Both batch-1 files call this twin a BATCH-3 case; that was my filing error — batch 3 is fault PRECEDENCE and this is a plain code. Corrected at both sites in the same commit.",
+      "pins": [
+        "4. Entry keys are in **strictly ascending lexicographic order** (§2).",
+        "as unsigned values at each position; at the first difference the smaller octet\n  orders first; if no difference is found before one string ends, the **shorter\n  string orders first**."
+      ]
+    },
+    {
+      "name": "invalid/trailing-bytes",
+      "class": "invalid",
+      "code": "trailing_bytes",
+      "fault_locus": "body",
+      "min_profile": "flat-decoder",
+      "bytes": "647866310200010000ff",
+      "clause": "§5.6 — after the root node is read, no octets may remain.",
+      "note": "A complete, valid empty-payload leaf followed by one octet. The prefix parses cleanly, so a decoder that stops at the root's end and never checks the remainder returns SUCCESS on octets that are not a value.",
+      "pins": [
+        "6. After the root node is read, no octets may remain: any remainder is\n   `trailing_bytes`."
+      ]
+    },
+    {
+      "name": "invalid/unexpected-eof-mid-struct",
+      "class": "invalid",
+      "code": "unexpected_eof",
+      "fault_locus": "body",
+      "min_profile": "flat-decoder",
+      "bytes": "647866310200010101",
+      "clause": "§5.6 — input ending mid-structure is unexpected_eof; §5.3 — count equals the number of entries that follow.",
+      "note": "A struct announcing count 1 with no entry after it. Pairs with invalid/trailing-bytes as the two directions of one boundary: octets left over, and octets missing."
+    },
+    {
+      "name": "invalid/non-canonical-payload-overlong-utf8",
+      "class": "invalid",
+      "code": "non_canonical_payload",
+      "fault_locus": "payload",
+      "min_profile": "flat-decoder",
+      "modifier": "leaf-holding",
+      "bundle": "fixture-setoid",
+      "bytes": "647866311201fb44faaf3a9db590cbc4cb1abfdadb02010002c080",
+      "clause": "§5.5 — a leaf's payload MUST be in im(e); §4 — D MUST refuse a non-canonical spelling rather than repair it.",
+      "note": "Payload c0 80: the classic OVERLONG encoding of U+0000. A lenient UTF-8 decoder REPAIRS it to NUL and accepts — exactly the repair §4 forbids, which is what makes this the case that names the clause. ⚠ UNREACHABLE under identity-bytes, where im(e) is all of Bytes: the readable bundle that made batch 1 checkable by eye cannot exercise this rule at all. That is the vacuity `coverage_rule` exists to catch, and it is why this file changes bundle for exactly two cases. ⚠ SAME OCTETS, TWO CORRECT VERDICTS. A leaf-blind flat-decoder does not hold the private fixture id and so cannot apply D at all; per §10.3 it MUST report unsupported_leaf_codec, and per §9 its judgment that the framing was well formed stands permanently. The verdict asserted here is the LEAF-HOLDING one. ⇒ The holding/blind PAIR is a precedence case (§10.3) and belongs to batch 3; only the leaf-holding half is batch 2's. Recorded here because a {name, bundle, bytes, verdict} schema cannot express it, and a replayer that ignores the modifier will score a conforming leaf-blind decoder as wrong.",
+      "verdict_if_leaf_blind": "unsupported_leaf_codec",
+      "pins": [
+        "5. A leaf's `payload` MUST be in `im(e)` — i.e. `D(payload)` is defined. A decoder\n   holding the leaf codec MUST check this.",
+        "- `e : T → Bytes` — total, computable, and **lawful**: `x ≈ y ⟺ e(x) = e(y)`.",
+        "- `D : Bytes ⇀ T` — an exact partial inverse: `D(e(x)) ≈ x`, and `D(b)` is defined",
+        "`D` MUST be **computable**, and membership in `im(e)` MUST\n  be **decidable**."
+      ]
+    },
+    {
+      "name": "invalid/non-canonical-payload-not-utf8",
+      "class": "invalid",
+      "code": "non_canonical_payload",
+      "fault_locus": "payload",
+      "min_profile": "flat-decoder",
+      "modifier": "leaf-holding",
+      "bundle": "fixture-setoid",
+      "bytes": "647866311201fb44faaf3a9db590cbc4cb1abfdadb02010001ff",
+      "clause": "§5.5 — a leaf's payload MUST be in im(e).",
+      "note": "Payload ff: not valid UTF-8 under any reading, so outside im(e) with no repair available. The pair fails differently — the overlong one is REPAIRABLE and must not be repaired, this one is simply absent from im(e) — so a decoder that only asks \"does this decode at all\" catches this and passes the overlong one. ⚠ SAME OCTETS, TWO CORRECT VERDICTS. A leaf-blind flat-decoder does not hold the private fixture id and so cannot apply D at all; per §10.3 it MUST report unsupported_leaf_codec, and per §9 its judgment that the framing was well formed stands permanently. The verdict asserted here is the LEAF-HOLDING one. ⇒ The holding/blind PAIR is a precedence case (§10.3) and belongs to batch 3; only the leaf-holding half is batch 2's. Recorded here because a {name, bundle, bytes, verdict} schema cannot express it, and a replayer that ignores the modifier will score a conforming leaf-blind decoder as wrong.",
+      "verdict_if_leaf_blind": "unsupported_leaf_codec",
+      "pins": [
+        "5. A leaf's `payload` MUST be in `im(e)` — i.e. `D(payload)` is defined. A decoder\n   holding the leaf codec MUST check this.",
+        "- `e : T → Bytes` — total, computable, and **lawful**: `x ≈ y ⟺ e(x) = e(y)`.",
+        "- `D : Bytes ⇀ T` — an exact partial inverse: `D(e(x)) ≈ x`, and `D(b)` is defined",
+        "`D` MUST be **computable**, and membership in `im(e)` MUST\n  be **decidable**."
+      ]
+    },
+    {
+      "name": "unsupported/reserved-leaf-codec-id",
+      "class": "unsupported",
+      "code": "unsupported_leaf_codec",
+      "fault_locus": "header",
+      "min_profile": "flat-header-validator",
+      "modifier": "leaf-blind",
+      "bundle": "reserved-id",
+      "bytes": "6478663102ff010000",
+      "clause": "§9 — an unknown or reserved id is a MISSING CAPABILITY, not malformed octets; §13 reserves 0x02..0xff.",
+      "note": "⛔ THE CLASS BOUNDARY, and the only case here that is NOT invalid. The framing is perfect — magic, id length, a well-formed empty leaf — and the verdict must be `unsupported`, because §9 says framing and hashes may still be judged and a later registry addition MUST NOT change the historical judgment that these octets were well framed. A decoder reporting `invalid` tells its caller \"not a value, now or ever\": a claim it cannot support and that a future registry entry would falsify. ⚠ AND THIS CASE SITS ON AN OPEN QUESTION IN §2.1's TABLE: flat-header-validator READS the id (and therefore the id-length uvarint) but MAY REPORT only unknown_magic / unexpected_eof / need_more_input. So the profile can observe a fault it is not permitted to name. Routed to the spec lane rather than assumed either way; this case asserts the flat-decoder verdict, which is unaffected.",
+      "pins": [
+        "id := 0x00 ‖ cuvarint(n)              # PUBLIC — registry-assigned, n ≥ 1\n    | 0x01 ‖ ns{16} ‖ cuvarint(k)     # PRIVATE / EXPERIMENTAL — self-scoped",
+        "- Total length is 2..32 octets; outside that range the artifact is **invalid**.",
+        "`D` MUST be **computable**, and membership in `im(e)` MUST\n  be **decidable**."
+      ]
+    }
+  ],
+  "pending": {
+    "note": "Owed in batch 2 and NOT here: the link-header codes — bad_link_index, unused_link, duplicate_link_hash, links_out_of_order (whose lawful twin and counterfactual address already sit in codec-linked.json) — and leaf_codec_mismatch, which is UNREACHABLE in the flat form because a flat artifact names its id exactly once. They land in codec-linked.json beside the chunks they malform, since each needs real digests. limit_exceeded (resource-refused) is a §12 envelope obligation and follows its own area per the plan's ruling 3."
+  },
+  "profiles": {
+    "spec": "docs/CODEC-v1.md §2.1 (landed 198e77a)",
+    "min_profile": "DERIVED from fault_locus against §2.1's table, never authored. That is deliberate: min_profile is a function of (where the fault sits, the profile table), so WIDENING A PROFILE'S MAY-REPORT SET SILENTLY LOWERS IT — the field stays syntactically valid and semantically stale, and the corpus keeps demanding more capability than the fault needs. Direction is the quiet one and it is the OPPOSITE of vacuity: a too-high min_profile does not make a case unfalsifiable, it makes it UNDER-DEMANDING, so a conforming flat-header-validator that fails to report a reserved id passes a corpus that never asked it to. Measured: a5b6a2a widened flat-header-validator and stale-ed exactly one row within an hour of authoring. ⇒ Deriving it makes the stale-field class impossible to ENTER rather than easier to NOTICE.",
+    "modifier": "leaf-holding / leaf-blind per leaf-codec-id, per §2.1. Stated only where it CHANGES the correct verdict. Batch 1 is leaf-blind-equivalent throughout — e is the identity, so im(e) is everything and no payload can be non-canonical — which is exactly why the fixture setoid had to enter here for the modifier to become observable at all.",
+    "fault_locus": "WHERE the fault sits: header (magic, id, id-length uvarint) · body (tag, structure, keys, body-resident uvarints, remainder) · payload (im(e) membership) · links · store. AUTHORED — it is a fact about the octets and cannot be computed from them without re-implementing the decoder.",
+    "invariant": "For every case: code ∈ may-report(min_profile), and min_profile is the LEAST capable profile satisfying that for its fault_locus. Both halves are mechanically checkable — the first from §2.1's table alone, the second only because fault_locus is authored. Re-derive on ANY change to §2.1."
+  },
+  "uvarint_vs_cuvarint": "CODEC.md §3 (R4) names `cuvarint` as the canonical production and every grammar writes it, while `uvarint` remains the SYNTAX. This corpus follows that split rather than replacing one word with the other: a mention that quotes a GRAMMAR POSITION says `cuvarint`, and a mention describing what the octets CONTAIN says `uvarint`. ⇒ The fault prose here is not stale. In every case below the thing present FAILS to be a cuvarint — which is precisely why §9 names the codes at the uvarint layer (`malformed_uvarint`, `non_shortest_uvarint`, `uvarint_overflow`) rather than the canonical one. A reader 'fixing' those to cuvarint would be asserting that a non-canonical spelling is a canonical production, which is the one thing they are cases about."
+}

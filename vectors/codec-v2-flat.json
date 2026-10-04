@@ -1,0 +1,706 @@
+{
+  "spec": "docs/CODEC.md",
+  "status": "DRAFT, batch 1 of CODEC-V2-PLAN: authored against the deixis-codec-v2 CANDIDATE CONTRACT. Not frozen; a contract change before the freeze invalidates these octets, which are then re-derived, not patched.",
+  "source": "CODEC.md v2 at 343cda9 (identical on main at 63f919f)",
+  "bundles": {
+    "identity-bytes": {
+      "id": "0001",
+      "carrier": "Bytes; ≈ is octet equality; e = id; D = id"
+    },
+    "fixture-setoid": {
+      "id": "01fb44faaf3a9db590cbc4cb1abfdadb0201",
+      "carrier": "{class, representation}; ≈ compares class; e = UTF-8 of class; D decodes UTF-8 strictly (vectors/README.md)"
+    },
+    "option-of-identity-bytes": {
+      "id": "020001",
+      "carrier": "Option[Bytes]; e(None) = 00, e(Some(b)) = 01 ‖ b (CODEC.md §13)"
+    },
+    "option-of-fixture-setoid": {
+      "id": "0201fb44faaf3a9db590cbc4cb1abfdadb0201",
+      "carrier": "Option over the fixture setoid"
+    },
+    "option-of-option-of-identity-bytes": {
+      "id": "02020001",
+      "carrier": "Option[Option[Bytes]]"
+    },
+    "option-of-x30-identity-bytes": {
+      "id": "0202020202020202020202020202020202020202020202020202020202020001",
+      "carrier": "Option applied thirty times over Bytes: the deepest nesting a 32-octet id can name (CODEC.md §13)"
+    }
+  },
+  "method": "Every byte string is hand-assembled from CODEC.md v2 §5 and §13, field by field as each note spells out, and never emitted by an implementation.",
+  "cases": [
+    {
+      "name": "v2-flat/childless-empty-payload",
+      "kind": "accept",
+      "bundle": "identity-bytes",
+      "node": {
+        "own": "",
+        "children": []
+      },
+      "bytes": "647866320200010000",
+      "note": "V3. Header 64 78 66 32 · 02 · 00 01, then the root: cuvarint(len(payload)) = 00, no payload octets, cuvarint(count) = 00. `00 00` is a legal node under a slot codec whose e can be empty: an empty payload is a payload, and a zero count is a count, not absence.",
+      "pins": [
+        "header := \"dxf2\" ‖ cuvarint(len(id)) ‖ id",
+        "node   := cuvarint(len(payload)) ‖ payload ‖ cuvarint(count) ‖ entry*",
+        "`0x00 ‖ 0x00` is a legal node",
+        "A childless node is its framed payload followed by `0x00`."
+      ]
+    },
+    {
+      "name": "v2-flat/childless-payload-01",
+      "kind": "accept",
+      "bundle": "identity-bytes",
+      "node": {
+        "own": "01",
+        "children": []
+      },
+      "bytes": "64786632020001010100",
+      "note": "The root's payload 01, framed by its length 01, then count 00. The simplest childless node with a non-empty payload.",
+      "pins": [
+        "node   := cuvarint(len(payload)) ‖ payload ‖ cuvarint(count) ‖ entry*",
+        "A childless node is its framed payload followed by `0x00`."
+      ]
+    },
+    {
+      "name": "v2-flat/parent-payload-and-child",
+      "kind": "accept",
+      "bundle": "identity-bytes",
+      "node": {
+        "own": "aa",
+        "children": [
+          [
+            "61",
+            {
+              "own": "01",
+              "children": []
+            }
+          ]
+        ]
+      },
+      "bytes": "6478663202000101aa010161010100",
+      "note": "V1. The root carries payload aa AND a child: 01 aa (payload), 01 (count), then the entry 01 61 (key a) and the child 01 01 00. A payload is framed at every node, parents included; an encoder that framed payloads only at childless nodes emits different octets here.",
+      "pins": [
+        "node   := cuvarint(len(payload)) ‖ payload ‖ cuvarint(count) ‖ entry*",
+        "entry  := cuvarint(len(key)) ‖ key ‖ node",
+        "**Every** node's `payload` MUST be in `im(e)`"
+      ]
+    },
+    {
+      "name": "v2-flat/parent-empty-payload-one-child",
+      "kind": "accept",
+      "bundle": "identity-bytes",
+      "node": {
+        "own": "",
+        "children": [
+          [
+            "61",
+            {
+              "own": "01",
+              "children": []
+            }
+          ]
+        ]
+      },
+      "bytes": "6478663202000100010161010100",
+      "note": "The root's payload is empty (00) and it has one child: 00 · 01 · 01 61 · 01 01 00. Paired with the previous case: the parent's payload is the only difference, and it is in the octets.",
+      "pins": [
+        "node   := cuvarint(len(payload)) ‖ payload ‖ cuvarint(count) ‖ entry*",
+        "entry  := cuvarint(len(key)) ‖ key ‖ node"
+      ]
+    },
+    {
+      "name": "v2-flat/key-order-a-before-ab",
+      "kind": "accept",
+      "bundle": "identity-bytes",
+      "node": {
+        "own": "",
+        "children": [
+          [
+            "6162",
+            {
+              "own": "",
+              "children": []
+            }
+          ],
+          [
+            "61",
+            {
+              "own": "",
+              "children": []
+            }
+          ]
+        ]
+      },
+      "bytes": "647866320200010002016100000261620000",
+      "note": "Areas 11 and 13. Authored in insertion order ab, a; canonical order puts a (61) before ab (61 62), the shorter string first. Root: 00 (payload) · 02 (count) · 01 61 00 00 · 02 61 62 00 00. A core comparing octets without the prefix rule orders them backwards.",
+      "pins": [
+        "Entry keys are in **strictly ascending lexicographic order** (§2)",
+        "if no difference is found before one string ends, the **shorter"
+      ]
+    },
+    {
+      "name": "v2-flat/empty-key",
+      "kind": "accept",
+      "bundle": "identity-bytes",
+      "node": {
+        "own": "",
+        "children": [
+          [
+            "",
+            {
+              "own": "01",
+              "children": []
+            }
+          ]
+        ]
+      },
+      "bytes": "64786632020001000100010100",
+      "note": "Area 12. One child under the empty key: the entry is cuvarint(len(key)) = 00 and no key octets, then the child 01 01 00. The empty key is a key.",
+      "pins": [
+        "entry  := cuvarint(len(key)) ‖ key ‖ node"
+      ]
+    },
+    {
+      "name": "v2-flat/length-octet-equals-key-octet",
+      "kind": "accept",
+      "bundle": "identity-bytes",
+      "node": {
+        "own": "",
+        "children": [
+          [
+            "01",
+            {
+              "own": "01",
+              "children": []
+            }
+          ]
+        ]
+      },
+      "bytes": "6478663202000100010101010100",
+      "note": "Area 11, second edge. The octet 01 appears as the root's count, the key length, the key itself, the child's payload length and the child's payload: 00 · 01 · 01 01 · 01 01 00. Two integer spellings and a key share one octet value, and position alone decides each reading.",
+      "pins": [
+        "entry  := cuvarint(len(key)) ‖ key ‖ node",
+        "node   := cuvarint(len(payload)) ‖ payload ‖ cuvarint(count) ‖ entry*"
+      ]
+    },
+    {
+      "name": "v2-flat/shared-subtrees-spelled-in-full",
+      "kind": "accept",
+      "bundle": "identity-bytes",
+      "node": {
+        "own": "",
+        "children": [
+          [
+            "61",
+            {
+              "own": "01",
+              "children": [
+                [
+                  "63",
+                  {
+                    "own": "",
+                    "children": []
+                  }
+                ]
+              ]
+            }
+          ],
+          [
+            "62",
+            {
+              "own": "01",
+              "children": [
+                [
+                  "63",
+                  {
+                    "own": "",
+                    "children": []
+                  }
+                ]
+              ]
+            }
+          ]
+        ]
+      },
+      "bytes": "647866320200010002016101010101630000016201010101630000",
+      "note": "Area 10's flat half. Two identical subtrees S = 01 01 01 01 63 00 00 (payload 01, one child c with empty payload) under a and b, each spelled IN FULL. The flat form has no reference production, so repetition is written twice. The linked bridge (v2-bridge/shared-subtrees) stores S once.",
+      "pins": [
+        "**The flat form has no sharing, and that is a requirement rather than an omission.**",
+        "node   := cuvarint(len(payload)) ‖ payload ‖ cuvarint(count) ‖ entry*"
+      ]
+    },
+    {
+      "name": "v2-flat/fixture-representation-first",
+      "kind": "accept",
+      "bundle": "fixture-setoid",
+      "node": {
+        "own": {
+          "class": "a",
+          "representation": "first"
+        },
+        "children": []
+      },
+      "bytes": "647866321201fb44faaf3a9db590cbc4cb1abfdadb0201016100",
+      "note": "Law 1 under a coarse slot. Header with the 18-octet private id (length 12). e is the UTF-8 of class, so the payload is 61 whatever the representation. Pairs with v2-flat/fixture-representation-second: ≈-equal values, identical octets.",
+      "pins": [
+        "`encF(n) = encF(m) ⟺ n =_≈ m`",
+        "0x01 ‖ ns{16} ‖ cuvarint(k)"
+      ]
+    },
+    {
+      "name": "v2-flat/fixture-representation-second",
+      "kind": "accept",
+      "bundle": "fixture-setoid",
+      "node": {
+        "own": {
+          "class": "a",
+          "representation": "second"
+        },
+        "children": []
+      },
+      "bytes": "647866321201fb44faaf3a9db590cbc4cb1abfdadb0201016100",
+      "note": "The same octets as v2-flat/fixture-representation-first for a value that differs only in representation, which ≈ ignores. A bytes-identity slot could not express this pair.",
+      "pins": [
+        "`encF(n) = encF(m) ⟺ n =_≈ m`"
+      ]
+    },
+    {
+      "name": "v2-flat/fixture-parent-payload",
+      "kind": "accept",
+      "bundle": "fixture-setoid",
+      "node": {
+        "own": {
+          "class": "p",
+          "representation": "p"
+        },
+        "children": [
+          [
+            "6b",
+            {
+              "own": {
+                "class": "c",
+                "representation": "c"
+              },
+              "children": []
+            }
+          ]
+        ]
+      },
+      "bytes": "647866321201fb44faaf3a9db590cbc4cb1abfdadb0201017001016b016300",
+      "note": "V1 under the fixture setoid: the parent's class p is encoded (01 70) before its count and child (01 · 01 6b · 01 63 00).",
+      "pins": [
+        "node   := cuvarint(len(payload)) ‖ payload ‖ cuvarint(count) ‖ entry*",
+        "**Every** node's `payload` MUST be in `im(e)`"
+      ]
+    },
+    {
+      "name": "v2-flat/option-none",
+      "kind": "accept",
+      "bundle": "option-of-identity-bytes",
+      "node": {
+        "own": {
+          "none": {}
+        },
+        "children": []
+      },
+      "bytes": "6478663203020001010000",
+      "note": "V5. Header id 02 00 01 (length 03). The payload is e(None) = 00, framed by its length 01; count 00. None is a value at an existing node.",
+      "pins": [
+        "`e(None) = 0x00`; `e(Some(x)) = 0x01 ‖ e_c(x)`",
+        "OPTION-OF — Option over the codec the inner id names"
+      ]
+    },
+    {
+      "name": "v2-flat/option-some-empty",
+      "kind": "accept",
+      "bundle": "option-of-identity-bytes",
+      "node": {
+        "own": {
+          "some": ""
+        },
+        "children": []
+      },
+      "bytes": "6478663203020001010100",
+      "note": "V5. e(Some(empty)) = 01 followed by the empty inner encoding: payload 01, length 01. Differs from v2-flat/option-none in the payload octet, as None ≉ Some(_) requires.",
+      "pins": [
+        "`e(None) = 0x00`; `e(Some(x)) = 0x01 ‖ e_c(x)`",
+        "`None ≈ None`; `Some(x) ≈ Some(y)` iff `x ≈_c y`; `None` is never `≈` to any `Some`"
+      ]
+    },
+    {
+      "name": "v2-flat/option-none-root-some-child",
+      "kind": "accept",
+      "bundle": "option-of-identity-bytes",
+      "node": {
+        "own": {
+          "none": {}
+        },
+        "children": [
+          [
+            "61",
+            {
+              "own": {
+                "some": "01"
+              },
+              "children": []
+            }
+          ]
+        ]
+      },
+      "bytes": "6478663203020001010001016102010100",
+      "note": "V5. Root payload e(None) = 00 (01 00), count 01, entry 01 61, child payload e(Some(01)) = 01 01 framed by 02, count 00. A None payload at a parent is a value, and the parent still has its child.",
+      "pins": [
+        "`e(None) = 0x00`; `e(Some(x)) = 0x01 ‖ e_c(x)`",
+        "node   := cuvarint(len(payload)) ‖ payload ‖ cuvarint(count) ‖ entry*"
+      ]
+    },
+    {
+      "name": "v2-flat/historical-tree-through-option-of",
+      "kind": "accept",
+      "bundle": "option-of-fixture-setoid",
+      "node": {
+        "own": {
+          "none": {}
+        },
+        "children": [
+          [
+            "61",
+            {
+              "own": {
+                "some": {
+                  "class": "x",
+                  "representation": "x"
+                }
+              },
+              "children": []
+            }
+          ]
+        ]
+      },
+      "bytes": "64786632130201fb44faaf3a9db590cbc4cb1abfdadb0201010001016102017800",
+      "note": "V11. The old tree Struct{a: Leaf(class x)} carried through E to Node(None, {a: Node(Some(x), {})}) and encoded under option-of(fixture-setoid): header id 02 01 fb44…02 01 (length 13). Root payload 00, child payload 01 78 (Some, then the UTF-8 of x).",
+      "pins": [
+        "slot whose `T` is `Option[U]` is served by a codec for `Option[U]`",
+        "`e(None) = 0x00`; `e(Some(x)) = 0x01 ‖ e_c(x)`"
+      ]
+    },
+    {
+      "name": "v2-flat/option-of-option-nested",
+      "kind": "accept",
+      "bundle": "option-of-option-of-identity-bytes",
+      "node": {
+        "own": {
+          "some": {
+            "some": "01"
+          }
+        },
+        "children": []
+      },
+      "bytes": "6478663204020200010301010100",
+      "note": "V6. id 02 02 00 01 (length 04): option-of nested once. e(Some(Some(01))) = 01 ‖ (01 ‖ 01) = 01 01 01, framed by 03, count 00.",
+      "pins": [
+        "`e(None) = 0x00`; `e(Some(x)) = 0x01 ‖ e_c(x)`",
+        "OPTION-OF — Option over the codec the inner id names"
+      ]
+    },
+    {
+      "name": "v2-flat/two-octet-payload-length",
+      "kind": "accept",
+      "bundle": "identity-bytes",
+      "node": {
+        "own": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "children": []
+      },
+      "bytes": "647866320200018001aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa00",
+      "note": "A payload of 128 octets aa: its length 128 is 80 01 (low seven bits 0 with the continuation bit, then 1), the first length that needs two octets. Count 00. The streaming cases cut inside this varint.",
+      "pins": [
+        "`malformed_uvarint`, as MUST input that ends while the continuation bit is set."
+      ]
+    },
+    {
+      "name": "v2-flat/option-of-nested-to-the-bound",
+      "kind": "accept",
+      "bundle": "option-of-x30-identity-bytes",
+      "node": {
+        "own": {
+          "some": {
+            "some": {
+              "some": {
+                "some": {
+                  "some": {
+                    "some": {
+                      "some": {
+                        "some": {
+                          "some": {
+                            "some": {
+                              "some": {
+                                "some": {
+                                  "some": {
+                                    "some": {
+                                      "some": {
+                                        "some": {
+                                          "some": {
+                                            "some": {
+                                              "some": {
+                                                "some": {
+                                                  "some": {
+                                                    "some": {
+                                                      "some": {
+                                                        "some": {
+                                                          "some": {
+                                                            "some": {
+                                                              "some": {
+                                                                "some": {
+                                                                  "some": {
+                                                                    "some": "aa"
+                                                                  }
+                                                                }
+                                                              }
+                                                            }
+                                                          }
+                                                        }
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "children": []
+      },
+      "bytes": "647866322002020202020202020202020202020202020202020202020202020202020200011f010101010101010101010101010101010101010101010101010101010101aa00",
+      "note": "V6 at the bound. The id is thirty option-of octets 02 over 00 01: 32 octets, the most §13 allows, so its length octet is 20. The payload is Some thirty times over aa: thirty 01 octets and aa, 31 octets, framed by 1f, then count 00. The pair of v2-invalid/id-length-33-caps-nesting, one level deeper and refused. A core that caps nesting below thirty, or counts the bound on the inner id, refuses this case.",
+      "pins": [
+        "whole id breaks the length bound. A malformed id outranks an unsupported one, as",
+        "| `e` | `e(None) = 0x00`; `e(Some(x)) = 0x01 ‖ e_c(x)` |"
+      ]
+    },
+    {
+      "name": "v2-flat/fixture-two-octet-class",
+      "kind": "accept",
+      "bundle": "fixture-setoid",
+      "node": {
+        "own": {
+          "class": "é",
+          "representation": "é"
+        },
+        "children": []
+      },
+      "bytes": "647866321201fb44faaf3a9db590cbc4cb1abfdadb020102c3a900",
+      "note": "The class U+00E9 (é): its UTF-8 is c3 a9, two octets, framed by 02, then count 00. Every other fixture class in the corpus is ASCII, so this is the first that a UTF-8 decoder and a CLI's text transport must both carry correctly. A CLI reading its input in a legacy code page turns it into Ã©, which the harness sees as a different class.",
+      "pins": [
+        "**Every** node's `payload` MUST be in `im(e)`"
+      ]
+    },
+    {
+      "name": "v2-flat/fixture-four-octet-class",
+      "kind": "accept",
+      "bundle": "fixture-setoid",
+      "node": {
+        "own": {
+          "class": "😀",
+          "representation": "😀"
+        },
+        "children": []
+      },
+      "bytes": "647866321201fb44faaf3a9db590cbc4cb1abfdadb020104f09f988000",
+      "note": "The class U+1F600: its UTF-8 is f0 9f 98 80, four octets, framed by 04, then count 00. In a UTF-16 host it is a surrogate pair. A decoder that counts UTF-16 units or re-encodes the pair as two three-octet halves (CESU-8) produces different octets.",
+      "pins": [
+        "**Every** node's `payload` MUST be in `im(e)`"
+      ]
+    },
+    {
+      "name": "v2-flat/fixture-class-with-leading-bom",
+      "kind": "accept",
+      "bundle": "fixture-setoid",
+      "node": {
+        "own": {
+          "class": "﻿x",
+          "representation": "﻿x"
+        },
+        "children": []
+      },
+      "bytes": "647866321201fb44faaf3a9db590cbc4cb1abfdadb020104efbbbf7800",
+      "note": "The class U+FEFF followed by x: its UTF-8 is ef bb bf 78, framed by 04, then count 00. A leading U+FEFF is an ordinary character of the class. A decoder that strips it as a byte-order mark (TextDecoder does unless ignoreBOM is set) returns the class x, which re-encodes as 78 and breaks law 1. Suggested by the TypeScript implementer.",
+      "pins": [
+        "**Every** node's `payload` MUST be in `im(e)`"
+      ]
+    },
+    {
+      "name": "v2-flat/keys-unsigned-octet-order",
+      "kind": "accept",
+      "bundle": "identity-bytes",
+      "node": {
+        "own": "",
+        "children": [
+          [
+            "7f",
+            {
+              "own": "",
+              "children": []
+            }
+          ],
+          [
+            "80",
+            {
+              "own": "",
+              "children": []
+            }
+          ]
+        ]
+      },
+      "bytes": "647866320200010002017f000001800000",
+      "note": "7f and 80 differ only in the top bit. Unsigned, 7f < 80. A comparison of SIGNED octets reads 80 as -128 and puts it first. Decoded as text they agree with the octets (U+007F before a lone 0x80), so this pair separates signed from unsigned and nothing else. Header 64 78 66 32 · 02 · 00 01, then root 00 (payload length) 02 (count), then 01 7f 00 00, then 01 80 00 00. Encoding must emit this order and decoding must accept it.",
+      "pins": [
+        "as unsigned values at each position; at the first difference the smaller octet",
+        "This order is total on octet strings and is the only order",
+        "4. Entry keys are in **strictly ascending lexicographic order** (§2). An entry key"
+      ]
+    },
+    {
+      "name": "v2-flat/keys-octet-order-not-code-points",
+      "kind": "accept",
+      "bundle": "identity-bytes",
+      "node": {
+        "own": "",
+        "children": [
+          [
+            "80",
+            {
+              "own": "",
+              "children": []
+            }
+          ],
+          [
+            "c3a9",
+            {
+              "own": "",
+              "children": []
+            }
+          ]
+        ]
+      },
+      "bytes": "6478663202000100020180000002c3a90000",
+      "note": "80 < c3 as octets. c3 a9 is the UTF-8 of U+00E9; a lone 80 is not UTF-8, and a core that decodes keys to host strings maps it to U+DC80 (surrogateescape) or U+FFFD (replacement), both after U+00E9, so host-string comparison reverses the pair, by code point and by UTF-16 code unit alike. Signed octets agree with unsigned here (-128 < -61), so this pair separates octet order from host-string order and not from signed order. Header 64 78 66 32 · 02 · 00 01, then root 00 (payload length) 02 (count), then 01 80 00 00, then 02 c3 a9 00 00. Encoding must emit this order and decoding must accept it.",
+      "pins": [
+        "as unsigned values at each position; at the first difference the smaller octet",
+        "This order is total on octet strings and is the only order",
+        "4. Entry keys are in **strictly ascending lexicographic order** (§2). An entry key"
+      ]
+    },
+    {
+      "name": "v2-flat/keys-octet-order-not-utf16",
+      "kind": "accept",
+      "bundle": "identity-bytes",
+      "node": {
+        "own": "",
+        "children": [
+          [
+            "ee8080",
+            {
+              "own": "",
+              "children": []
+            }
+          ],
+          [
+            "f0908080",
+            {
+              "own": "",
+              "children": []
+            }
+          ]
+        ]
+      },
+      "bytes": "64786632020001000203ee8080000004f09080800000",
+      "note": "ee < f0 as octets: U+E000 before U+10000, which is also code-point order. In UTF-16, U+10000 is the pair D800 DC00 and D800 < E000, so a core comparing host strings by code unit reverses it. Signed octets agree (-18 < -16), so this pair separates octet order from UTF-16 order and nothing else. Header 64 78 66 32 · 02 · 00 01, then root 00 (payload length) 02 (count), then 03 ee 80 80 00 00, then 04 f0 90 80 80 00 00. Encoding must emit this order and decoding must accept it.",
+      "pins": [
+        "as unsigned values at each position; at the first difference the smaller octet",
+        "This order is total on octet strings and is the only order",
+        "4. Entry keys are in **strictly ascending lexicographic order** (§2). An entry key"
+      ]
+    },
+    {
+      "name": "v2-flat/keys-seven-across-three-orders",
+      "kind": "accept",
+      "bundle": "identity-bytes",
+      "node": {
+        "own": "",
+        "children": [
+          [
+            "01",
+            {
+              "own": "",
+              "children": []
+            }
+          ],
+          [
+            "7f",
+            {
+              "own": "",
+              "children": []
+            }
+          ],
+          [
+            "80",
+            {
+              "own": "",
+              "children": []
+            }
+          ],
+          [
+            "c3a9",
+            {
+              "own": "",
+              "children": []
+            }
+          ],
+          [
+            "ee8080",
+            {
+              "own": "",
+              "children": []
+            }
+          ],
+          [
+            "f0908080",
+            {
+              "own": "",
+              "children": []
+            }
+          ],
+          [
+            "ff",
+            {
+              "own": "",
+              "children": []
+            }
+          ]
+        ]
+      },
+      "bytes": "64786632020001000701010000017f00000180000002c3a9000003ee8080000004f0908080000001ff0000",
+      "note": "Seven keys in unsigned octet order: 01 7f 80 c3a9 ee8080 f0908080 ff, each child the node 00 00. Signed octets, code points (a lone 80 or ff decoded as a surrogate or U+FFFD) and UTF-16 code units each order them differently, so one node exercises all three misreadings at once.",
+      "pins": [
+        "as unsigned values at each position; at the first difference the smaller octet",
+        "4. Entry keys are in **strictly ascending lexicographic order** (§2). An entry key"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,166 @@
+{
+  "description": "deixis mandatory Node[T] attachment vectors — exact fresh attachment of ADR 0010 §5: attach(A,p,k,B) is defined exactly when p ∈ D_A and r = p ++ [k] ∉ D_A; there D_C = D_A ∪ {r ++ q | q ∈ D_B} and v_C = v_A ∪ {r ++ q ↦ v_B(q)}. op \"attach\" gives parent path \"parent\", key \"key\" and subtree \"B\"; its result is {\"defined\": …} or {\"undefined\": {}}. op \"attach-seq\" applies \"steps\" in order. op \"attach-then-at\" and \"attach-then-valueAt\" read the attached tree at \"at\". Every case declares its slot. Hand-authored from docs/design/0010-mandatory-node-values.md, docs/TREE.md and docs/PATH.md as merged in 1a9bb6d, and from nothing else. No implementation of the mandatory API existed when these were written. Items X14 and X15; each note names the defect (W) it catches. 17 cases.",
+  "profile": "deixis-mnode-attach",
+  "cases": [
+    {
+      "name": "m-attach-at-root",
+      "slot": "fixture", "op": "attach",
+      "A": { "own": { "class": "r", "representation": "r" }, "children": [["6b", { "own": { "class": "i", "representation": "i" }, "children": [["6a", { "own": { "class": "t", "representation": "t" }, "children": [] }]] }], ["61", { "own": { "class": "s", "representation": "s" }, "children": [] }]] },
+      "parent": [], "key": "62",
+      "B": { "own": { "class": "b", "representation": "b" }, "children": [] },
+      "result": { "defined": { "own": { "class": "r", "representation": "r" }, "children": [["6b", { "own": { "class": "i", "representation": "i" }, "children": [["6a", { "own": { "class": "t", "representation": "t" }, "children": [] }]] }], ["61", { "own": { "class": "s", "representation": "s" }, "children": [] }], ["62", { "own": { "class": "b", "representation": "b" }, "children": [] }]] } },
+      "note": "X14. p = ε exists and [62] is fresh. The new tree adds exactly the path [62] with B's value; the root value r is unchanged."
+    },
+    {
+      "name": "m-attach-at-interior-valued-parent",
+      "slot": "fixture", "op": "attach",
+      "A": { "own": { "class": "r", "representation": "r" }, "children": [["6b", { "own": { "class": "i", "representation": "i" }, "children": [["6a", { "own": { "class": "t", "representation": "t" }, "children": [] }]] }], ["61", { "own": { "class": "s", "representation": "s" }, "children": [] }]] },
+      "parent": ["6b"], "key": "6c",
+      "B": { "own": { "class": "b", "representation": "b" }, "children": [] },
+      "result": { "defined": { "own": { "class": "r", "representation": "r" }, "children": [["6b", { "own": { "class": "i", "representation": "i" }, "children": [["6a", { "own": { "class": "t", "representation": "t" }, "children": [] }], ["6c", { "own": { "class": "b", "representation": "b" }, "children": [] }]] }], ["61", { "own": { "class": "s", "representation": "s" }, "children": [] }]] } },
+      "note": "X14. The interior node [6b] keeps its value i and its existing child [6a], and gains [6c]."
+    },
+    {
+      "name": "m-attach-at-terminal-valued-node",
+      "slot": "fixture", "op": "attach",
+      "A": { "own": { "class": "r", "representation": "r" }, "children": [["61", { "own": { "class": "s", "representation": "s" }, "children": [] }]] },
+      "parent": ["61"], "key": "61",
+      "B": { "own": { "class": "b", "representation": "b" }, "children": [] },
+      "result": { "defined": { "own": { "class": "r", "representation": "r" }, "children": [["61", { "own": { "class": "s", "representation": "s" }, "children": [["61", { "own": { "class": "b", "representation": "b" }, "children": [] }]] }]] } },
+      "note": "X14. A childless node carrying s gains a child and keeps s at the same path. This is the availability that separates the product models from Leaf | Struct (TREE, Growth). The key 61 repeats its parent's key, which is legal: the new path [61,61] is fresh."
+    },
+    {
+      "name": "m-attach-deep",
+      "slot": "fixture", "op": "attach",
+      "A": { "own": { "class": "r", "representation": "r" }, "children": [["6b", { "own": { "class": "i", "representation": "i" }, "children": [["6a", { "own": { "class": "t", "representation": "t" }, "children": [] }]] }]] },
+      "parent": ["6b", "6a"], "key": "78",
+      "B": { "own": { "class": "b", "representation": "b" }, "children": [] },
+      "result": { "defined": { "own": { "class": "r", "representation": "r" }, "children": [["6b", { "own": { "class": "i", "representation": "i" }, "children": [["6a", { "own": { "class": "t", "representation": "t" }, "children": [["78", { "own": { "class": "b", "representation": "b" }, "children": [] }]] }]] }]] } },
+      "note": "X14. Attachment at depth two. Every ancestor value (r, i) and the parent's own t are kept."
+    },
+    {
+      "name": "m-attach-subtree-with-descendants",
+      "slot": "fixture", "op": "attach",
+      "A": { "own": { "class": "r", "representation": "r" }, "children": [] },
+      "parent": [], "key": "61",
+      "B": { "own": { "class": "b", "representation": "b" }, "children": [["62", { "own": { "class": "c", "representation": "c" }, "children": [] }]] },
+      "result": { "defined": { "own": { "class": "r", "representation": "r" }, "children": [["61", { "own": { "class": "b", "representation": "b" }, "children": [["62", { "own": { "class": "c", "representation": "c" }, "children": [] }]] }]] } },
+      "note": "X14. D_C = D_A ∪ {r ++ q | q ∈ D_B} = {ε} ∪ {[61], [61,62]}, and each new path carries v_B(q)."
+    },
+    {
+      "name": "m-attach-missing-parent-refuses",
+      "slot": "fixture", "op": "attach",
+      "A": { "own": { "class": "r", "representation": "r" }, "children": [["61", { "own": { "class": "s", "representation": "s" }, "children": [] }]] },
+      "parent": ["62"], "key": "61",
+      "B": { "own": { "class": "b", "representation": "b" }, "children": [] },
+      "result": { "undefined": {} },
+      "note": "X14. p = [62] ∉ D_A. A missing parent refuses; attachment does not create the path to it (ADR 0010 §5)."
+    },
+    {
+      "name": "m-attach-occupied-key-refuses",
+      "slot": "fixture", "op": "attach",
+      "A": { "own": { "class": "r", "representation": "r" }, "children": [["61", { "own": { "class": "s", "representation": "s" }, "children": [] }]] },
+      "parent": [], "key": "61",
+      "B": { "own": { "class": "b", "representation": "b" }, "children": [] },
+      "result": { "undefined": {} },
+      "note": "X14. r = [61] ∈ D_A: an occupied child key refuses."
+    },
+    {
+      "name": "m-attach-occupied-key-refuses-even-when-equal",
+      "slot": "fixture", "op": "attach",
+      "A": { "own": { "class": "r", "representation": "r" }, "children": [["61", { "own": { "class": "s", "representation": "s" }, "children": [] }]] },
+      "parent": [], "key": "61",
+      "B": { "own": { "class": "s", "representation": "s" }, "children": [] },
+      "result": { "undefined": {} },
+      "note": "X14. B equals the occupant, but the domain condition r ∉ D_A still fails. Attachment never compares payloads (§5) and is not an upsert. Catches W10."
+    },
+    {
+      "name": "m-attach-empty-key-is-fresh",
+      "slot": "fixture", "op": "attach",
+      "A": { "own": { "class": "r", "representation": "r" }, "children": [["61", { "own": { "class": "s", "representation": "s" }, "children": [] }]] },
+      "parent": [], "key": "",
+      "B": { "own": { "class": "b", "representation": "b" }, "children": [] },
+      "result": { "defined": { "own": { "class": "r", "representation": "r" }, "children": [["61", { "own": { "class": "s", "representation": "s" }, "children": [] }], ["", { "own": { "class": "b", "representation": "b" }, "children": [] }]] } },
+      "note": "X14, X19. The empty key is a key, and [\"\"] is not in D_A, so it is fresh."
+    },
+    {
+      "name": "m-attach-under-a-null-valued-parent",
+      "slot": "json", "op": "attach",
+      "A": { "own": "r", "children": [["61", { "own": null, "children": [] }]] },
+      "parent": ["61"], "key": "62",
+      "B": { "own": "b", "children": [] },
+      "result": { "defined": { "own": "r", "children": [["61", { "own": null, "children": [["62", { "own": "b", "children": [] }]] }]] } },
+      "note": "X14. The parent's value is null. It exists, admits a child, and keeps null: no promotion or replacement (§5: its value does not need promotion, replacement or a new wrapper). Catches W7."
+    },
+    {
+      "name": "m-attach-under-a-none-valued-root",
+      "slot": "option", "op": "attach",
+      "A": { "own": { "none": {} }, "children": [] },
+      "parent": [], "key": "61",
+      "B": { "own": { "some": { "class": "a", "representation": "a" } }, "children": [] },
+      "result": { "defined": { "own": { "none": {} }, "children": [["61", { "own": { "some": { "class": "a", "representation": "a" } }, "children": [] }]] } },
+      "note": "X14. The root carries none and gains a child; none stays none. Catches W7."
+    },
+    {
+      "name": "m-attach-under-a-unit-parent",
+      "slot": "unit", "op": "attach",
+      "A": { "own": {}, "children": [] },
+      "parent": [], "key": "61",
+      "B": { "own": {}, "children": [] },
+      "result": { "defined": { "own": {}, "children": [["61", { "own": {}, "children": [] }]] } },
+      "note": "X14. Node[Unit]: a pure-shape node admits a child like any other."
+    },
+    {
+      "name": "m-attach-distinct-keys-commute-order-one",
+      "slot": "fixture", "op": "attach-seq",
+      "A": { "own": { "class": "r", "representation": "r" }, "children": [] },
+      "steps": [
+        { "parent": [], "key": "61", "B": { "own": { "class": "a", "representation": "a" }, "children": [] } },
+        { "parent": [], "key": "62", "B": { "own": { "class": "b", "representation": "b" }, "children": [] } }
+      ],
+      "result": { "defined": { "own": { "class": "r", "representation": "r" }, "children": [["61", { "own": { "class": "a", "representation": "a" }, "children": [] }], ["62", { "own": { "class": "b", "representation": "b" }, "children": [] }]] } },
+      "note": "X15. Two fresh keys at the same parent, 61 first. See the next case."
+    },
+    {
+      "name": "m-attach-distinct-keys-commute-order-two",
+      "slot": "fixture", "op": "attach-seq",
+      "A": { "own": { "class": "r", "representation": "r" }, "children": [] },
+      "steps": [
+        { "parent": [], "key": "62", "B": { "own": { "class": "b", "representation": "b" }, "children": [] } },
+        { "parent": [], "key": "61", "B": { "own": { "class": "a", "representation": "a" }, "children": [] } }
+      ],
+      "result": { "defined": { "own": { "class": "r", "representation": "r" }, "children": [["61", { "own": { "class": "a", "representation": "a" }, "children": [] }], ["62", { "own": { "class": "b", "representation": "b" }, "children": [] }]] } },
+      "note": "X15. The same two additions, 62 first, give an equal tree: distinct fresh-key additions at the same parent commute (§5)."
+    },
+    {
+      "name": "m-attach-then-at-new-path-is-b",
+      "slot": "fixture", "op": "attach-then-at",
+      "A": { "own": { "class": "r", "representation": "r" }, "children": [["61", { "own": { "class": "s", "representation": "s" }, "children": [] }]] },
+      "parent": ["61"], "key": "62",
+      "B": { "own": { "class": "b", "representation": "b" }, "children": [["63", { "own": { "class": "c", "representation": "c" }, "children": [] }]] },
+      "at": ["61", "62"],
+      "result": { "defined": { "own": { "class": "b", "representation": "b" }, "children": [["63", { "own": { "class": "c", "representation": "c" }, "children": [] }]] } },
+      "note": "X15. at(C,r) ≡ B, whole."
+    },
+    {
+      "name": "m-attach-then-at-parent-has-grown",
+      "slot": "fixture", "op": "attach-then-at",
+      "A": { "own": { "class": "r", "representation": "r" }, "children": [["61", { "own": { "class": "s", "representation": "s" }, "children": [] }]] },
+      "parent": ["61"], "key": "62",
+      "B": { "own": { "class": "b", "representation": "b" }, "children": [] },
+      "at": ["61"],
+      "result": { "defined": { "own": { "class": "s", "representation": "s" }, "children": [["62", { "own": { "class": "b", "representation": "b" }, "children": [] }]] } },
+      "note": "X15. The subtree at p has grown: it is Node(s,{62 ↦ B}), not A's Node(s,∅). Equality of the selected subtree is not preserved, while at(A,p) ⊑ at(C,p) holds (§5)."
+    },
+    {
+      "name": "m-attach-then-valueat-parent-unchanged",
+      "slot": "option", "op": "attach-then-valueAt",
+      "A": { "own": { "some": { "class": "r", "representation": "r" } }, "children": [["61", { "own": { "none": {} }, "children": [] }]] },
+      "parent": ["61"], "key": "62",
+      "B": { "own": { "some": { "class": "b", "representation": "b" } }, "children": [] },
+      "at": ["61"],
+      "result": { "defined": { "none": {} } },
+      "note": "X15. valueAt(C,p) ≡ valueAt(A,p): the parent carried none before and still does. TREE, Growth: containment preserves an old none too. Catches W7."
+    }
+  ]
+}

@@ -1,0 +1,40 @@
+# deixis has no runtime dependencies: each core uses its language's standard library, and
+# the TypeScript and Rust cores carry their own SHA-256. What remains is tooling (the
+# TypeScript compiler, test runners) and the workflows themselves, so updates are grouped
+# into one pull request per ecosystem per month.
+#
+# An npm entry covers ONE directory and does not descend into nested ones, so each package
+# is named individually. A package added without a line here gets no updates and nothing
+# reds: the silence is the failure mode, so check this list when one is added.
+version: 2
+updates:
+  - package-ecosystem: cargo
+    directory: /
+    schedule: { interval: monthly }
+    groups:
+      rust: { patterns: ["*"] }
+  - package-ecosystem: gomod
+    directory: /
+    schedule: { interval: monthly }
+    groups:
+      go: { patterns: ["*"] }
+  - package-ecosystem: npm
+    directory: /core/ts
+    schedule: { interval: monthly }
+    groups:
+      ts: { patterns: ["*"] }
+  - package-ecosystem: npm
+    directory: /pos/ts
+    schedule: { interval: monthly }
+    groups:
+      ts: { patterns: ["*"] }
+  - package-ecosystem: npm
+    directory: /set/ts
+    schedule: { interval: monthly }
+    groups:
+      ts: { patterns: ["*"] }
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: monthly }
+    groups:
+      actions: { patterns: ["*"] }

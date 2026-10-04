@@ -1,0 +1,14 @@
+[package]
+name = "bitspark-deixis-set"
+version = "0.6.0"
+description = "deixis-set-v1: the finite-set container by self-keying, slot-member form. Reference implementation over deixis-core."
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[lib]
+name = "deixis_set"
+path = "src/lib.rs"
+
+[dependencies]
+bitspark-deixis-core = { path = "../../core/rs", version = "0.6.0" }

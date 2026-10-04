@@ -1,0 +1,10 @@
+# Repo-level ruff configuration — committed so the lint gate is deterministic across
+# machines and user-level configs. Rule selection is explicit for the same reason.
+target-version = "py313"
+line-length = 88
+
+[lint]
+select = ["E", "F", "W", "I", "UP", "B", "RUF"]
+# κ, ℕ, ≈, − are the family's spec voice — in docstrings and comments exactly as in
+# the docs and the sibling cores. The ambiguous-unicode rules would flag every one.
+ignore = ["RUF002", "RUF003"]

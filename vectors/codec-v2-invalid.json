@@ -1,0 +1,2954 @@
+{
+  "spec": "docs/CODEC.md",
+  "status": "DRAFT, batch 2 of CODEC-V2-PLAN: authored against the deixis-codec-v2 CANDIDATE CONTRACT. Not frozen; a contract change before the freeze invalidates these octets, which are then re-derived, not patched.",
+  "source": "CODEC.md v2 as merged on main at b42d777 (malformed_slot_codec_id; F1-F3; F4 and first-use precision)",
+  "method": "Every byte string is hand-assembled from CODEC.md v2 §§3, 5, 6, 13, field by field as each note spells out, and never emitted by an implementation. min_profile is derived from fault_locus by tools/derive-vector-profiles.py's table, never typed. Chunk digests are SHA-256 computed with a tool over each chunk's published bytes: recompute, do not trust.",
+  "holding": "Every decoding case states `holding`: the base slot-codec ids the decoder holds for that case (§2.1's modifier, stated with the ids it ranges over as §16 requires). option-of over a held id is held (§13). The harness decoder holds 00 01 and the fixture setoid's id unless a case says otherwise.",
+  "classes": "class is §9's: invalid, unsupported, incomplete (need_more_input), or store for the store / traversal layer, which is never a decoder verdict. streaming_code, where present, is the verdict with the stream still open.",
+  "linked": "A linked case names its root by address and gives the store as [digest, chunk-name] pairs. The store is untrusted: a digest need not be the SHA-256 of the chunk it names, which is how hash_mismatch is expressed. Chunks are named in this file's `chunks` or in codec-v2-linked.json. Every store case carries exactly one defect, because traversal order across a closure is unpinned.",
+  "streaming": "A stream case refers to the flat case whose artifact it cuts (`ref`). `bytes` is what is fed, `cuts` the interior offsets at which it is split into pieces, `end` whether end of input is declared after the last piece. A complete root with the stream still open is need_more_input until end of input is declared (§14: F4).",
+  "envelope": "Envelope cases carry their verdict under `expect`, not `code`: limit_exceeded is in no §2.1 row, by design, so the profile gate must not read it. `budget` maps §12 tokens to decimal strings; a dimension not named is at its §12 floor.",
+  "cases": [
+    {
+      "name": "v2-invalid/v1-artifact-is-unknown-magic",
+      "class": "invalid",
+      "code": "unknown_magic",
+      "fault_locus": "header",
+      "min_profile": "flat-header-validator",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "bytes": "647866310200010000",
+      "clause": "§5 rule 1: the magic is exactly \"dxf2\".",
+      "note": "A genuine deixis-codec-v1 artifact, the v1 corpus's flat/leaf-empty-payload, octet for octet. Its first four octets are 64 78 66 31 (\"dxf1\"), so a v2 decoder reads four octets that are not \"dxf2\". Old bytes stay historical (ADR 0011 §5): a v2 core that also accepts dxf1 fails here.",
+      "pins": [
+        "The magic is exactly `\"dxf2\"`. Anything else is `unknown_magic`"
+      ]
+    },
+    {
+      "name": "v2-invalid/short-magic-is-eof",
+      "class": "invalid",
+      "code": "unexpected_eof",
+      "fault_locus": "header",
+      "min_profile": "flat-header-validator",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "bytes": "647866",
+      "streaming_code": "need_more_input",
+      "clause": "§5 rule 1: unknown_magic presupposes four octets were read.",
+      "note": "Three octets of the CORRECT v2 magic. Fewer than four is unexpected_eof, never unknown_magic; with the stream open it is need_more_input, because more octets may complete a valid artifact.",
+      "pins": [
+        "Fewer than four is `unexpected_eof`"
+      ]
+    },
+    {
+      "name": "v2-invalid/v1-empty-struct-is-not-read-as-a-tag",
+      "class": "invalid",
+      "code": "unexpected_eof",
+      "fault_locus": "body",
+      "min_profile": "flat-decoder",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "bytes": "647866320200010100",
+      "streaming_code": "need_more_input",
+      "clause": "§5 rule 2 (retired) and §5 rule 6.",
+      "note": "V4. v1 spelled an empty struct 01 00 (tag 01, count 00). v2 reads no tag: 01 is the root's payload length, 00 its one payload octet, and then the count is missing. A reader that still dispatches on a first octet 01 accepts an empty struct here.",
+      "pins": [
+        "Input ending mid-structure is `unexpected_eof`."
+      ]
+    },
+    {
+      "name": "v2-invalid/count-without-entry",
+      "class": "invalid",
+      "code": "unexpected_eof",
+      "fault_locus": "body",
+      "min_profile": "flat-decoder",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "bytes": "647866320200010001",
+      "streaming_code": "need_more_input",
+      "clause": "§5 rule 3 and rule 6.",
+      "note": "The root's payload is empty (00) and its count announces one entry (01); the input ends before it.",
+      "pins": [
+        "Input ending mid-structure is `unexpected_eof`."
+      ]
+    },
+    {
+      "name": "v2-invalid/payload-longer-than-input",
+      "class": "invalid",
+      "code": "unexpected_eof",
+      "fault_locus": "body",
+      "min_profile": "flat-decoder",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "bytes": "6478663202000105aa",
+      "streaming_code": "need_more_input",
+      "clause": "§5 rule 6; §15 hostile input.",
+      "note": "The root's payload length says 05 and one octet (aa) follows. A declared length is not trusted for allocation before its octets are available.",
+      "pins": [
+        "Input ending mid-structure is `unexpected_eof`."
+      ]
+    },
+    {
+      "name": "v2-invalid/id-cut-by-end-of-input",
+      "class": "invalid",
+      "code": "unexpected_eof",
+      "fault_locus": "header",
+      "min_profile": "flat-header-validator",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "bytes": "647866321201fb44",
+      "streaming_code": "need_more_input",
+      "clause": "§5 rule 6; §13 (the id's stated length is in range).",
+      "note": "The id length 12 (18) is in range, and the INPUT ends after three of its octets. This is the input ending, not the id: contrast v2-invalid/id-bounded-cuvarint-public, where the id's own stated length ends a field.",
+      "pins": [
+        "Input ending mid-structure is `unexpected_eof`."
+      ]
+    },
+    {
+      "name": "v2-invalid/uvarint-truncated-at-end",
+      "class": "invalid",
+      "code": "malformed_uvarint",
+      "fault_locus": "body",
+      "min_profile": "flat-decoder",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "bytes": "6478663202000180",
+      "streaming_code": "need_more_input",
+      "clause": "§3 rule 2, second half.",
+      "note": "The root's payload length is a lone 80 and the input ends with the continuation bit set. §3 assigns malformed_uvarint here, not unexpected_eof (carried from v1's pinned invalid/malformed-uvarint-truncated). With the stream open it is need_more_input: the next octet may complete it.",
+      "pins": [
+        "`malformed_uvarint`, as MUST input that ends while the continuation bit is set."
+      ]
+    },
+    {
+      "name": "v2-invalid/uvarint-eleventh-continuation-octet",
+      "class": "invalid",
+      "code": "malformed_uvarint",
+      "fault_locus": "body",
+      "min_profile": "flat-decoder",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "bytes": "64786632020001808080808080808080808000",
+      "clause": "§3 rule 2, first half.",
+      "note": "Eleven continuation octets (80) and a terminator: the eleventh CONTINUATION octet §3 names.",
+      "pins": [
+        "An eleventh continuation octet MUST be refused as"
+      ]
+    },
+    {
+      "name": "v2-invalid/uvarint-eleven-octets-ending-in-terminator",
+      "class": "invalid",
+      "code": "malformed_uvarint",
+      "fault_locus": "body",
+      "min_profile": "flat-decoder",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "bytes": "647866320200018080808080808080808000",
+      "clause": "§10, the uvarint row: > 10 octets.",
+      "note": "Ten continuation octets and a terminator 00 as the eleventh: eleven octets, but only ten continuation octets. §3's phrase \"an eleventh continuation octet\" read strictly does not reach it; §10's \"> 10 octets\" does. Paired with the previous case so an implementation enforcing only one reading fails one of them.",
+      "pins": [
+        "| any `uvarint` | ill-formed continuation, or > 10 octets | `malformed_uvarint` |"
+      ]
+    },
+    {
+      "name": "v2-invalid/uvarint-overflow-at-the-boundary",
+      "class": "invalid",
+      "code": "uvarint_overflow",
+      "fault_locus": "body",
+      "min_profile": "flat-decoder",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "bytes": "6478663202000180808080808080808002",
+      "clause": "§3 rule 1.",
+      "note": "Nine octets 80 and a tenth 02: value 2 × 2^63 = 2^64 exactly, the first value outside the domain. (ff × 9, 01 is 2^64 − 1, the largest value in it.)",
+      "pins": [
+        "larger value MUST be refused as `uvarint_overflow`.",
+        "| | well-formed, value ≥ `2^64` | `uvarint_overflow` |"
+      ]
+    },
+    {
+      "name": "v2-invalid/uvarint-overflow-inside-the-id",
+      "class": "invalid",
+      "code": "uvarint_overflow",
+      "fault_locus": "header",
+      "min_profile": "flat-header-validator",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "bytes": "647866320b00808080808080808080020000",
+      "clause": "§13: integer faults inside the id keep their §3 codes.",
+      "note": "Id length 0b (11): a public id 00 whose n is the ten-octet spelling of 2^64. The integer fault keeps its §3 code; it is not malformed_slot_codec_id.",
+      "pins": [
+        "larger value MUST be refused as `uvarint_overflow`."
+      ]
+    },
+    {
+      "name": "v2-invalid/non-shortest-id-length",
+      "class": "invalid",
+      "code": "non_shortest_uvarint",
+      "fault_locus": "header",
+      "min_profile": "flat-header-validator",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "bytes": "64786632820000010000",
+      "clause": "§3 rule 3, on the id length.",
+      "note": "The id length 2 spelled in two octets (82 00). The header validator's only uvarint outside the id; §2.1 lets it name this.",
+      "pins": [
+        "not a second way to name the codec: the id is inside the hashed octets (§7), so"
+      ]
+    },
+    {
+      "name": "v2-invalid/non-shortest-n-is-not-a-second-name",
+      "class": "invalid",
+      "code": "non_shortest_uvarint",
+      "fault_locus": "header",
+      "min_profile": "flat-header-validator",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "bytes": "64786632030081000000",
+      "clause": "§13: n is bound by §3 in full.",
+      "note": "Id 00 81 00 (length 03): n = 1 spelled in two octets. Accepting it would give identity-bytes a second spelling, and so every value under it a second address.",
+      "pins": [
+        "not a second way to name the codec: the id is inside the hashed octets (§7), so"
+      ]
+    },
+    {
+      "name": "v2-invalid/non-shortest-payload-length",
+      "class": "invalid",
+      "code": "non_shortest_uvarint",
+      "fault_locus": "body",
+      "min_profile": "flat-decoder",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "bytes": "647866320200018100aa00",
+      "clause": "§3 rule 3.",
+      "note": "The root's payload length 1 spelled 81 00, then the payload aa and count 00.",
+      "pins": [
+        "not a second way to name the codec: the id is inside the hashed octets (§7), so"
+      ]
+    },
+    {
+      "name": "v2-invalid/duplicate-key",
+      "class": "invalid",
+      "code": "duplicate_key",
+      "fault_locus": "body",
+      "min_profile": "flat-decoder",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "bytes": "6478663202000100020161000001610000",
+      "clause": "§5 rule 4.",
+      "note": "Two entries under key a (61), each with the node 00 00.",
+      "pins": [
+        "4. Entry keys are in **strictly ascending lexicographic order** (§2). An entry key"
+      ]
+    },
+    {
+      "name": "v2-invalid/unsorted-extension-before-prefix",
+      "class": "invalid",
+      "code": "unsorted_keys",
+      "fault_locus": "body",
+      "min_profile": "flat-decoder",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "bytes": "647866320200010002026162000001610000",
+      "clause": "§5 rule 4; §2's shorter-first rule.",
+      "note": "ab (61 62) before a (61). The canonical order puts the shorter first; a core that compares only common octets and treats a prefix as equal or greater accepts this.",
+      "pins": [
+        "4. Entry keys are in **strictly ascending lexicographic order** (§2). An entry key"
+      ]
+    },
+    {
+      "name": "v2-invalid/trailing-bytes",
+      "class": "invalid",
+      "code": "trailing_bytes",
+      "fault_locus": "body",
+      "min_profile": "flat-decoder",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "bytes": "64786632020001000000",
+      "clause": "§5 rule 6.",
+      "note": "A complete root (00 00) and one octet more.",
+      "pins": [
+        "6. After the root node is read, no octets may remain: any remainder is"
+      ]
+    },
+    {
+      "name": "v2-invalid/fixture-overlong-root",
+      "class": "invalid",
+      "code": "non_canonical_payload",
+      "fault_locus": "payload",
+      "min_profile": "flat-decoder",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "bytes": "647866321201fb44faaf3a9db590cbc4cb1abfdadb020102c08000",
+      "clause": "§5 rule 5; the fixture setoid's D decodes UTF-8 strictly.",
+      "note": "The root's payload c0 80 is an overlong encoding of U+0000, not valid UTF-8, so outside im(e).",
+      "pins": [
+        "**Every** node's `payload` MUST be in `im(e)`"
+      ]
+    },
+    {
+      "name": "v2-invalid/fixture-non-canonical-at-a-parent",
+      "class": "invalid",
+      "code": "non_canonical_payload",
+      "fault_locus": "payload",
+      "min_profile": "flat-decoder",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "bytes": "647866321201fb44faaf3a9db590cbc4cb1abfdadb020101ff01016b016300",
+      "clause": "§5 rule 5, at a node with children.",
+      "note": "V2. The root's payload ff is not UTF-8 and the root HAS a child (k → c, valid). A decoder that checks im(e) only at childless nodes accepts this.",
+      "pins": [
+        "**Every** node's `payload` MUST be in `im(e)`",
+        "MUST check this at every node"
+      ]
+    },
+    {
+      "name": "v2-invalid/fixture-non-canonical-at-a-child",
+      "class": "invalid",
+      "code": "non_canonical_payload",
+      "fault_locus": "payload",
+      "min_profile": "flat-decoder",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "bytes": "647866321201fb44faaf3a9db590cbc4cb1abfdadb0201017001016b01ff00",
+      "clause": "§5 rule 5.",
+      "note": "The root's payload p (70) is valid; its child under k has payload ff.",
+      "pins": [
+        "MUST check this at every node"
+      ]
+    },
+    {
+      "name": "v2-invalid/fixture-encoded-surrogate",
+      "class": "invalid",
+      "code": "non_canonical_payload",
+      "fault_locus": "payload",
+      "min_profile": "flat-decoder",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "bytes": "647866321201fb44faaf3a9db590cbc4cb1abfdadb020103eda08000",
+      "clause": "§5 rule 5; the fixture's D accepts RFC 3629 UTF-8 only (vectors/README.md).",
+      "note": "The root's payload ed a0 80 is the three-octet pattern for U+D800, a surrogate. RFC 3629 excludes surrogates, so it is outside im(e). A decoder that checks only the octet patterns, or decodes WTF-8, accepts it.",
+      "pins": [
+        "**Every** node's `payload` MUST be in `im(e)`"
+      ]
+    },
+    {
+      "name": "v2-invalid/fixture-above-the-last-scalar",
+      "class": "invalid",
+      "code": "non_canonical_payload",
+      "fault_locus": "payload",
+      "min_profile": "flat-decoder",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "bytes": "647866321201fb44faaf3a9db590cbc4cb1abfdadb020104f490808000",
+      "clause": "§5 rule 5; the fixture's D accepts RFC 3629 UTF-8 only (vectors/README.md).",
+      "note": "The root's payload f4 90 80 80 is the four-octet pattern for U+110000, one past the last scalar value U+10FFFF, so it is outside im(e). A decoder that checks only the octet patterns accepts it.",
+      "pins": [
+        "**Every** node's `payload` MUST be in `im(e)`"
+      ]
+    },
+    {
+      "name": "v2-invalid/option-payload-02",
+      "class": "invalid",
+      "code": "non_canonical_payload",
+      "fault_locus": "payload",
+      "min_profile": "flat-decoder",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "bytes": "6478663203020001010200",
+      "clause": "§13, option-of's D.",
+      "note": "V5. The option-of payload's first octet must be 00 or 01; 02 is outside im(e).",
+      "pins": [
+        "| `D` | defined exactly on `0x00` and on `0x01 ‖ b` with `b ∈ im(e_c)`, inverting `e` there |"
+      ]
+    },
+    {
+      "name": "v2-invalid/option-payload-empty",
+      "class": "invalid",
+      "code": "non_canonical_payload",
+      "fault_locus": "payload",
+      "min_profile": "flat-decoder",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "bytes": "64786632030200010000",
+      "clause": "§13, option-of's D.",
+      "note": "V5. An empty payload under option-of. None is the one octet 00, never the empty string: an empty payload is not absence.",
+      "pins": [
+        "| `D` | defined exactly on `0x00` and on `0x01 ‖ b` with `b ∈ im(e_c)`, inverting `e` there |"
+      ]
+    },
+    {
+      "name": "v2-invalid/option-none-with-a-tail",
+      "class": "invalid",
+      "code": "non_canonical_payload",
+      "fault_locus": "payload",
+      "min_profile": "flat-decoder",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "bytes": "647866320302000102000000",
+      "clause": "§13, option-of's D is defined exactly on 0x00 and on 0x01 ‖ b.",
+      "note": "V5. The payload 00 00: None followed by an octet. D is defined on 00 exactly, so a lenient D that stops after the first octet accepts this.",
+      "pins": [
+        "| `D` | defined exactly on `0x00` and on `0x01 ‖ b` with `b ∈ im(e_c)`, inverting `e` there |"
+      ]
+    },
+    {
+      "name": "v2-invalid/option-some-inner-not-canonical",
+      "class": "invalid",
+      "code": "non_canonical_payload",
+      "fault_locus": "payload",
+      "min_profile": "flat-decoder",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "bytes": "64786632130201fb44faaf3a9db590cbc4cb1abfdadb02010201ff00",
+      "clause": "§13, option-of's D: b ∈ im(e_c).",
+      "note": "V5. option-of(fixture-setoid): Some (01) whose inner octet ff is not UTF-8.",
+      "pins": [
+        "| `D` | defined exactly on `0x00` and on `0x01 ‖ b` with `b ∈ im(e_c)`, inverting `e` there |"
+      ]
+    },
+    {
+      "name": "v2-invalid/unsupported-unassigned-public",
+      "class": "unsupported",
+      "code": "unsupported_slot_codec",
+      "fault_locus": "header",
+      "min_profile": "flat-header-validator",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "bytes": "6478663202007f0000",
+      "clause": "§13: an unassigned n ≥ 1 is unsupported.",
+      "note": "Id 00 7f: public n = 127, not held. The framing is well formed and the artifact is judged unsupported, not invalid.",
+      "pins": [
+        "An unassigned `n ≥ 1`, and any reserved first octet, are **unsupported** — not"
+      ]
+    },
+    {
+      "name": "v2-invalid/unsupported-reserved-03",
+      "class": "unsupported",
+      "code": "unsupported_slot_codec",
+      "fault_locus": "header",
+      "min_profile": "flat-header-validator",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "bytes": "647866320203000000",
+      "clause": "§13: 0x03..0xff are reserved; a reserved first octet is unsupported.",
+      "note": "V7. 03 is the first reserved form in v2 (02 is option-of). A parser that still reserves 02 and not 03 has the forms off by one.",
+      "pins": [
+        "An unassigned `n ≥ 1`, and any reserved first octet, are **unsupported** — not"
+      ]
+    },
+    {
+      "name": "v2-invalid/unsupported-reserved-ff",
+      "class": "unsupported",
+      "code": "unsupported_slot_codec",
+      "fault_locus": "header",
+      "min_profile": "flat-header-validator",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "bytes": "6478663202ffff0000",
+      "clause": "§13: a reserved first octet ends the structural judgment.",
+      "note": "The last reserved form. Its second octet ff belongs to a form not yet defined, so nothing about it is judged.",
+      "pins": [
+        "An unassigned `n ≥ 1`, and any reserved first octet, are **unsupported** — not"
+      ]
+    },
+    {
+      "name": "v2-invalid/unsupported-option-of-unassigned",
+      "class": "unsupported",
+      "code": "unsupported_slot_codec",
+      "fault_locus": "header",
+      "min_profile": "flat-header-validator",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "bytes": "647866320302007f0000",
+      "clause": "§13: option-of is unsupported exactly when its inner id is.",
+      "note": "V6. option-of(00 7f): the option-of form is known, its inner codec is not.",
+      "pins": [
+        "payload by its length. An option-of id is **unsupported** exactly when its inner id is"
+      ]
+    },
+    {
+      "name": "v2-invalid/unsupported-option-of-reserved-one-octet",
+      "class": "unsupported",
+      "code": "unsupported_slot_codec",
+      "fault_locus": "header",
+      "min_profile": "flat-header-validator",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "bytes": "647866320202030000",
+      "clause": "§13 (F2): the 2..32 bound is on the whole id.",
+      "note": "Id 02 03: option-of over the reserved form 03. The inner id has no minimum beyond its form's, so this is unsupported. The naive reading applies 2..32 to the inner id and says malformed_slot_codec_id.",
+      "pins": [
+        "minimum beyond what its own form requires: `02 03` is option-of over a reserved"
+      ]
+    },
+    {
+      "name": "v2-invalid/unsupported-private-not-held",
+      "class": "unsupported",
+      "code": "unsupported_slot_codec",
+      "fault_locus": "header",
+      "min_profile": "flat-header-validator",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "bytes": "64786632120100000000000000000000000000000000010000",
+      "clause": "§13: a private id nobody here holds.",
+      "note": "Private namespace of sixteen 00 octets, k = 1. Well formed, not held.",
+      "pins": [
+        "An unassigned `n ≥ 1`, and any reserved first octet, are **unsupported** — not"
+      ]
+    },
+    {
+      "name": "v2-invalid/codec-blind-fixture",
+      "class": "unsupported",
+      "code": "unsupported_slot_codec",
+      "fault_locus": "header",
+      "min_profile": "flat-header-validator",
+      "holding": [],
+      "bytes": "647866321201fb44faaf3a9db590cbc4cb1abfdadb0201016100",
+      "clause": "§11 obligation 3.",
+      "note": "The fixture artifact of class a, which a holding decoder accepts, decoded with nothing held. A codec-blind decoder reports unsupported and MUST NOT report the value as validated; returning the value is the failure this case exists to catch.",
+      "pins": [
+        "3. A **codec-blind** profile (§2.1) MUST report **unsupported**, and MUST NOT report"
+      ]
+    },
+    {
+      "name": "v2-invalid/codec-blind-option-of-fixture",
+      "class": "unsupported",
+      "code": "unsupported_slot_codec",
+      "fault_locus": "header",
+      "min_profile": "flat-header-validator",
+      "holding": [
+        "0001"
+      ],
+      "bytes": "64786632130201fb44faaf3a9db590cbc4cb1abfdadb0201010000",
+      "clause": "§13 and §11: option-of is held exactly when its inner id is.",
+      "note": "option-of(fixture-setoid) with only identity-bytes held: the inner codec is missing, so option-of over it is missing too.",
+      "pins": [
+        "payload by its length. An option-of id is **unsupported** exactly when its inner id is",
+        "3. A **codec-blind** profile (§2.1) MUST report **unsupported**, and MUST NOT report"
+      ]
+    },
+    {
+      "name": "v2-invalid/id-length-zero",
+      "class": "invalid",
+      "code": "malformed_slot_codec_id",
+      "fault_locus": "header",
+      "min_profile": "flat-header-validator",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "bytes": "64786632000000",
+      "clause": "§13: a length outside 2..32, judged when the length is read.",
+      "note": "Id length 00.",
+      "pins": [
+        "`malformed_slot_codec_id`, judged when the length is read. The bound is on the"
+      ]
+    },
+    {
+      "name": "v2-invalid/id-length-one",
+      "class": "invalid",
+      "code": "malformed_slot_codec_id",
+      "fault_locus": "header",
+      "min_profile": "flat-header-validator",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "bytes": "6478663201000000",
+      "clause": "§13: a length outside 2..32.",
+      "note": "Id length 01. Its one octet 00 would begin a public id; the length rule refuses it first.",
+      "pins": [
+        "`malformed_slot_codec_id`, judged when the length is read. The bound is on the"
+      ]
+    },
+    {
+      "name": "v2-invalid/id-length-33-caps-nesting",
+      "class": "invalid",
+      "code": "malformed_slot_codec_id",
+      "fault_locus": "header",
+      "min_profile": "flat-header-validator",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "bytes": "6478663221020202020202020202020202020202020202020202020202020202020202020001010000",
+      "clause": "§13: the bound is on the whole id, so it also bounds option-of nesting.",
+      "note": "V6. Thirty-one option-of octets over 00 01: 33 octets, one past the bound. Thirty (32 octets) is the deepest nesting v2 can name.",
+      "pins": [
+        "`malformed_slot_codec_id`, judged when the length is read. The bound is on the"
+      ]
+    },
+    {
+      "name": "v2-invalid/public-n-zero",
+      "class": "invalid",
+      "code": "malformed_slot_codec_id",
+      "fault_locus": "header",
+      "min_profile": "flat-header-validator",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "bytes": "647866320200000000",
+      "clause": "§13: n = 0 is permanently reserved and malformed.",
+      "note": "Id 00 00.",
+      "pins": [
+        "- `n = 0` is permanently reserved and is `malformed_slot_codec_id` — it can never"
+      ]
+    },
+    {
+      "name": "v2-invalid/public-octet-left-over",
+      "class": "invalid",
+      "code": "malformed_slot_codec_id",
+      "fault_locus": "header",
+      "min_profile": "flat-header-validator",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "bytes": "64786632030001050000",
+      "clause": "§13: octets left over within the stated length.",
+      "note": "Id 00 01 05: identity-bytes followed by one octet still inside the id. A parser that stops after the cuvarint and ignores the rest names identity-bytes.",
+      "pins": [
+        "option-of id is `0x02` and one whole inner id. Octets missing or left over within the"
+      ]
+    },
+    {
+      "name": "v2-invalid/private-namespace-cut-short",
+      "class": "invalid",
+      "code": "malformed_slot_codec_id",
+      "fault_locus": "header",
+      "min_profile": "flat-header-validator",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "bytes": "647866320201aa0000",
+      "clause": "§13: octets missing within the stated length.",
+      "note": "Id 01 aa: the private form needs sixteen namespace octets and gets one.",
+      "pins": [
+        "option-of id is `0x02` and one whole inner id. Octets missing or left over within the"
+      ]
+    },
+    {
+      "name": "v2-invalid/private-without-k",
+      "class": "invalid",
+      "code": "malformed_slot_codec_id",
+      "fault_locus": "header",
+      "min_profile": "flat-header-validator",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "bytes": "647866321101fb44faaf3a9db590cbc4cb1abfdadb020000",
+      "clause": "§13 (F1): a next required field beginning at the id's end.",
+      "note": "Id length 11 (17): 01 and the sixteen namespace octets, and the id ends where k would begin. A reader that reads k from the node would take the root's 00 as k = 0.",
+      "pins": [
+        "form whose next required field would begin at or past the id's end (`00` alone,"
+      ]
+    },
+    {
+      "name": "v2-invalid/private-octet-left-over",
+      "class": "invalid",
+      "code": "malformed_slot_codec_id",
+      "fault_locus": "header",
+      "min_profile": "flat-header-validator",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "bytes": "647866321301fb44faaf3a9db590cbc4cb1abfdadb0201050000",
+      "clause": "§13: octets left over within the stated length.",
+      "note": "The fixture setoid's id followed by one octet 05 inside the id (length 13).",
+      "pins": [
+        "option-of id is `0x02` and one whole inner id. Octets missing or left over within the"
+      ]
+    },
+    {
+      "name": "v2-invalid/option-of-inner-public-alone",
+      "class": "invalid",
+      "code": "malformed_slot_codec_id",
+      "fault_locus": "header",
+      "min_profile": "flat-header-validator",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "bytes": "647866320202000000",
+      "clause": "§13 (F1): `00` alone.",
+      "note": "Id 02 00: option-of whose inner id is the public form's first octet with no cuvarint after it.",
+      "pins": [
+        "form whose next required field would begin at or past the id's end (`00` alone,"
+      ]
+    },
+    {
+      "name": "v2-invalid/option-of-with-nothing-after",
+      "class": "invalid",
+      "code": "malformed_slot_codec_id",
+      "fault_locus": "header",
+      "min_profile": "flat-header-validator",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "bytes": "647866320202020000",
+      "clause": "§13 (F1): `02` with nothing after it.",
+      "note": "Id 02 02: option-of over an option-of that has no inner id.",
+      "pins": [
+        "form whose next required field would begin at or past the id's end (`00` alone,"
+      ]
+    },
+    {
+      "name": "v2-invalid/option-of-inner-n-zero",
+      "class": "invalid",
+      "code": "malformed_slot_codec_id",
+      "fault_locus": "header",
+      "min_profile": "flat-header-validator",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "bytes": "64786632030200000000",
+      "clause": "§13: option-of is malformed exactly when its inner id is.",
+      "note": "Id 02 00 00: option-of over n = 0.",
+      "pins": [
+        "- `n = 0` is permanently reserved and is `malformed_slot_codec_id` — it can never",
+        "whole id breaks the length bound. A malformed id outranks an unsupported one, as"
+      ]
+    },
+    {
+      "name": "v2-invalid/id-bounded-cuvarint-public",
+      "class": "invalid",
+      "code": "malformed_uvarint",
+      "fault_locus": "header",
+      "min_profile": "flat-header-validator",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "bytes": "647866320200800000",
+      "clause": "§13 (F1): the id is a bounded input.",
+      "note": "Id 00 80: n's cuvarint reaches the id's end with its continuation bit set, which is malformed_uvarint as at the end of any input. The natural parser reads on past the id, takes 80 00 as one varint, and reports non_shortest_uvarint: a code about octets that belong to the node. The text calls that reader non-conforming.",
+      "pins": [
+        "- **The id is a bounded input.** Its stated length is where its octets end, and no",
+        "field inside it is read past that end. A `cuvarint` that reaches the id's end with",
+        "past the id into the node, and reports what it finds there, is non-conforming."
+      ]
+    },
+    {
+      "name": "v2-invalid/id-bounded-cuvarint-private",
+      "class": "invalid",
+      "code": "malformed_uvarint",
+      "fault_locus": "header",
+      "min_profile": "flat-header-validator",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "bytes": "647866321201fb44faaf3a9db590cbc4cb1abfdadb02800000",
+      "clause": "§13 (F1).",
+      "note": "The private form: 01, the namespace, and k's cuvarint 80 at the id's end (length 12). Naive: non_shortest_uvarint.",
+      "pins": [
+        "field inside it is read past that end. A `cuvarint` that reaches the id's end with"
+      ]
+    },
+    {
+      "name": "v2-invalid/id-bounded-cuvarint-option-of",
+      "class": "invalid",
+      "code": "malformed_uvarint",
+      "fault_locus": "header",
+      "min_profile": "flat-header-validator",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "bytes": "64786632030200800000",
+      "clause": "§13 (F1).",
+      "note": "Inside option-of: 02 00 80 (length 03). Naive: non_shortest_uvarint.",
+      "pins": [
+        "field inside it is read past that end. A `cuvarint` that reaches the id's end with"
+      ]
+    },
+    {
+      "name": "v2-invalid/unsorted-unsigned-octet-order",
+      "class": "invalid",
+      "code": "unsorted_keys",
+      "fault_locus": "body",
+      "min_profile": "flat-decoder",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "bytes": "64786632020001000201800000017f0000",
+      "clause": "§5 rule 4; §2's unsigned octet order.",
+      "note": "The mirror of v2-flat/keys-unsigned-octet-order: the same two keys, 80 before 7f. Header 64 78 66 32 · 02 · 00 01, then root 00 (payload length) 02 (count), then 01 80 00 00, then 01 7f 00 00. Under unsigned octet order the second key precedes the first.",
+      "pins": [
+        "as unsigned values at each position; at the first difference the smaller octet",
+        "This order is total on octet strings and is the only order",
+        "4. Entry keys are in **strictly ascending lexicographic order** (§2). An entry key"
+      ]
+    },
+    {
+      "name": "v2-invalid/unsorted-octet-order-not-code-points",
+      "class": "invalid",
+      "code": "unsorted_keys",
+      "fault_locus": "body",
+      "min_profile": "flat-decoder",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "bytes": "64786632020001000202c3a9000001800000",
+      "clause": "§5 rule 4; §2's unsigned octet order.",
+      "note": "The mirror of v2-flat/keys-octet-order-not-code-points: the same two keys, c3a9 before 80. Header 64 78 66 32 · 02 · 00 01, then root 00 (payload length) 02 (count), then 02 c3 a9 00 00, then 01 80 00 00. Under unsigned octet order the second key precedes the first.",
+      "pins": [
+        "as unsigned values at each position; at the first difference the smaller octet",
+        "This order is total on octet strings and is the only order",
+        "4. Entry keys are in **strictly ascending lexicographic order** (§2). An entry key"
+      ]
+    },
+    {
+      "name": "v2-invalid/unsorted-octet-order-not-utf16",
+      "class": "invalid",
+      "code": "unsorted_keys",
+      "fault_locus": "body",
+      "min_profile": "flat-decoder",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "bytes": "64786632020001000204f0908080000003ee80800000",
+      "clause": "§5 rule 4; §2's unsigned octet order.",
+      "note": "The mirror of v2-flat/keys-octet-order-not-utf16: the same two keys, f0908080 before ee8080. Header 64 78 66 32 · 02 · 00 01, then root 00 (payload length) 02 (count), then 04 f0 90 80 80 00 00, then 03 ee 80 80 00 00. Under unsigned octet order the second key precedes the first.",
+      "pins": [
+        "as unsigned values at each position; at the first difference the smaller octet",
+        "This order is total on octet strings and is the only order",
+        "4. Entry keys are in **strictly ascending lexicographic order** (§2). An entry key"
+      ]
+    },
+    {
+      "name": "v2-invalid/seven-keys-in-signed-octets-order",
+      "class": "invalid",
+      "code": "unsorted_keys",
+      "fault_locus": "body",
+      "min_profile": "flat-decoder",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "bytes": "6478663202000100070180000002c3a9000003ee8080000004f0908080000001ff000001010000017f0000",
+      "clause": "§5 rule 4; §2's unsigned octet order.",
+      "note": "The seven keys of v2-flat/keys-seven-across-three-orders, sorted instead under signed octets: 80 c3a9 ee8080 f0908080 ff 01 7f. Under unsigned octets some key precedes its predecessor.",
+      "pins": [
+        "as unsigned values at each position; at the first difference the smaller octet",
+        "4. Entry keys are in **strictly ascending lexicographic order** (§2). An entry key"
+      ]
+    },
+    {
+      "name": "v2-invalid/seven-keys-in-code-points-order",
+      "class": "invalid",
+      "code": "unsorted_keys",
+      "fault_locus": "body",
+      "min_profile": "flat-decoder",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "bytes": "64786632020001000701010000017f000002c3a900000180000001ff000003ee8080000004f09080800000",
+      "clause": "§5 rule 4; §2's unsigned octet order.",
+      "note": "The seven keys of v2-flat/keys-seven-across-three-orders, sorted instead under code points: 01 7f c3a9 80 ff ee8080 f0908080. Under unsigned octets some key precedes its predecessor.",
+      "pins": [
+        "as unsigned values at each position; at the first difference the smaller octet",
+        "4. Entry keys are in **strictly ascending lexicographic order** (§2). An entry key"
+      ]
+    },
+    {
+      "name": "v2-invalid/seven-keys-in-utf16-code-units-order",
+      "class": "invalid",
+      "code": "unsorted_keys",
+      "fault_locus": "body",
+      "min_profile": "flat-decoder",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "bytes": "64786632020001000701010000017f000002c3a9000004f090808000000180000001ff000003ee80800000",
+      "clause": "§5 rule 4; §2's unsigned octet order.",
+      "note": "The seven keys of v2-flat/keys-seven-across-three-orders, sorted instead under utf16 code units: 01 7f c3a9 f0908080 80 ff ee8080. Under unsigned octets some key precedes its predecessor.",
+      "pins": [
+        "as unsigned values at each position; at the first difference the smaller octet",
+        "4. Entry keys are in **strictly ascending lexicographic order** (§2). An entry key"
+      ]
+    }
+  ],
+  "linked_cases": [
+    {
+      "name": "v2-linked-invalid/duplicate-link-hash",
+      "class": "invalid",
+      "code": "duplicate_link_hash",
+      "fault_locus": "links",
+      "min_profile": "closure-checker",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "root": {
+        "space": "dxl2",
+        "digest": "847520be34ee6d207b95cd2ef06cb2b1ea7b28dc7e53a34c70404cf2747addeb"
+      },
+      "root_chunk": "v2-bad-chunk/duplicate-link-hash",
+      "store": [
+        [
+          "847520be34ee6d207b95cd2ef06cb2b1ea7b28dc7e53a34c70404cf2747addeb",
+          "v2-bad-chunk/duplicate-link-hash"
+        ],
+        [
+          "a9677a54bc70bd0072953ec21471ff76b5e357c6b8bd25ee89db2d045b268009",
+          "v2-chunk/childless-empty"
+        ]
+      ],
+      "clause": "§6 rule 3.",
+      "note": "Every referenced chunk is present, so the one defect is the repeated hash.",
+      "pins": [
+        "3. The same hash MUST NOT appear twice: `duplicate_link_hash`."
+      ]
+    },
+    {
+      "name": "v2-linked-invalid/bad-link-index",
+      "class": "invalid",
+      "code": "bad_link_index",
+      "fault_locus": "links",
+      "min_profile": "closure-checker",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "root": {
+        "space": "dxl2",
+        "digest": "b4580722f3992abf54b4106a940b0cb84cbee1f40eb90d386bdf4319b784c8ef"
+      },
+      "root_chunk": "v2-bad-chunk/bad-link-index",
+      "store": [
+        [
+          "b4580722f3992abf54b4106a940b0cb84cbee1f40eb90d386bdf4319b784c8ef",
+          "v2-bad-chunk/bad-link-index"
+        ],
+        [
+          "a9677a54bc70bd0072953ec21471ff76b5e357c6b8bd25ee89db2d045b268009",
+          "v2-chunk/childless-empty"
+        ]
+      ],
+      "clause": "§6 rule 4.",
+      "note": "b → 1 with nlinks 1. The listed hash is used by a, so nothing else is wrong.",
+      "pins": [
+        "4. Every `link-index` is `< nlinks`: otherwise `bad_link_index`."
+      ]
+    },
+    {
+      "name": "v2-linked-invalid/unused-link",
+      "class": "invalid",
+      "code": "unused_link",
+      "fault_locus": "links",
+      "min_profile": "closure-checker",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "root": {
+        "space": "dxl2",
+        "digest": "ccc17a5666fa3d04ec4bcd0612b5f7d53108d27c51b80518e248a90c4e41fc11"
+      },
+      "root_chunk": "v2-bad-chunk/unused-link",
+      "store": [
+        [
+          "ccc17a5666fa3d04ec4bcd0612b5f7d53108d27c51b80518e248a90c4e41fc11",
+          "v2-bad-chunk/unused-link"
+        ],
+        [
+          "a9677a54bc70bd0072953ec21471ff76b5e357c6b8bd25ee89db2d045b268009",
+          "v2-chunk/childless-empty"
+        ],
+        [
+          "038a411f936d20a4a35f092cf7eb4a67452cafadf0d25cc6d11b3937236cf163",
+          "v2-chunk/childless-01"
+        ]
+      ],
+      "clause": "§6 rule 5.",
+      "note": "childless-01 is listed and present, and no entry references it.",
+      "pins": [
+        "5. Every listed hash MUST be referenced by at least one `lentry`: an unreferenced",
+        "it above `unused_link`), and one whose only entry references `0` is `unused_link`."
+      ]
+    },
+    {
+      "name": "v2-linked-invalid/links-out-of-order",
+      "class": "invalid",
+      "code": "links_out_of_order",
+      "fault_locus": "links",
+      "min_profile": "closure-checker",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "root": {
+        "space": "dxl2",
+        "digest": "7633994cf50280730361af46ba3c1badcad812f6a2f6103b5812c81720dd864b"
+      },
+      "root_chunk": "v2-bad-chunk/links-out-of-order",
+      "store": [
+        [
+          "7633994cf50280730361af46ba3c1badcad812f6a2f6103b5812c81720dd864b",
+          "v2-bad-chunk/links-out-of-order"
+        ],
+        [
+          "a9677a54bc70bd0072953ec21471ff76b5e357c6b8bd25ee89db2d045b268009",
+          "v2-chunk/childless-empty"
+        ],
+        [
+          "038a411f936d20a4a35f092cf7eb4a67452cafadf0d25cc6d11b3937236cf163",
+          "v2-chunk/childless-01"
+        ]
+      ],
+      "clause": "§6 rule 6.",
+      "note": "Two hashes, so first-use order is exercisable (v1's vacuity lesson: with one hash it is not). Both are used; the header lists them in the wrong order.",
+      "pins": [
+        "6. The header order MUST equal first-use order: otherwise `links_out_of_order`.",
+        "a header `[h1, h2]` whose only entry references `1` is `links_out_of_order` (§10 ranks"
+      ]
+    },
+    {
+      "name": "v2-linked-invalid/slot-codec-mismatch",
+      "class": "invalid",
+      "code": "slot_codec_mismatch",
+      "fault_locus": "links",
+      "min_profile": "closure-checker",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "root": {
+        "space": "dxl2",
+        "digest": "cd929c0bef41bd2742f908c6d65d447fd050f0cebd12e502a62d81f6dce9d7fa"
+      },
+      "root_chunk": "v2-bad-chunk/parent-of-a-fixture-chunk",
+      "store": [
+        [
+          "cd929c0bef41bd2742f908c6d65d447fd050f0cebd12e502a62d81f6dce9d7fa",
+          "v2-bad-chunk/parent-of-a-fixture-chunk"
+        ],
+        [
+          "20d9df0b20c6ba8ccd6f0945ea3ec52717a851eb37d1c21f0c08f5bcdfce1ad1",
+          "v2-chunk/fixture-childless-a"
+        ]
+      ],
+      "clause": "§10, the child-chunk row.",
+      "note": "The parent is under 00 01 and its child chunk, valid on its own, is under the fixture setoid's id.",
+      "pins": [
+        "| child chunk | its id differs from the parent's | `slot_codec_mismatch` |"
+      ]
+    },
+    {
+      "name": "v2-linked-invalid/chunk-trailing-octet",
+      "class": "invalid",
+      "code": "trailing_bytes",
+      "fault_locus": "links",
+      "min_profile": "closure-checker",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "root": {
+        "space": "dxl2",
+        "digest": "48c738a90e5a4c9bd26b703d0c62d39d4311e263e5e23680d123bed2d7b6e0c6"
+      },
+      "root_chunk": "v2-bad-chunk/trailing-octet",
+      "store": [
+        [
+          "48c738a90e5a4c9bd26b703d0c62d39d4311e263e5e23680d123bed2d7b6e0c6",
+          "v2-bad-chunk/trailing-octet"
+        ]
+      ],
+      "clause": "§6 rule 7 (trailing rules as in §5).",
+      "note": "One octet after the body of a root chunk.",
+      "pins": [
+        "6. After the root node is read, no octets may remain: any remainder is"
+      ]
+    },
+    {
+      "name": "v2-linked-invalid/chunk-v1-magic",
+      "class": "invalid",
+      "code": "unknown_magic",
+      "fault_locus": "links",
+      "min_profile": "closure-checker",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "root": {
+        "space": "dxl2",
+        "digest": "670a0c53c50e560a67c7ee37d72bd7950c3867caa30c6408133ab9f03ec9ea86"
+      },
+      "root_chunk": "v2-bad-chunk/v1-magic",
+      "store": [
+        [
+          "670a0c53c50e560a67c7ee37d72bd7950c3867caa30c6408133ab9f03ec9ea86",
+          "v2-bad-chunk/v1-magic"
+        ]
+      ],
+      "clause": "§6 rule 1.",
+      "note": "A chunk under \"dxl1\" is not a v2 chunk.",
+      "pins": [
+        "1. The magic is exactly `\"dxl2\"`."
+      ]
+    },
+    {
+      "name": "v2-linked-invalid/flat-artifact-is-not-a-chunk",
+      "class": "invalid",
+      "code": "unknown_magic",
+      "fault_locus": "links",
+      "min_profile": "closure-checker",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "root": {
+        "space": "dxl2",
+        "digest": "1d266e316995bde92f0a570352b4641b7fec56750365e880f6e7e552fcdbcca2"
+      },
+      "root_chunk": "v2-bad-chunk/flat-artifact-as-chunk",
+      "store": [
+        [
+          "1d266e316995bde92f0a570352b4641b7fec56750365e880f6e7e552fcdbcca2",
+          "v2-bad-chunk/flat-artifact-as-chunk"
+        ]
+      ],
+      "clause": "§6 rule 1.",
+      "note": "\"dxf2\" is the flat form's magic; a resolver reading chunks reads exactly \"dxl2\".",
+      "pins": [
+        "1. The magic is exactly `\"dxl2\"`."
+      ]
+    },
+    {
+      "name": "v2-linked-invalid/chunk-malformed-id",
+      "class": "invalid",
+      "code": "malformed_slot_codec_id",
+      "fault_locus": "links",
+      "min_profile": "closure-checker",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "root": {
+        "space": "dxl2",
+        "digest": "96224f4c1bd52e955cfcad7bcd424e973764d5ac00b191100991587536c60544"
+      },
+      "root_chunk": "v2-bad-chunk/malformed-id",
+      "store": [
+        [
+          "96224f4c1bd52e955cfcad7bcd424e973764d5ac00b191100991587536c60544",
+          "v2-bad-chunk/malformed-id"
+        ]
+      ],
+      "clause": "§13 in a chunk header.",
+      "note": "A chunk's id is judged by the same rules as an artifact's: 00 00 is n = 0.",
+      "pins": [
+        "- `n = 0` is permanently reserved and is `malformed_slot_codec_id` — it can never"
+      ]
+    },
+    {
+      "name": "v2-linked-invalid/chunk-non-canonical-payload",
+      "class": "invalid",
+      "code": "non_canonical_payload",
+      "fault_locus": "chunk-payload",
+      "min_profile": "linked-resolver",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "root": {
+        "space": "dxl2",
+        "digest": "b93926906df388d59bb24cf244429607d7780dffd5be3d9bd6fdbd0c69147b85"
+      },
+      "root_chunk": "v2-bad-chunk/fixture-payload-ff",
+      "store": [
+        [
+          "b93926906df388d59bb24cf244429607d7780dffd5be3d9bd6fdbd0c69147b85",
+          "v2-bad-chunk/fixture-payload-ff"
+        ]
+      ],
+      "clause": "§5 rule 5 via §6 rule 7.",
+      "note": "A root chunk whose own payload is outside im(e).",
+      "pins": [
+        "**Every** node's `payload` MUST be in `im(e)`"
+      ]
+    },
+    {
+      "name": "v2-linked-invalid/non-canonical-payload-in-a-child-chunk",
+      "class": "invalid",
+      "code": "non_canonical_payload",
+      "fault_locus": "chunk-payload",
+      "min_profile": "linked-resolver",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "root": {
+        "space": "dxl2",
+        "digest": "8c8931e5c7b1dc52b5b30e80d9a9575fedf4681330cd2d2bde136d3a88c50dad"
+      },
+      "root_chunk": "v2-bad-chunk/fixture-parent-of-payload-ff",
+      "store": [
+        [
+          "8c8931e5c7b1dc52b5b30e80d9a9575fedf4681330cd2d2bde136d3a88c50dad",
+          "v2-bad-chunk/fixture-parent-of-payload-ff"
+        ],
+        [
+          "b93926906df388d59bb24cf244429607d7780dffd5be3d9bd6fdbd0c69147b85",
+          "v2-bad-chunk/fixture-payload-ff"
+        ]
+      ],
+      "clause": "§5 rule 5 at every node, across chunks.",
+      "note": "V2 for the linked form: the parent is valid and its child chunk's payload is not. A resolver that validates payloads only at the root accepts.",
+      "pins": [
+        "MUST check this at every node"
+      ]
+    },
+    {
+      "name": "v2-linked-invalid/codec-blind-chunk",
+      "class": "unsupported",
+      "code": "unsupported_slot_codec",
+      "fault_locus": "links",
+      "min_profile": "closure-checker",
+      "holding": [],
+      "root": {
+        "space": "dxl2",
+        "digest": "20d9df0b20c6ba8ccd6f0945ea3ec52717a851eb37d1c21f0c08f5bcdfce1ad1"
+      },
+      "root_chunk": "v2-chunk/fixture-childless-a",
+      "store": [
+        [
+          "20d9df0b20c6ba8ccd6f0945ea3ec52717a851eb37d1c21f0c08f5bcdfce1ad1",
+          "v2-chunk/fixture-childless-a"
+        ]
+      ],
+      "clause": "§11 obligation 3.",
+      "note": "A valid fixture chunk, resolved with nothing held.",
+      "pins": [
+        "3. A **codec-blind** profile (§2.1) MUST report **unsupported**, and MUST NOT report"
+      ]
+    },
+    {
+      "name": "v2-store/missing-child",
+      "class": "store",
+      "code": "missing_chunk",
+      "fault_locus": "store",
+      "min_profile": "chunk-store",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "root": {
+        "space": "dxl2",
+        "digest": "a59bbd548d8a6c3f4cb6fa23d97403fdc245689d2ea72d2ea6818cc5830692b4"
+      },
+      "root_chunk": "v2-chunk/parent-aa-child-01",
+      "store": [
+        [
+          "a59bbd548d8a6c3f4cb6fa23d97403fdc245689d2ea72d2ea6818cc5830692b4",
+          "v2-chunk/parent-aa-child-01"
+        ]
+      ],
+      "clause": "§9, the store / traversal layer.",
+      "note": "The parent references childless-01 and the store does not have it. The response carries this under `store`, never as a decoder verdict.",
+      "pins": [
+        "**store / traversal layer** (not decoder verdicts): `missing_chunk` · `hash_mismatch` ·"
+      ]
+    },
+    {
+      "name": "v2-store/root-against-the-requested-address",
+      "class": "store",
+      "code": "hash_mismatch",
+      "fault_locus": "store",
+      "min_profile": "chunk-store",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "root": {
+        "space": "dxl2",
+        "digest": "038a411f936d20a4a35f092cf7eb4a67452cafadf0d25cc6d11b3937236cf163"
+      },
+      "root_chunk": "v2-chunk/childless-empty",
+      "store": [
+        [
+          "038a411f936d20a4a35f092cf7eb4a67452cafadf0d25cc6d11b3937236cf163",
+          "v2-chunk/childless-empty"
+        ]
+      ],
+      "clause": "§14: the root is verified against the address that was requested.",
+      "note": "The caller asks for childless-01's address; the store answers with childless-empty, a valid chunk of a DIFFERENT value. Every child check passes vacuously (it has none), so only resolve-root's anchor catches it. The naive resolver returns the empty value.",
+      "pins": [
+        "the hash in its parent's links header, **and the root against the address that was"
+      ]
+    },
+    {
+      "name": "v2-store/child-against-its-link-hash",
+      "class": "store",
+      "code": "hash_mismatch",
+      "fault_locus": "store",
+      "min_profile": "chunk-store",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "root": {
+        "space": "dxl2",
+        "digest": "a59bbd548d8a6c3f4cb6fa23d97403fdc245689d2ea72d2ea6818cc5830692b4"
+      },
+      "root_chunk": "v2-chunk/parent-aa-child-01",
+      "store": [
+        [
+          "a59bbd548d8a6c3f4cb6fa23d97403fdc245689d2ea72d2ea6818cc5830692b4",
+          "v2-chunk/parent-aa-child-01"
+        ],
+        [
+          "038a411f936d20a4a35f092cf7eb4a67452cafadf0d25cc6d11b3937236cf163",
+          "v2-chunk/childless-empty"
+        ]
+      ],
+      "clause": "§14: a child against the hash in its parent's links header.",
+      "note": "The parent is served correctly; under its child's hash the store serves childless-empty.",
+      "pins": [
+        "the hash in its parent's links header, **and the root against the address that was"
+      ]
+    },
+    {
+      "name": "v2-linked-invalid/duplicate-key",
+      "class": "invalid",
+      "code": "duplicate_key",
+      "fault_locus": "links",
+      "min_profile": "closure-checker",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "root": {
+        "space": "dxl2",
+        "digest": "c3567a6b53879d6ad8504601d057df1b5dc7cb900f25531c6843a767a354145a"
+      },
+      "root_chunk": "v2-bad-chunk/duplicate-key",
+      "store": [
+        [
+          "c3567a6b53879d6ad8504601d057df1b5dc7cb900f25531c6843a767a354145a",
+          "v2-bad-chunk/duplicate-key"
+        ],
+        [
+          "a9677a54bc70bd0072953ec21471ff76b5e357c6b8bd25ee89db2d045b268009",
+          "v2-chunk/childless-empty"
+        ]
+      ],
+      "clause": "§6 rule 7; §5 rule 4.",
+      "note": "Every referenced chunk is present and the links header is canonical, so the one defect is the key order. Two entries under key a (61), both referencing link 0. A reader that keeps the last (or first) entry sees one child and a valid links header; section 5 rule 4, applied by section 6 rule 7, forbids deduplicating. The closure-checker reads entry keys too and must report the same code.",
+      "pins": [
+        "7. Key ordering, count, payload and trailing rules are as in §5.",
+        "`unsorted_keys`. **Any profile that reads entries** MUST NOT sort on read and MUST NOT",
+        "deduplicate — `closure-checker` included, which reads entry keys and reports both"
+      ]
+    },
+    {
+      "name": "v2-linked-invalid/unsorted-keys",
+      "class": "invalid",
+      "code": "unsorted_keys",
+      "fault_locus": "links",
+      "min_profile": "closure-checker",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "root": {
+        "space": "dxl2",
+        "digest": "73fac80901859c43e7b6dffc9054b66e03ec840ec619f0ce00f91c18238df428"
+      },
+      "root_chunk": "v2-bad-chunk/unsorted-keys",
+      "store": [
+        [
+          "73fac80901859c43e7b6dffc9054b66e03ec840ec619f0ce00f91c18238df428",
+          "v2-bad-chunk/unsorted-keys"
+        ],
+        [
+          "a9677a54bc70bd0072953ec21471ff76b5e357c6b8bd25ee89db2d045b268009",
+          "v2-chunk/childless-empty"
+        ]
+      ],
+      "clause": "§6 rule 7; §5 rule 4.",
+      "note": "Every referenced chunk is present and the links header is canonical, so the one defect is the key order. b (62) before a (61), both referencing link 0. A reader that sorts on read sees a before b and a valid links header; section 5 rule 4, applied by section 6 rule 7, forbids sorting on read. The closure-checker reads entry keys too and must report the same code.",
+      "pins": [
+        "7. Key ordering, count, payload and trailing rules are as in §5.",
+        "`unsorted_keys`. **Any profile that reads entries** MUST NOT sort on read and MUST NOT",
+        "deduplicate — `closure-checker` included, which reads entry keys and reports both"
+      ]
+    },
+    {
+      "name": "v2-linked-invalid/slot-codec-mismatch-under-a-fixture-parent",
+      "class": "invalid",
+      "code": "slot_codec_mismatch",
+      "fault_locus": "links",
+      "min_profile": "closure-checker",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "root": {
+        "space": "dxl2",
+        "digest": "c6bd43860ccec054e3a0c5cc435b94fa9560f8bc7d9decde6c31c4e70b329d46"
+      },
+      "root_chunk": "v2-bad-chunk/fixture-parent-of-identity-leaf",
+      "store": [
+        [
+          "c6bd43860ccec054e3a0c5cc435b94fa9560f8bc7d9decde6c31c4e70b329d46",
+          "v2-bad-chunk/fixture-parent-of-identity-leaf"
+        ],
+        [
+          "a9677a54bc70bd0072953ec21471ff76b5e357c6b8bd25ee89db2d045b268009",
+          "v2-chunk/childless-empty"
+        ]
+      ],
+      "clause": "§10 (child chunk).",
+      "note": "The mirror of v2-linked-invalid/slot-codec-mismatch: a fixture-setoid parent whose child is identity-bytes. Both ids are held and both chunks are canonical.",
+      "pins": [
+        "is `slot_codec_mismatch`, judged after the child's own framing."
+      ]
+    },
+    {
+      "name": "v2-linked-invalid/slot-codec-mismatch-two-levels-down",
+      "class": "invalid",
+      "code": "slot_codec_mismatch",
+      "fault_locus": "links",
+      "min_profile": "closure-checker",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "root": {
+        "space": "dxl2",
+        "digest": "66e8829490c7e4371fea3a73443a112a5f01c7855ef5c4d7889ca03ec4ca7475"
+      },
+      "root_chunk": "v2-bad-chunk/identity-grandparent-of-a-fixture-chunk",
+      "store": [
+        [
+          "66e8829490c7e4371fea3a73443a112a5f01c7855ef5c4d7889ca03ec4ca7475",
+          "v2-bad-chunk/identity-grandparent-of-a-fixture-chunk"
+        ],
+        [
+          "cd929c0bef41bd2742f908c6d65d447fd050f0cebd12e502a62d81f6dce9d7fa",
+          "v2-bad-chunk/parent-of-a-fixture-chunk"
+        ],
+        [
+          "20d9df0b20c6ba8ccd6f0945ea3ec52717a851eb37d1c21f0c08f5bcdfce1ad1",
+          "v2-chunk/fixture-childless-a"
+        ]
+      ],
+      "clause": "§10 (child chunk).",
+      "note": "Root and child agree on identity-bytes; the grandchild is fixture-setoid. The comparison is parent to child at every level, not root to all.",
+      "pins": [
+        "is `slot_codec_mismatch`, judged after the child's own framing."
+      ]
+    },
+    {
+      "name": "v2-linked-invalid/childless-chunk-listing-a-link",
+      "class": "invalid",
+      "code": "unused_link",
+      "fault_locus": "links",
+      "min_profile": "closure-checker",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "root": {
+        "space": "dxl2",
+        "digest": "bbf1ab72fff8beea91c19a55c2d62b6b983e475197dbc00e5a5f21efd815e94d"
+      },
+      "root_chunk": "v2-bad-chunk/childless-listing-a-link",
+      "store": [
+        [
+          "bbf1ab72fff8beea91c19a55c2d62b6b983e475197dbc00e5a5f21efd815e94d",
+          "v2-bad-chunk/childless-listing-a-link"
+        ],
+        [
+          "a9677a54bc70bd0072953ec21471ff76b5e357c6b8bd25ee89db2d045b268009",
+          "v2-chunk/childless-empty"
+        ]
+      ],
+      "clause": "§6 rule 5.",
+      "note": "A second shape of unused_link: the chunk has no entries at all, so its one listed hash is referenced by none.",
+      "pins": [
+        "5. Every listed hash MUST be referenced by at least one `lentry`: an unreferenced"
+      ]
+    }
+  ],
+  "stream_cases": [
+    {
+      "name": "v2-stream/prefix-open",
+      "class": "incomplete",
+      "code": "need_more_input",
+      "fault_locus": "body",
+      "min_profile": "flat-decoder",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "ref": "v2-flat/parent-payload-and-child",
+      "bytes": "6478663202000101aa01016101",
+      "cuts": [],
+      "end": false,
+      "clause": "§14: need_more_input is non-terminal.",
+      "note": "The accepted artifact cut after the child's payload length. The stream is open: more may arrive.",
+      "pins": [
+        "**non-terminal** state: the decoder cannot yet give a final verdict. That covers both an"
+      ]
+    },
+    {
+      "name": "v2-stream/prefix-closed",
+      "class": "invalid",
+      "code": "unexpected_eof",
+      "fault_locus": "body",
+      "min_profile": "flat-decoder",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "ref": "v2-flat/parent-payload-and-child",
+      "bytes": "6478663202000101aa01016101",
+      "cuts": [],
+      "end": true,
+      "clause": "§14: it becomes unexpected_eof only when the caller declares end of input.",
+      "note": "The same octets with end declared: the only difference from v2-stream/prefix-open.",
+      "pins": [
+        "**non-terminal** state: the decoder cannot yet give a final verdict. That covers both an",
+        "Input ending mid-structure is `unexpected_eof`."
+      ]
+    },
+    {
+      "name": "v2-stream/cut-inside-a-varint-open",
+      "class": "incomplete",
+      "code": "need_more_input",
+      "fault_locus": "body",
+      "min_profile": "flat-decoder",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "ref": "v2-flat/two-octet-payload-length",
+      "bytes": "6478663202000180",
+      "cuts": [],
+      "end": false,
+      "clause": "§14 and §3 rule 2.",
+      "note": "The prefix ends after 80, the first octet of the length 80 01. Open, this is need_more_input and never malformed_uvarint: a streaming decoder that applies §3's end-of-input rule to the end of a PIECE refuses a valid artifact.",
+      "pins": [
+        "**non-terminal** state: the decoder cannot yet give a final verdict. That covers both an",
+        "`malformed_uvarint`, as MUST input that ends while the continuation bit is set."
+      ]
+    },
+    {
+      "name": "v2-stream/cut-inside-a-varint-closed",
+      "class": "invalid",
+      "code": "malformed_uvarint",
+      "fault_locus": "body",
+      "min_profile": "flat-decoder",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "ref": "v2-flat/two-octet-payload-length",
+      "bytes": "6478663202000180",
+      "cuts": [],
+      "end": true,
+      "clause": "§3 rule 2, second half.",
+      "note": "The same prefix with end declared: the input ended with the continuation bit set.",
+      "pins": [
+        "`malformed_uvarint`, as MUST input that ends while the continuation bit is set."
+      ]
+    },
+    {
+      "name": "v2-stream/split-inside-a-varint",
+      "ref": "v2-flat/two-octet-payload-length",
+      "bytes": "647866320200018001aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa00",
+      "cuts": [
+        8
+      ],
+      "end": true,
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "accept": true,
+      "clause": "§14: split invariance.",
+      "note": "The whole accepted artifact in two pieces, cut between 80 and 01. The verdict is the whole-buffer verdict: accept, with the value of the referenced case.",
+      "pins": [
+        "A streaming decoder fed any split of an artifact's octets MUST reach the same verdict"
+      ]
+    },
+    {
+      "name": "v2-stream/split-inside-the-magic",
+      "class": "invalid",
+      "code": "trailing_bytes",
+      "fault_locus": "body",
+      "min_profile": "flat-decoder",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "ref": "v2-invalid/trailing-bytes",
+      "bytes": "64786632020001000000",
+      "cuts": [
+        2,
+        7
+      ],
+      "end": true,
+      "clause": "§14: split invariance, for a non-acceptance verdict.",
+      "note": "Three pieces: 64 78 | 66 32 02 00 01 | 00 00 00. The verdict is the whole-buffer one.",
+      "pins": [
+        "A streaming decoder fed any split of an artifact's octets MUST reach the same verdict"
+      ]
+    },
+    {
+      "name": "v2-stream/complete-root-open",
+      "class": "incomplete",
+      "code": "need_more_input",
+      "fault_locus": "body",
+      "min_profile": "flat-decoder",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "ref": "v2-flat/childless-payload-01",
+      "bytes": "64786632020001010100",
+      "cuts": [],
+      "end": false,
+      "clause": "§14: need_more_input covers a complete root while the stream is open.",
+      "note": "F4. The whole accepted artifact, stream open. The root is complete, but an octet arriving next would make it trailing_bytes, and acceptance is terminal, so the decoder cannot yet accept.",
+      "pins": [
+        "**non-terminal** state: the decoder cannot yet give a final verdict. That covers both an",
+        "incomplete root and a complete root while the stream is still open, since octets"
+      ]
+    },
+    {
+      "name": "v2-stream/complete-root-closed",
+      "ref": "v2-flat/childless-payload-01",
+      "bytes": "64786632020001010100",
+      "cuts": [],
+      "end": true,
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "accept": true,
+      "clause": "§14: at end of input need_more_input resolves to the accepted value.",
+      "note": "The same octets with end declared: accepted, with the value of the referenced case.",
+      "pins": [
+        "When the caller declares end of input, `need_more_input` resolves: to the accepted"
+      ]
+    },
+    {
+      "name": "v2-stream/complete-root-bad-payload-open",
+      "class": "incomplete",
+      "code": "need_more_input",
+      "fault_locus": "body",
+      "min_profile": "flat-decoder",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "ref": "v2-invalid/fixture-overlong-root",
+      "bytes": "647866321201fb44faaf3a9db590cbc4cb1abfdadb020102c08000",
+      "cuts": [],
+      "end": false,
+      "clause": "§14 with §10 and §11: the payload is judged last.",
+      "note": "A complete root whose payload c0 80 is outside im(e), stream open. The payload fault is not yet the verdict: a following octet would make it trailing_bytes, which outranks it. A decoder that reports non_canonical_payload here has judged the payload before the remainder.",
+      "pins": [
+        "incomplete root and a complete root while the stream is still open, since octets",
+        "2. `unsupported_slot_codec` outranks any payload-level judgment."
+      ]
+    },
+    {
+      "name": "v2-stream/complete-root-bad-payload-closed",
+      "class": "invalid",
+      "code": "non_canonical_payload",
+      "fault_locus": "payload",
+      "min_profile": "flat-decoder",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "ref": "v2-invalid/fixture-overlong-root",
+      "bytes": "647866321201fb44faaf3a9db590cbc4cb1abfdadb020102c08000",
+      "cuts": [],
+      "end": true,
+      "clause": "§14: need_more_input resolves to the verdict the remaining checks reach.",
+      "note": "The same octets with end declared: non_canonical_payload.",
+      "pins": [
+        "When the caller declares end of input, `need_more_input` resolves: to the accepted",
+        "**Every** node's `payload` MUST be in `im(e)`"
+      ]
+    },
+    {
+      "name": "v2-stream/cut-at-the-root-boundary",
+      "class": "invalid",
+      "code": "trailing_bytes",
+      "fault_locus": "body",
+      "min_profile": "flat-decoder",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "ref": "v2-invalid/trailing-bytes",
+      "bytes": "64786632020001000000",
+      "cuts": [
+        9
+      ],
+      "end": true,
+      "clause": "§14: split invariance at the one cut where an early accept is tempting.",
+      "note": "Two pieces, 64 78 66 32 02 00 01 00 00 | 00, cut exactly where the root ends. A decoder that accepts on the first piece contradicts the whole-buffer trailing_bytes.",
+      "pins": [
+        "A streaming decoder fed any split of an artifact's octets MUST reach the same verdict",
+        "incomplete root and a complete root while the stream is still open, since octets"
+      ]
+    }
+  ],
+  "envelope_cases": [
+    {
+      "name": "v2-envelope/budget-admits-the-exact-count",
+      "op": "resolve",
+      "root": {
+        "space": "dxl2",
+        "digest": "0e4262bed3a9a0ada2376eff56ad3bb8c0dc8fb56922a2d6910286e051717077"
+      },
+      "root_chunk": "v2-bomb/level-03",
+      "store_chunks": [
+        "v2-bomb/level-03",
+        "v2-bomb/level-02",
+        "v2-bomb/level-01",
+        "v2-chunk/childless-empty"
+      ],
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "budget": {
+        "unfolded_node_count": "15"
+      },
+      "expect": {
+        "accept": true,
+        "value": {
+          "own": "",
+          "children": [
+            [
+              "61",
+              {
+                "own": "",
+                "children": [
+                  [
+                    "61",
+                    {
+                      "own": "",
+                      "children": [
+                        [
+                          "61",
+                          {
+                            "own": "",
+                            "children": []
+                          }
+                        ],
+                        [
+                          "62",
+                          {
+                            "own": "",
+                            "children": []
+                          }
+                        ]
+                      ]
+                    }
+                  ],
+                  [
+                    "62",
+                    {
+                      "own": "",
+                      "children": [
+                        [
+                          "61",
+                          {
+                            "own": "",
+                            "children": []
+                          }
+                        ],
+                        [
+                          "62",
+                          {
+                            "own": "",
+                            "children": []
+                          }
+                        ]
+                      ]
+                    }
+                  ]
+                ]
+              }
+            ],
+            [
+              "62",
+              {
+                "own": "",
+                "children": [
+                  [
+                    "61",
+                    {
+                      "own": "",
+                      "children": [
+                        [
+                          "61",
+                          {
+                            "own": "",
+                            "children": []
+                          }
+                        ],
+                        [
+                          "62",
+                          {
+                            "own": "",
+                            "children": []
+                          }
+                        ]
+                      ]
+                    }
+                  ],
+                  [
+                    "62",
+                    {
+                      "own": "",
+                      "children": [
+                        [
+                          "61",
+                          {
+                            "own": "",
+                            "children": []
+                          }
+                        ],
+                        [
+                          "62",
+                          {
+                            "own": "",
+                            "children": []
+                          }
+                        ]
+                      ]
+                    }
+                  ]
+                ]
+              }
+            ]
+          ]
+        }
+      },
+      "clause": "§12: materialization takes an explicit caller budget and refuses rather than EXCEED it.",
+      "note": "Level 3 unfolds to 15 nodes from 4 chunks: a full binary tree of depth 3 (four levels; depth counts edges, §12). A budget of 15 is not exceeded, so this is accepted. Every other dimension is at its §12 floor.",
+      "pins": [
+        "  refuse rather than exceed it."
+      ]
+    },
+    {
+      "name": "v2-envelope/budget-refuses-one-over",
+      "op": "resolve",
+      "root": {
+        "space": "dxl2",
+        "digest": "0e4262bed3a9a0ada2376eff56ad3bb8c0dc8fb56922a2d6910286e051717077"
+      },
+      "root_chunk": "v2-bomb/level-03",
+      "store_chunks": [
+        "v2-bomb/level-03",
+        "v2-bomb/level-02",
+        "v2-bomb/level-01",
+        "v2-chunk/childless-empty"
+      ],
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "budget": {
+        "unfolded_node_count": "14"
+      },
+      "expect": {
+        "class": "resource-refused",
+        "code": "limit_exceeded",
+        "dimension": "unfolded_node_count"
+      },
+      "clause": "§12; §9: limit_exceeded names the dimension by its token and is never invalidity.",
+      "note": "The same closure with a budget of 14. The caller's budget binds, so the refusal is determinate and names unfolded_node_count, the only dimension exceeded.",
+      "pins": [
+        "  refuse rather than exceed it.",
+        "beyond it, and when it does, refuses with `limit_exceeded` naming the dimension by the"
+      ]
+    },
+    {
+      "name": "v2-envelope/sharing-bomb-saturates",
+      "op": "resolve",
+      "root": {
+        "space": "dxl2",
+        "digest": "f98a24080530183bd501c1c2aa5cd39c9193fa8d733dc15a3ab2796a40db6166"
+      },
+      "root_chunk": "v2-bomb/root",
+      "store_chunks": [
+        "v2-bomb/root",
+        "v2-bomb/level-63",
+        "v2-bomb/level-62",
+        "v2-bomb/level-61",
+        "v2-bomb/level-60",
+        "v2-bomb/level-59",
+        "v2-bomb/level-58",
+        "v2-bomb/level-57",
+        "v2-bomb/level-56",
+        "v2-bomb/level-55",
+        "v2-bomb/level-54",
+        "v2-bomb/level-53",
+        "v2-bomb/level-52",
+        "v2-bomb/level-51",
+        "v2-bomb/level-50",
+        "v2-bomb/level-49",
+        "v2-bomb/level-48",
+        "v2-bomb/level-47",
+        "v2-bomb/level-46",
+        "v2-bomb/level-45",
+        "v2-bomb/level-44",
+        "v2-bomb/level-43",
+        "v2-bomb/level-42",
+        "v2-bomb/level-41",
+        "v2-bomb/level-40",
+        "v2-bomb/level-39",
+        "v2-bomb/level-38",
+        "v2-bomb/level-37",
+        "v2-bomb/level-36",
+        "v2-bomb/level-35",
+        "v2-bomb/level-34",
+        "v2-bomb/level-33",
+        "v2-bomb/level-32",
+        "v2-bomb/level-31",
+        "v2-bomb/level-30",
+        "v2-bomb/level-29",
+        "v2-bomb/level-28",
+        "v2-bomb/level-27",
+        "v2-bomb/level-26",
+        "v2-bomb/level-25",
+        "v2-bomb/level-24",
+        "v2-bomb/level-23",
+        "v2-bomb/level-22",
+        "v2-bomb/level-21",
+        "v2-bomb/level-20",
+        "v2-bomb/level-19",
+        "v2-bomb/level-18",
+        "v2-bomb/level-17",
+        "v2-bomb/level-16",
+        "v2-bomb/level-15",
+        "v2-bomb/level-14",
+        "v2-bomb/level-13",
+        "v2-bomb/level-12",
+        "v2-bomb/level-11",
+        "v2-bomb/level-10",
+        "v2-bomb/level-09",
+        "v2-bomb/level-08",
+        "v2-bomb/level-07",
+        "v2-bomb/level-06",
+        "v2-bomb/level-05",
+        "v2-bomb/level-04",
+        "v2-bomb/level-03",
+        "v2-bomb/level-02",
+        "v2-bomb/level-01",
+        "v2-chunk/childless-empty"
+      ],
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "budget": {},
+      "expect": {
+        "class": "resource-refused",
+        "code": "limit_exceeded",
+        "dimension_one_of": [
+          "unfolded_node_count",
+          "unfolded_flat_octets"
+        ]
+      },
+      "clause": "§12: saturating arithmetic over the DAG, before materialization, with a visited-hash set.",
+      "note": "65 chunks of at most 48 octets unfold to 2^64 nodes. Budget: every dimension at its §12 floor, so the refusal is owed. Three strategies fail it: materializing to measure never answers within the harness's bound; counting in wrapping 64-bit arithmetic gets 0, admits the value and then materializes; traversing without a visited set does 2^64 work. Both unfolded dimensions are exceeded, so either token is a correct name.",
+      "pins": [
+        "- Unfolded measures MUST be computed with **saturating** arithmetic over the DAG,",
+        "- Traversal MUST maintain a visited-hash set. Termination MUST NOT rest on the",
+        "| unfolded node count | `unfolded_node_count` | 16 777 216 |",
+        "the exceeded dimensions conforms: the envelope orders no dimension above another."
+      ]
+    },
+    {
+      "name": "v2-envelope/budget-after-capability",
+      "op": "resolve",
+      "root": {
+        "space": "dxl2",
+        "digest": "0e4262bed3a9a0ada2376eff56ad3bb8c0dc8fb56922a2d6910286e051717077"
+      },
+      "root_chunk": "v2-bomb/level-03",
+      "store_chunks": [
+        "v2-bomb/level-03",
+        "v2-bomb/level-02",
+        "v2-bomb/level-01",
+        "v2-chunk/childless-empty"
+      ],
+      "holding": [],
+      "budget": {
+        "unfolded_node_count": "14"
+      },
+      "expect": {
+        "class": "unsupported",
+        "code": "unsupported_slot_codec"
+      },
+      "clause": "§12: the build budget is checked after the closure is judged.",
+      "note": "v2-envelope/budget-refuses-one-over, resolved with nothing held. The closure is over its budget and its codec is not held. The capability judgment comes first, so the verdict is unsupported_slot_codec. A resolver that checks the budget first says limit_exceeded.",
+      "pins": [
+        "- **That budget guards the build, not the judgments.** It is checked after the",
+        "3. A **codec-blind** profile (§2.1) MUST report **unsupported**, and MUST NOT report"
+      ]
+    },
+    {
+      "name": "v2-envelope/budget-after-payloads",
+      "op": "resolve",
+      "root": {
+        "space": "dxl2",
+        "digest": "8c8931e5c7b1dc52b5b30e80d9a9575fedf4681330cd2d2bde136d3a88c50dad"
+      },
+      "root_chunk": "v2-bad-chunk/fixture-parent-of-payload-ff",
+      "store_chunks": [
+        "v2-bad-chunk/fixture-parent-of-payload-ff",
+        "v2-bad-chunk/fixture-payload-ff"
+      ],
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "budget": {
+        "unfolded_node_count": "1"
+      },
+      "expect": {
+        "class": "invalid",
+        "code": "non_canonical_payload"
+      },
+      "clause": "§12: the payload judgments precede the build budget.",
+      "note": "Two nodes against a budget of one, and the child's payload ff is outside im(e). An over-budget closure that is invalid gets that verdict, so this is non_canonical_payload. A resolver that checks the budget before the payloads says limit_exceeded.",
+      "pins": [
+        "- **That budget guards the build, not the judgments.** It is checked after the",
+        "MUST check this at every node"
+      ]
+    },
+    {
+      "name": "v2-envelope/depth-budget-admits-the-exact-depth",
+      "op": "resolve",
+      "root": {
+        "space": "dxl2",
+        "digest": "0e4262bed3a9a0ada2376eff56ad3bb8c0dc8fb56922a2d6910286e051717077"
+      },
+      "root_chunk": "v2-bomb/level-03",
+      "store_chunks": [
+        "v2-bomb/level-03",
+        "v2-bomb/level-02",
+        "v2-bomb/level-01",
+        "v2-chunk/childless-empty"
+      ],
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "budget": {
+        "logical_depth": "3"
+      },
+      "expect": {
+        "accept": true,
+        "value": {
+          "own": "",
+          "children": [
+            [
+              "61",
+              {
+                "own": "",
+                "children": [
+                  [
+                    "61",
+                    {
+                      "own": "",
+                      "children": [
+                        [
+                          "61",
+                          {
+                            "own": "",
+                            "children": []
+                          }
+                        ],
+                        [
+                          "62",
+                          {
+                            "own": "",
+                            "children": []
+                          }
+                        ]
+                      ]
+                    }
+                  ],
+                  [
+                    "62",
+                    {
+                      "own": "",
+                      "children": [
+                        [
+                          "61",
+                          {
+                            "own": "",
+                            "children": []
+                          }
+                        ],
+                        [
+                          "62",
+                          {
+                            "own": "",
+                            "children": []
+                          }
+                        ]
+                      ]
+                    }
+                  ]
+                ]
+              }
+            ],
+            [
+              "62",
+              {
+                "own": "",
+                "children": [
+                  [
+                    "61",
+                    {
+                      "own": "",
+                      "children": [
+                        [
+                          "61",
+                          {
+                            "own": "",
+                            "children": []
+                          }
+                        ],
+                        [
+                          "62",
+                          {
+                            "own": "",
+                            "children": []
+                          }
+                        ]
+                      ]
+                    }
+                  ],
+                  [
+                    "62",
+                    {
+                      "own": "",
+                      "children": [
+                        [
+                          "61",
+                          {
+                            "own": "",
+                            "children": []
+                          }
+                        ],
+                        [
+                          "62",
+                          {
+                            "own": "",
+                            "children": []
+                          }
+                        ]
+                      ]
+                    }
+                  ]
+                ]
+              }
+            ]
+          ]
+        }
+      },
+      "clause": "§12: logical depth counts edges, the root at depth 0.",
+      "note": "Level 3's deepest nodes are three edges below the root. A budget of 3 is not exceeded. A reader that counts levels (4) refuses this.",
+      "pins": [
+        "**Logical depth counts edges.** The root is at depth 0, and a child is one deeper than"
+      ]
+    },
+    {
+      "name": "v2-envelope/depth-budget-refuses-one-short",
+      "op": "resolve",
+      "root": {
+        "space": "dxl2",
+        "digest": "0e4262bed3a9a0ada2376eff56ad3bb8c0dc8fb56922a2d6910286e051717077"
+      },
+      "root_chunk": "v2-bomb/level-03",
+      "store_chunks": [
+        "v2-bomb/level-03",
+        "v2-bomb/level-02",
+        "v2-bomb/level-01",
+        "v2-chunk/childless-empty"
+      ],
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "budget": {
+        "logical_depth": "2"
+      },
+      "expect": {
+        "class": "resource-refused",
+        "code": "limit_exceeded",
+        "dimension": "logical_depth"
+      },
+      "clause": "§12: logical depth counts edges.",
+      "note": "The same closure with a depth budget of 2: its depth of 3 exceeds it, and logical_depth is the only dimension exceeded.",
+      "pins": [
+        "**Logical depth counts edges.** The root is at depth 0, and a child is one deeper than",
+        "beyond it, and when it does, refuses with `limit_exceeded` naming the dimension by the"
+      ]
+    },
+    {
+      "name": "v2-envelope/flatten-budget-counts-the-header",
+      "op": "flatten",
+      "root": {
+        "space": "dxl2",
+        "digest": "21b92f5754e55c77768e7e2ee138797ace7a1408829df6f8241ccd7e5e5581a2"
+      },
+      "root_chunk": "v2-chunk/root-shared",
+      "store_chunks": [
+        "v2-chunk/root-shared",
+        "v2-chunk/inner-shared",
+        "v2-chunk/childless-empty"
+      ],
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "budget": {
+        "unfolded_flat_octets": "27"
+      },
+      "expect": {
+        "accept": true,
+        "bytes_of": "v2-flat/shared-subtrees-spelled-in-full"
+      },
+      "clause": "§12: unfolded_flat_octets measures the whole flat artifact, header included.",
+      "note": "The shared closure flattens to v2-flat/shared-subtrees-spelled-in-full's 27 octets, 7 of them the header (64 78 66 32 · 02 · 00 01). A budget of exactly 27 admits it, and the answer is those octets.",
+      "pins": [
+        "the whole flat artifact the closure flattens to, header included."
+      ]
+    },
+    {
+      "name": "v2-envelope/flatten-budget-one-octet-short",
+      "op": "flatten",
+      "root": {
+        "space": "dxl2",
+        "digest": "21b92f5754e55c77768e7e2ee138797ace7a1408829df6f8241ccd7e5e5581a2"
+      },
+      "root_chunk": "v2-chunk/root-shared",
+      "store_chunks": [
+        "v2-chunk/root-shared",
+        "v2-chunk/inner-shared",
+        "v2-chunk/childless-empty"
+      ],
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "budget": {
+        "unfolded_flat_octets": "26"
+      },
+      "expect": {
+        "class": "resource-refused",
+        "code": "limit_exceeded",
+        "dimension": "unfolded_flat_octets"
+      },
+      "clause": "§12: the header is inside the measure.",
+      "note": "A budget of 26, one short of the whole artifact. A flattener that measures only the node octets (20) admits it.",
+      "pins": [
+        "the whole flat artifact the closure flattens to, header included.",
+        "beyond it, and when it does, refuses with `limit_exceeded` naming the dimension by the"
+      ]
+    },
+    {
+      "name": "v2-envelope/chunk-size-before-its-parse",
+      "op": "resolve",
+      "root": {
+        "space": "dxl2",
+        "digest": "96224f4c1bd52e955cfcad7bcd424e973764d5ac00b191100991587536c60544"
+      },
+      "root_chunk": "v2-bad-chunk/malformed-id",
+      "store": [
+        [
+          "96224f4c1bd52e955cfcad7bcd424e973764d5ac00b191100991587536c60544",
+          "v2-bad-chunk/malformed-id"
+        ]
+      ],
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "budget": {
+        "chunk_octets": "9"
+      },
+      "expect": {
+        "class": "resource-refused",
+        "code": "limit_exceeded",
+        "dimension": "chunk_octets"
+      },
+      "clause": "§12 (I6): a chunk's size is met when it is fetched, before its hash check and its parse.",
+      "note": "The root chunk is 10 octets and its id 00 00 is malformed; the budget allows 9. The size is judged on the fetched length before any fault inside the chunk, so this is limit_exceeded naming chunk_octets. A resolver that parses first says malformed_slot_codec_id.",
+      "pins": [
+        "**A chunk is verified before it is parsed.** Chunks are never streamed. A chunk is",
+        "beyond it, and when it does, refuses with `limit_exceeded` naming the dimension by the"
+      ]
+    },
+    {
+      "name": "v2-envelope/chunk-size-before-its-hash",
+      "op": "resolve",
+      "root": {
+        "space": "dxl2",
+        "digest": "038a411f936d20a4a35f092cf7eb4a67452cafadf0d25cc6d11b3937236cf163"
+      },
+      "root_chunk": "v2-chunk/childless-empty",
+      "store": [
+        [
+          "038a411f936d20a4a35f092cf7eb4a67452cafadf0d25cc6d11b3937236cf163",
+          "v2-chunk/childless-empty"
+        ]
+      ],
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "budget": {
+        "chunk_octets": "9"
+      },
+      "expect": {
+        "class": "resource-refused",
+        "code": "limit_exceeded",
+        "dimension": "chunk_octets"
+      },
+      "clause": "§12 (I6): the size is judged before the hash check.",
+      "note": "v2-store/root-against-the-requested-address with a chunk budget of 9: the store serves the 10-octet childless-empty chunk under childless-01's address. The size is met before the hash, so this is limit_exceeded naming chunk_octets, never the store's hash_mismatch.",
+      "pins": [
+        "**A chunk is verified before it is parsed.** Chunks are never streamed. A chunk is",
+        "the hash in its parent's links header, **and the root against the address that was"
+      ]
+    }
+  ],
+  "chunks": [
+    {
+      "name": "v2-chunk/fixture-childless-a",
+      "bytes": "64786c321201fb44faaf3a9db590cbc4cb1abfdadb020100016100",
+      "sha256": "20d9df0b20c6ba8ccd6f0945ea3ec52717a851eb37d1c21f0c08f5bcdfce1ad1",
+      "note": "A valid chunk under the fixture setoid: nlinks 00, body 01 61 00 (class a)."
+    },
+    {
+      "name": "v2-bad-chunk/duplicate-link-hash",
+      "bytes": "64786c3202000102a9677a54bc70bd0072953ec21471ff76b5e357c6b8bd25ee89db2d045b268009a9677a54bc70bd0072953ec21471ff76b5e357c6b8bd25ee89db2d045b2680090002016100016201",
+      "sha256": "847520be34ee6d207b95cd2ef06cb2b1ea7b28dc7e53a34c70404cf2747addeb",
+      "note": "nlinks 02 listing v2-chunk/childless-empty twice; entries a → 0, b → 1."
+    },
+    {
+      "name": "v2-bad-chunk/bad-link-index",
+      "bytes": "64786c3202000101a9677a54bc70bd0072953ec21471ff76b5e357c6b8bd25ee89db2d045b2680090002016100016201",
+      "sha256": "b4580722f3992abf54b4106a940b0cb84cbee1f40eb90d386bdf4319b784c8ef",
+      "note": "nlinks 01; entries a → 0 and b → 1, and 1 is not < nlinks."
+    },
+    {
+      "name": "v2-bad-chunk/unused-link",
+      "bytes": "64786c3202000102a9677a54bc70bd0072953ec21471ff76b5e357c6b8bd25ee89db2d045b268009038a411f936d20a4a35f092cf7eb4a67452cafadf0d25cc6d11b3937236cf1630001016100",
+      "sha256": "ccc17a5666fa3d04ec4bcd0612b5f7d53108d27c51b80518e248a90c4e41fc11",
+      "note": "nlinks 02; one entry a → 0; the second hash (v2-chunk/childless-01) is referenced by nothing."
+    },
+    {
+      "name": "v2-bad-chunk/links-out-of-order",
+      "bytes": "64786c3202000102038a411f936d20a4a35f092cf7eb4a67452cafadf0d25cc6d11b3937236cf163a9677a54bc70bd0072953ec21471ff76b5e357c6b8bd25ee89db2d045b2680090002016101016200",
+      "sha256": "7633994cf50280730361af46ba3c1badcad812f6a2f6103b5812c81720dd864b",
+      "note": "nlinks 02 listing childless-01 then childless-empty; entries a → 1 (childless-empty), b → 0. First use lists childless-empty first."
+    },
+    {
+      "name": "v2-bad-chunk/parent-of-a-fixture-chunk",
+      "bytes": "64786c320200010120d9df0b20c6ba8ccd6f0945ea3ec52717a851eb37d1c21f0c08f5bcdfce1ad10001016100",
+      "sha256": "cd929c0bef41bd2742f908c6d65d447fd050f0cebd12e502a62d81f6dce9d7fa",
+      "note": "An identity-bytes chunk whose one child (under a) is v2-chunk/fixture-childless-a, a chunk under a different id."
+    },
+    {
+      "name": "v2-bad-chunk/trailing-octet",
+      "bytes": "64786c32020001000000ff",
+      "sha256": "48c738a90e5a4c9bd26b703d0c62d39d4311e263e5e23680d123bed2d7b6e0c6",
+      "note": "v2-chunk/childless-empty and one octet ff after its body."
+    },
+    {
+      "name": "v2-bad-chunk/v1-magic",
+      "bytes": "64786c31020001000000",
+      "sha256": "670a0c53c50e560a67c7ee37d72bd7950c3867caa30c6408133ab9f03ec9ea86",
+      "note": "A childless chunk under the v1 magic \"dxl1\" (64 78 6c 31)."
+    },
+    {
+      "name": "v2-bad-chunk/flat-artifact-as-chunk",
+      "bytes": "647866320200010000",
+      "sha256": "1d266e316995bde92f0a570352b4641b7fec56750365e880f6e7e552fcdbcca2",
+      "note": "A v2 FLAT artifact (\"dxf2\", the childless empty node) presented as a chunk."
+    },
+    {
+      "name": "v2-bad-chunk/malformed-id",
+      "bytes": "64786c32020000000000",
+      "sha256": "96224f4c1bd52e955cfcad7bcd424e973764d5ac00b191100991587536c60544",
+      "note": "A childless chunk whose id is 00 00 (n = 0)."
+    },
+    {
+      "name": "v2-bad-chunk/fixture-payload-ff",
+      "bytes": "64786c321201fb44faaf3a9db590cbc4cb1abfdadb02010001ff00",
+      "sha256": "b93926906df388d59bb24cf244429607d7780dffd5be3d9bd6fdbd0c69147b85",
+      "note": "A fixture-setoid chunk whose payload ff is not UTF-8."
+    },
+    {
+      "name": "v2-bad-chunk/fixture-parent-of-payload-ff",
+      "bytes": "64786c321201fb44faaf3a9db590cbc4cb1abfdadb020101b93926906df388d59bb24cf244429607d7780dffd5be3d9bd6fdbd0c69147b85017001016b00",
+      "sha256": "8c8931e5c7b1dc52b5b30e80d9a9575fedf4681330cd2d2bde136d3a88c50dad",
+      "note": "A fixture-setoid chunk with a valid payload p (70) whose one child (under k) is v2-bad-chunk/fixture-payload-ff."
+    },
+    {
+      "name": "v2-bad-chunk/duplicate-hash-and-bad-index",
+      "bytes": "64786c3202000102a9677a54bc70bd0072953ec21471ff76b5e357c6b8bd25ee89db2d045b268009a9677a54bc70bd0072953ec21471ff76b5e357c6b8bd25ee89db2d045b2680090002016100016202",
+      "sha256": "c655770495d0b0debdc97ed0329a5d115263d603750ac29ff484e8b026c7480d",
+      "note": "nlinks 02 listing childless-empty twice, and b → 2, which is not < nlinks."
+    },
+    {
+      "name": "v2-bad-chunk/bad-index-and-unused-link",
+      "bytes": "64786c3202000102a9677a54bc70bd0072953ec21471ff76b5e357c6b8bd25ee89db2d045b268009038a411f936d20a4a35f092cf7eb4a67452cafadf0d25cc6d11b3937236cf1630002016100016202",
+      "sha256": "4d05fee6fe4459aab8892eda853c63c445dd6b56a802c4087e2fef7f9342f4fd",
+      "note": "nlinks 02 [childless-empty, childless-01]; a → 0, b → 2. Index 2 is out of range and childless-01 is unused."
+    },
+    {
+      "name": "v2-bad-chunk/out-of-order-and-unused-link",
+      "bytes": "64786c3202000102038a411f936d20a4a35f092cf7eb4a67452cafadf0d25cc6d11b3937236cf163a9677a54bc70bd0072953ec21471ff76b5e357c6b8bd25ee89db2d045b2680090001016101",
+      "sha256": "846358de8a02990d138fdc5bf3f7a85c22d1b1017f36e727414b7f92953b2640",
+      "note": "nlinks 02 [childless-01, childless-empty]; one entry a → 1. childless-01 is unused, and first use lists childless-empty first."
+    },
+    {
+      "name": "v2-bad-chunk/fixture-child-with-non-shortest-length",
+      "bytes": "64786c321201fb44faaf3a9db590cbc4cb1abfdadb02010081006100",
+      "sha256": "519ef0a66737be8d9dbb084d51a34101515c6e557ccc23bc44e853b330cbf664",
+      "note": "A fixture-setoid chunk whose payload length 1 is spelled 81 00."
+    },
+    {
+      "name": "v2-bad-chunk/parent-of-non-shortest-fixture-child",
+      "bytes": "64786c3202000101519ef0a66737be8d9dbb084d51a34101515c6e557ccc23bc44e853b330cbf6640001016100",
+      "sha256": "8998c3cdd9441fe0cc42fd28e7f3b5fd80c2a1db1f34adec1a928812221ab100",
+      "note": "An identity-bytes chunk whose one child is v2-bad-chunk/fixture-child-with-non-shortest-length."
+    },
+    {
+      "name": "v2-bad-chunk/fixture-child-with-duplicate-hash",
+      "bytes": "64786c321201fb44faaf3a9db590cbc4cb1abfdadb020102a9677a54bc70bd0072953ec21471ff76b5e357c6b8bd25ee89db2d045b268009a9677a54bc70bd0072953ec21471ff76b5e357c6b8bd25ee89db2d045b268009016102016100016201",
+      "sha256": "af3b688b6e82c8f46f78706b48062a2bfffb7556165e00857b3c44fc18a7e2dd",
+      "note": "A fixture-setoid chunk whose links header lists childless-empty twice."
+    },
+    {
+      "name": "v2-bad-chunk/parent-of-duplicate-hash-fixture-child",
+      "bytes": "64786c3202000101af3b688b6e82c8f46f78706b48062a2bfffb7556165e00857b3c44fc18a7e2dd0001016100",
+      "sha256": "6b78d430f22ed7e0eae23a0f84c246b53a705de128874e578cb27a497549bc20",
+      "note": "An identity-bytes chunk whose one child is v2-bad-chunk/fixture-child-with-duplicate-hash."
+    },
+    {
+      "name": "v2-bomb/level-01",
+      "bytes": "64786c3202000101a9677a54bc70bd0072953ec21471ff76b5e357c6b8bd25ee89db2d045b2680090002016100016200",
+      "sha256": "324f889b4cfec216db40904711c3c927aa4a05324d4577deef0a775e13529dd8",
+      "note": "Level 1: payload empty, one link (level 0), referenced twice, under a and b. It unfolds to 2^2 − 1 nodes."
+    },
+    {
+      "name": "v2-bomb/level-02",
+      "bytes": "64786c3202000101324f889b4cfec216db40904711c3c927aa4a05324d4577deef0a775e13529dd80002016100016200",
+      "sha256": "47ef61b84d6e8d9c2535ac1cd55e80e817720f014dc4c6c0ec5bd7cbd9afab90",
+      "note": "Level 2: payload empty, one link (level 1), referenced twice, under a and b. It unfolds to 2^3 − 1 nodes."
+    },
+    {
+      "name": "v2-bomb/level-03",
+      "bytes": "64786c320200010147ef61b84d6e8d9c2535ac1cd55e80e817720f014dc4c6c0ec5bd7cbd9afab900002016100016200",
+      "sha256": "0e4262bed3a9a0ada2376eff56ad3bb8c0dc8fb56922a2d6910286e051717077",
+      "note": "Level 3: payload empty, one link (level 2), referenced twice, under a and b. It unfolds to 2^4 − 1 nodes."
+    },
+    {
+      "name": "v2-bomb/level-04",
+      "bytes": "64786c32020001010e4262bed3a9a0ada2376eff56ad3bb8c0dc8fb56922a2d6910286e0517170770002016100016200",
+      "sha256": "41096383f4af73aa879048a929d6e803e81372021b9b822e98d67ff928d15fd4",
+      "note": "Level 4: payload empty, one link (level 3), referenced twice, under a and b. It unfolds to 2^5 − 1 nodes."
+    },
+    {
+      "name": "v2-bomb/level-05",
+      "bytes": "64786c320200010141096383f4af73aa879048a929d6e803e81372021b9b822e98d67ff928d15fd40002016100016200",
+      "sha256": "7f25ce571ddc4f20a92137e6c68b254908fd5d5412adbaef77f09077dc55cb01",
+      "note": "Level 5: payload empty, one link (level 4), referenced twice, under a and b. It unfolds to 2^6 − 1 nodes."
+    },
+    {
+      "name": "v2-bomb/level-06",
+      "bytes": "64786c32020001017f25ce571ddc4f20a92137e6c68b254908fd5d5412adbaef77f09077dc55cb010002016100016200",
+      "sha256": "8b3b81f6742cd8ece9fb1fd0a24858c41462bbd5ee81645c766b904883a94f62",
+      "note": "Level 6: payload empty, one link (level 5), referenced twice, under a and b. It unfolds to 2^7 − 1 nodes."
+    },
+    {
+      "name": "v2-bomb/level-07",
+      "bytes": "64786c32020001018b3b81f6742cd8ece9fb1fd0a24858c41462bbd5ee81645c766b904883a94f620002016100016200",
+      "sha256": "83ee991b6233f34a956750d57812da696f2cb4e3655d4af65a67c96898adab2f",
+      "note": "Level 7: payload empty, one link (level 6), referenced twice, under a and b. It unfolds to 2^8 − 1 nodes."
+    },
+    {
+      "name": "v2-bomb/level-08",
+      "bytes": "64786c320200010183ee991b6233f34a956750d57812da696f2cb4e3655d4af65a67c96898adab2f0002016100016200",
+      "sha256": "294e57495f2746dfdb9ae124e94833dba45ab53b4ad9ce46945b88c0dd6c110e",
+      "note": "Level 8: payload empty, one link (level 7), referenced twice, under a and b. It unfolds to 2^9 − 1 nodes."
+    },
+    {
+      "name": "v2-bomb/level-09",
+      "bytes": "64786c3202000101294e57495f2746dfdb9ae124e94833dba45ab53b4ad9ce46945b88c0dd6c110e0002016100016200",
+      "sha256": "54a76455f8f0f231ad6b98e2711523cb780bb37e07330c8bd1474cbdd316bfad",
+      "note": "Level 9: payload empty, one link (level 8), referenced twice, under a and b. It unfolds to 2^10 − 1 nodes."
+    },
+    {
+      "name": "v2-bomb/level-10",
+      "bytes": "64786c320200010154a76455f8f0f231ad6b98e2711523cb780bb37e07330c8bd1474cbdd316bfad0002016100016200",
+      "sha256": "15ee6cbab0d9b976fcc1a4a755902a51780feba7d3834bebab3c0bf712013491",
+      "note": "Level 10: payload empty, one link (level 9), referenced twice, under a and b. It unfolds to 2^11 − 1 nodes."
+    },
+    {
+      "name": "v2-bomb/level-11",
+      "bytes": "64786c320200010115ee6cbab0d9b976fcc1a4a755902a51780feba7d3834bebab3c0bf7120134910002016100016200",
+      "sha256": "29908a2d2ee493c1776936231d95c75d36a13590664acf66f8bfd35fc31ca30e",
+      "note": "Level 11: payload empty, one link (level 10), referenced twice, under a and b. It unfolds to 2^12 − 1 nodes."
+    },
+    {
+      "name": "v2-bomb/level-12",
+      "bytes": "64786c320200010129908a2d2ee493c1776936231d95c75d36a13590664acf66f8bfd35fc31ca30e0002016100016200",
+      "sha256": "5b4a0e1c4df1f70a420829fe2aa0d05816beb44335f1169b345061da18d21489",
+      "note": "Level 12: payload empty, one link (level 11), referenced twice, under a and b. It unfolds to 2^13 − 1 nodes."
+    },
+    {
+      "name": "v2-bomb/level-13",
+      "bytes": "64786c32020001015b4a0e1c4df1f70a420829fe2aa0d05816beb44335f1169b345061da18d214890002016100016200",
+      "sha256": "457fe7708fa52ff36b6b534a445fa397e61f2f21e3c0472ce740b01144841968",
+      "note": "Level 13: payload empty, one link (level 12), referenced twice, under a and b. It unfolds to 2^14 − 1 nodes."
+    },
+    {
+      "name": "v2-bomb/level-14",
+      "bytes": "64786c3202000101457fe7708fa52ff36b6b534a445fa397e61f2f21e3c0472ce740b011448419680002016100016200",
+      "sha256": "50a686b7ca099db2fb63f846c344e3cfe4d633dac730d8f159b49dc2a9f6ac39",
+      "note": "Level 14: payload empty, one link (level 13), referenced twice, under a and b. It unfolds to 2^15 − 1 nodes."
+    },
+    {
+      "name": "v2-bomb/level-15",
+      "bytes": "64786c320200010150a686b7ca099db2fb63f846c344e3cfe4d633dac730d8f159b49dc2a9f6ac390002016100016200",
+      "sha256": "aabadd82c7b91745a7d98a649bf5bbf35253a6fc70674cf82f8a635492e19cc4",
+      "note": "Level 15: payload empty, one link (level 14), referenced twice, under a and b. It unfolds to 2^16 − 1 nodes."
+    },
+    {
+      "name": "v2-bomb/level-16",
+      "bytes": "64786c3202000101aabadd82c7b91745a7d98a649bf5bbf35253a6fc70674cf82f8a635492e19cc40002016100016200",
+      "sha256": "bb8469709a14768c8d6cd37d1683bb94e914016597db783367a74d262e72e82d",
+      "note": "Level 16: payload empty, one link (level 15), referenced twice, under a and b. It unfolds to 2^17 − 1 nodes."
+    },
+    {
+      "name": "v2-bomb/level-17",
+      "bytes": "64786c3202000101bb8469709a14768c8d6cd37d1683bb94e914016597db783367a74d262e72e82d0002016100016200",
+      "sha256": "285b61eaf5fb07ba2a78a879ae6f1503ed4222ca114c7e968a8c10becab83a38",
+      "note": "Level 17: payload empty, one link (level 16), referenced twice, under a and b. It unfolds to 2^18 − 1 nodes."
+    },
+    {
+      "name": "v2-bomb/level-18",
+      "bytes": "64786c3202000101285b61eaf5fb07ba2a78a879ae6f1503ed4222ca114c7e968a8c10becab83a380002016100016200",
+      "sha256": "f8ae2f8cc6ee2c16988ed68710d738f9f2676d3339bab18a60f364fd3c59ebf9",
+      "note": "Level 18: payload empty, one link (level 17), referenced twice, under a and b. It unfolds to 2^19 − 1 nodes."
+    },
+    {
+      "name": "v2-bomb/level-19",
+      "bytes": "64786c3202000101f8ae2f8cc6ee2c16988ed68710d738f9f2676d3339bab18a60f364fd3c59ebf90002016100016200",
+      "sha256": "ba165d9a95824cbebe5483e123dbba3142af9f39bcbcdf52a1beee4bc5242141",
+      "note": "Level 19: payload empty, one link (level 18), referenced twice, under a and b. It unfolds to 2^20 − 1 nodes."
+    },
+    {
+      "name": "v2-bomb/level-20",
+      "bytes": "64786c3202000101ba165d9a95824cbebe5483e123dbba3142af9f39bcbcdf52a1beee4bc52421410002016100016200",
+      "sha256": "307dfc8d1786003b3821ab56e49ed8e87db2f3badb19e6a3ae573deb25dae944",
+      "note": "Level 20: payload empty, one link (level 19), referenced twice, under a and b. It unfolds to 2^21 − 1 nodes."
+    },
+    {
+      "name": "v2-bomb/level-21",
+      "bytes": "64786c3202000101307dfc8d1786003b3821ab56e49ed8e87db2f3badb19e6a3ae573deb25dae9440002016100016200",
+      "sha256": "3c6535e156e9a3740e0aa472429aed009cd8fcf878aefb3cd8c522eb2eaeca4b",
+      "note": "Level 21: payload empty, one link (level 20), referenced twice, under a and b. It unfolds to 2^22 − 1 nodes."
+    },
+    {
+      "name": "v2-bomb/level-22",
+      "bytes": "64786c32020001013c6535e156e9a3740e0aa472429aed009cd8fcf878aefb3cd8c522eb2eaeca4b0002016100016200",
+      "sha256": "30d32a9f5dea624115cd1462959a4b6f6ff99e84b9a23c47b44413647b2f912a",
+      "note": "Level 22: payload empty, one link (level 21), referenced twice, under a and b. It unfolds to 2^23 − 1 nodes."
+    },
+    {
+      "name": "v2-bomb/level-23",
+      "bytes": "64786c320200010130d32a9f5dea624115cd1462959a4b6f6ff99e84b9a23c47b44413647b2f912a0002016100016200",
+      "sha256": "304d9b056d9738c70218e253a775259bf786873eddf2cdb9eda2191e479c8fb4",
+      "note": "Level 23: payload empty, one link (level 22), referenced twice, under a and b. It unfolds to 2^24 − 1 nodes."
+    },
+    {
+      "name": "v2-bomb/level-24",
+      "bytes": "64786c3202000101304d9b056d9738c70218e253a775259bf786873eddf2cdb9eda2191e479c8fb40002016100016200",
+      "sha256": "a9a3d1eeb3e7441646b210e3408f3315b83ad1fb43704a95ad0da9fe95954d46",
+      "note": "Level 24: payload empty, one link (level 23), referenced twice, under a and b. It unfolds to 2^25 − 1 nodes."
+    },
+    {
+      "name": "v2-bomb/level-25",
+      "bytes": "64786c3202000101a9a3d1eeb3e7441646b210e3408f3315b83ad1fb43704a95ad0da9fe95954d460002016100016200",
+      "sha256": "0e3510e15a1244c7ea893a35301b5871e2df28d3c9a3968944b1d55356e92807",
+      "note": "Level 25: payload empty, one link (level 24), referenced twice, under a and b. It unfolds to 2^26 − 1 nodes."
+    },
+    {
+      "name": "v2-bomb/level-26",
+      "bytes": "64786c32020001010e3510e15a1244c7ea893a35301b5871e2df28d3c9a3968944b1d55356e928070002016100016200",
+      "sha256": "935d45ce8df331127ff586e0955f59443ae94bd7a153b14e54eb5c60c3acdc51",
+      "note": "Level 26: payload empty, one link (level 25), referenced twice, under a and b. It unfolds to 2^27 − 1 nodes."
+    },
+    {
+      "name": "v2-bomb/level-27",
+      "bytes": "64786c3202000101935d45ce8df331127ff586e0955f59443ae94bd7a153b14e54eb5c60c3acdc510002016100016200",
+      "sha256": "6d3b6e0e526978401ceffedde27aaa623c47d8a8b007f2e237302a6b6270ab8b",
+      "note": "Level 27: payload empty, one link (level 26), referenced twice, under a and b. It unfolds to 2^28 − 1 nodes."
+    },
+    {
+      "name": "v2-bomb/level-28",
+      "bytes": "64786c32020001016d3b6e0e526978401ceffedde27aaa623c47d8a8b007f2e237302a6b6270ab8b0002016100016200",
+      "sha256": "b1a41bbd24d5b401d3077fff81276e8a84d50ff90c0dd7a4ba69883b33b2e70f",
+      "note": "Level 28: payload empty, one link (level 27), referenced twice, under a and b. It unfolds to 2^29 − 1 nodes."
+    },
+    {
+      "name": "v2-bomb/level-29",
+      "bytes": "64786c3202000101b1a41bbd24d5b401d3077fff81276e8a84d50ff90c0dd7a4ba69883b33b2e70f0002016100016200",
+      "sha256": "043f7217979399f383ea0b17a5c2094ea117c329b1c567c0033d859679646732",
+      "note": "Level 29: payload empty, one link (level 28), referenced twice, under a and b. It unfolds to 2^30 − 1 nodes."
+    },
+    {
+      "name": "v2-bomb/level-30",
+      "bytes": "64786c3202000101043f7217979399f383ea0b17a5c2094ea117c329b1c567c0033d8596796467320002016100016200",
+      "sha256": "d5fe52ff8e7ef18ebf5586b36fe1b2b79084b5f96a1934d1a63b8a1d973f72b0",
+      "note": "Level 30: payload empty, one link (level 29), referenced twice, under a and b. It unfolds to 2^31 − 1 nodes."
+    },
+    {
+      "name": "v2-bomb/level-31",
+      "bytes": "64786c3202000101d5fe52ff8e7ef18ebf5586b36fe1b2b79084b5f96a1934d1a63b8a1d973f72b00002016100016200",
+      "sha256": "bbc87b8871a58f759b4d8937fe420fa5edf96c48dc3118d2e189d3eea58fd819",
+      "note": "Level 31: payload empty, one link (level 30), referenced twice, under a and b. It unfolds to 2^32 − 1 nodes."
+    },
+    {
+      "name": "v2-bomb/level-32",
+      "bytes": "64786c3202000101bbc87b8871a58f759b4d8937fe420fa5edf96c48dc3118d2e189d3eea58fd8190002016100016200",
+      "sha256": "0e8a77cf329b55b1af685a50f6061b77ccce6e22aa2834c5633c614a730588f5",
+      "note": "Level 32: payload empty, one link (level 31), referenced twice, under a and b. It unfolds to 2^33 − 1 nodes."
+    },
+    {
+      "name": "v2-bomb/level-33",
+      "bytes": "64786c32020001010e8a77cf329b55b1af685a50f6061b77ccce6e22aa2834c5633c614a730588f50002016100016200",
+      "sha256": "1a6e3b5c38e40e855f763171c927489b63cfde524e25c5ce08da9e1570fa194c",
+      "note": "Level 33: payload empty, one link (level 32), referenced twice, under a and b. It unfolds to 2^34 − 1 nodes."
+    },
+    {
+      "name": "v2-bomb/level-34",
+      "bytes": "64786c32020001011a6e3b5c38e40e855f763171c927489b63cfde524e25c5ce08da9e1570fa194c0002016100016200",
+      "sha256": "5c704812c9135453a3b6277395167f2e03c2f6ea66c448b9459e7e288c3bee3c",
+      "note": "Level 34: payload empty, one link (level 33), referenced twice, under a and b. It unfolds to 2^35 − 1 nodes."
+    },
+    {
+      "name": "v2-bomb/level-35",
+      "bytes": "64786c32020001015c704812c9135453a3b6277395167f2e03c2f6ea66c448b9459e7e288c3bee3c0002016100016200",
+      "sha256": "1510924033589eb08e4b53bafa64d7b91a7a52a72f7d03b8cab8fdf531f08f65",
+      "note": "Level 35: payload empty, one link (level 34), referenced twice, under a and b. It unfolds to 2^36 − 1 nodes."
+    },
+    {
+      "name": "v2-bomb/level-36",
+      "bytes": "64786c32020001011510924033589eb08e4b53bafa64d7b91a7a52a72f7d03b8cab8fdf531f08f650002016100016200",
+      "sha256": "405fca0e25a6c1e468211d9ed9cce5fc4454c7bce33ec626e3aa996eb6898f17",
+      "note": "Level 36: payload empty, one link (level 35), referenced twice, under a and b. It unfolds to 2^37 − 1 nodes."
+    },
+    {
+      "name": "v2-bomb/level-37",
+      "bytes": "64786c3202000101405fca0e25a6c1e468211d9ed9cce5fc4454c7bce33ec626e3aa996eb6898f170002016100016200",
+      "sha256": "d8e204704a56d6ec7a59192c1c51be7960acfc5e63a04f44d90d13a1456f7a94",
+      "note": "Level 37: payload empty, one link (level 36), referenced twice, under a and b. It unfolds to 2^38 − 1 nodes."
+    },
+    {
+      "name": "v2-bomb/level-38",
+      "bytes": "64786c3202000101d8e204704a56d6ec7a59192c1c51be7960acfc5e63a04f44d90d13a1456f7a940002016100016200",
+      "sha256": "972e32fad578968b5cc873bbe95b05140cb3dee7373a082831945981722ead12",
+      "note": "Level 38: payload empty, one link (level 37), referenced twice, under a and b. It unfolds to 2^39 − 1 nodes."
+    },
+    {
+      "name": "v2-bomb/level-39",
+      "bytes": "64786c3202000101972e32fad578968b5cc873bbe95b05140cb3dee7373a082831945981722ead120002016100016200",
+      "sha256": "e1b2fd4108088a29cbc8c1c4769c90a4075f4664821b45b8b1458f471009024b",
+      "note": "Level 39: payload empty, one link (level 38), referenced twice, under a and b. It unfolds to 2^40 − 1 nodes."
+    },
+    {
+      "name": "v2-bomb/level-40",
+      "bytes": "64786c3202000101e1b2fd4108088a29cbc8c1c4769c90a4075f4664821b45b8b1458f471009024b0002016100016200",
+      "sha256": "87a5e035fa67363c47c15b13ad68fa5b0e5ef984e4bade4471862ac842d92e94",
+      "note": "Level 40: payload empty, one link (level 39), referenced twice, under a and b. It unfolds to 2^41 − 1 nodes."
+    },
+    {
+      "name": "v2-bomb/level-41",
+      "bytes": "64786c320200010187a5e035fa67363c47c15b13ad68fa5b0e5ef984e4bade4471862ac842d92e940002016100016200",
+      "sha256": "312e08b681e4aee643106027eb325299062aca61ae3fb38e5b9d4094cab91469",
+      "note": "Level 41: payload empty, one link (level 40), referenced twice, under a and b. It unfolds to 2^42 − 1 nodes."
+    },
+    {
+      "name": "v2-bomb/level-42",
+      "bytes": "64786c3202000101312e08b681e4aee643106027eb325299062aca61ae3fb38e5b9d4094cab914690002016100016200",
+      "sha256": "6f6daf5025ccd6106d7d1a9cd618ce3739b53ecc247af1d9cad86d6485c0bdaf",
+      "note": "Level 42: payload empty, one link (level 41), referenced twice, under a and b. It unfolds to 2^43 − 1 nodes."
+    },
+    {
+      "name": "v2-bomb/level-43",
+      "bytes": "64786c32020001016f6daf5025ccd6106d7d1a9cd618ce3739b53ecc247af1d9cad86d6485c0bdaf0002016100016200",
+      "sha256": "68e93928173fa74326b7146f78f83a1c7e90db13f82f8b418d0cadcfc6764cd0",
+      "note": "Level 43: payload empty, one link (level 42), referenced twice, under a and b. It unfolds to 2^44 − 1 nodes."
+    },
+    {
+      "name": "v2-bomb/level-44",
+      "bytes": "64786c320200010168e93928173fa74326b7146f78f83a1c7e90db13f82f8b418d0cadcfc6764cd00002016100016200",
+      "sha256": "c4c324181ffda4260edae21e224cfa6dfb3f20a282fc668e5b112e58045f0047",
+      "note": "Level 44: payload empty, one link (level 43), referenced twice, under a and b. It unfolds to 2^45 − 1 nodes."
+    },
+    {
+      "name": "v2-bomb/level-45",
+      "bytes": "64786c3202000101c4c324181ffda4260edae21e224cfa6dfb3f20a282fc668e5b112e58045f00470002016100016200",
+      "sha256": "0aae95b117bf75c6dd010bc543bc15c306e2e310fbf063e908a8be5f9e2b02e5",
+      "note": "Level 45: payload empty, one link (level 44), referenced twice, under a and b. It unfolds to 2^46 − 1 nodes."
+    },
+    {
+      "name": "v2-bomb/level-46",
+      "bytes": "64786c32020001010aae95b117bf75c6dd010bc543bc15c306e2e310fbf063e908a8be5f9e2b02e50002016100016200",
+      "sha256": "d2defbd8d6a5c05987749e38d1a7ede7f8c7f8c30ffeaa83a5a643c86e295be7",
+      "note": "Level 46: payload empty, one link (level 45), referenced twice, under a and b. It unfolds to 2^47 − 1 nodes."
+    },
+    {
+      "name": "v2-bomb/level-47",
+      "bytes": "64786c3202000101d2defbd8d6a5c05987749e38d1a7ede7f8c7f8c30ffeaa83a5a643c86e295be70002016100016200",
+      "sha256": "d3d988d9a1aa95feb168077b7b8e0fa6983082b150374a5b5ae2a5a28ac06ebe",
+      "note": "Level 47: payload empty, one link (level 46), referenced twice, under a and b. It unfolds to 2^48 − 1 nodes."
+    },
+    {
+      "name": "v2-bomb/level-48",
+      "bytes": "64786c3202000101d3d988d9a1aa95feb168077b7b8e0fa6983082b150374a5b5ae2a5a28ac06ebe0002016100016200",
+      "sha256": "02bb7690d4315bf92c3e574957fae243829b839398a87296b9a281b2a301160a",
+      "note": "Level 48: payload empty, one link (level 47), referenced twice, under a and b. It unfolds to 2^49 − 1 nodes."
+    },
+    {
+      "name": "v2-bomb/level-49",
+      "bytes": "64786c320200010102bb7690d4315bf92c3e574957fae243829b839398a87296b9a281b2a301160a0002016100016200",
+      "sha256": "c74d17a19534a2176b88747c0080d0ea244ea081d3a21554d913b049c087ba99",
+      "note": "Level 49: payload empty, one link (level 48), referenced twice, under a and b. It unfolds to 2^50 − 1 nodes."
+    },
+    {
+      "name": "v2-bomb/level-50",
+      "bytes": "64786c3202000101c74d17a19534a2176b88747c0080d0ea244ea081d3a21554d913b049c087ba990002016100016200",
+      "sha256": "e9ee1a6035fc5f96d811759c15526db7e0aa1d09def8ea9d3196f1484a052890",
+      "note": "Level 50: payload empty, one link (level 49), referenced twice, under a and b. It unfolds to 2^51 − 1 nodes."
+    },
+    {
+      "name": "v2-bomb/level-51",
+      "bytes": "64786c3202000101e9ee1a6035fc5f96d811759c15526db7e0aa1d09def8ea9d3196f1484a0528900002016100016200",
+      "sha256": "e053d692ce7d2b2120e3c99093a1e907291aa90b78f1961ab02b6ec3d7729782",
+      "note": "Level 51: payload empty, one link (level 50), referenced twice, under a and b. It unfolds to 2^52 − 1 nodes."
+    },
+    {
+      "name": "v2-bomb/level-52",
+      "bytes": "64786c3202000101e053d692ce7d2b2120e3c99093a1e907291aa90b78f1961ab02b6ec3d77297820002016100016200",
+      "sha256": "7976d0c7f782606ba22597ff976778190dd1b4114a10a4176a091711e1cd7905",
+      "note": "Level 52: payload empty, one link (level 51), referenced twice, under a and b. It unfolds to 2^53 − 1 nodes."
+    },
+    {
+      "name": "v2-bomb/level-53",
+      "bytes": "64786c32020001017976d0c7f782606ba22597ff976778190dd1b4114a10a4176a091711e1cd79050002016100016200",
+      "sha256": "e37151f60c61b2c1be6238b4244f55c8a38008446dbeeaa9b879656a989c3496",
+      "note": "Level 53: payload empty, one link (level 52), referenced twice, under a and b. It unfolds to 2^54 − 1 nodes."
+    },
+    {
+      "name": "v2-bomb/level-54",
+      "bytes": "64786c3202000101e37151f60c61b2c1be6238b4244f55c8a38008446dbeeaa9b879656a989c34960002016100016200",
+      "sha256": "f48bca4d35fcb2415bee5007e98304606e35d147b6603d90deadbbc5f5b8b0dd",
+      "note": "Level 54: payload empty, one link (level 53), referenced twice, under a and b. It unfolds to 2^55 − 1 nodes."
+    },
+    {
+      "name": "v2-bomb/level-55",
+      "bytes": "64786c3202000101f48bca4d35fcb2415bee5007e98304606e35d147b6603d90deadbbc5f5b8b0dd0002016100016200",
+      "sha256": "245a781f8a76708b76da1431150a50c5e8d671b2bdfd0666bd368b359c12c99a",
+      "note": "Level 55: payload empty, one link (level 54), referenced twice, under a and b. It unfolds to 2^56 − 1 nodes."
+    },
+    {
+      "name": "v2-bomb/level-56",
+      "bytes": "64786c3202000101245a781f8a76708b76da1431150a50c5e8d671b2bdfd0666bd368b359c12c99a0002016100016200",
+      "sha256": "2ae971f04d83877dbf5bf24ee748d40e8d00cac0787ec5792d0fbb7f22e9b01c",
+      "note": "Level 56: payload empty, one link (level 55), referenced twice, under a and b. It unfolds to 2^57 − 1 nodes."
+    },
+    {
+      "name": "v2-bomb/level-57",
+      "bytes": "64786c32020001012ae971f04d83877dbf5bf24ee748d40e8d00cac0787ec5792d0fbb7f22e9b01c0002016100016200",
+      "sha256": "9011ef0dd5d09affbe77f7929cb5a9a5243430eceaf0659ffdc181ccdd4a8269",
+      "note": "Level 57: payload empty, one link (level 56), referenced twice, under a and b. It unfolds to 2^58 − 1 nodes."
+    },
+    {
+      "name": "v2-bomb/level-58",
+      "bytes": "64786c32020001019011ef0dd5d09affbe77f7929cb5a9a5243430eceaf0659ffdc181ccdd4a82690002016100016200",
+      "sha256": "93b8b1e51405c12ee3b2eace23a0e8aa6e9648d902e41762717242a34f617630",
+      "note": "Level 58: payload empty, one link (level 57), referenced twice, under a and b. It unfolds to 2^59 − 1 nodes."
+    },
+    {
+      "name": "v2-bomb/level-59",
+      "bytes": "64786c320200010193b8b1e51405c12ee3b2eace23a0e8aa6e9648d902e41762717242a34f6176300002016100016200",
+      "sha256": "84f0bd61019d022147d1a067aea3a8fb05bbe4677ccdc828bff76f7e52b360e5",
+      "note": "Level 59: payload empty, one link (level 58), referenced twice, under a and b. It unfolds to 2^60 − 1 nodes."
+    },
+    {
+      "name": "v2-bomb/level-60",
+      "bytes": "64786c320200010184f0bd61019d022147d1a067aea3a8fb05bbe4677ccdc828bff76f7e52b360e50002016100016200",
+      "sha256": "7f1aa0e30fbcef7e6f74fcbc1937a2cd74aa2bac1387af42b82086e4adde21fa",
+      "note": "Level 60: payload empty, one link (level 59), referenced twice, under a and b. It unfolds to 2^61 − 1 nodes."
+    },
+    {
+      "name": "v2-bomb/level-61",
+      "bytes": "64786c32020001017f1aa0e30fbcef7e6f74fcbc1937a2cd74aa2bac1387af42b82086e4adde21fa0002016100016200",
+      "sha256": "fffa04b2b2947c1f3faa2d6ed9ab7e444041419b0c6ac8861406746c4a527921",
+      "note": "Level 61: payload empty, one link (level 60), referenced twice, under a and b. It unfolds to 2^62 − 1 nodes."
+    },
+    {
+      "name": "v2-bomb/level-62",
+      "bytes": "64786c3202000101fffa04b2b2947c1f3faa2d6ed9ab7e444041419b0c6ac8861406746c4a5279210002016100016200",
+      "sha256": "b99d5d773f9656b5a004bd2e66511e33e4ddab327be91459caa44c25f59b0126",
+      "note": "Level 62: payload empty, one link (level 61), referenced twice, under a and b. It unfolds to 2^63 − 1 nodes."
+    },
+    {
+      "name": "v2-bomb/level-63",
+      "bytes": "64786c3202000101b99d5d773f9656b5a004bd2e66511e33e4ddab327be91459caa44c25f59b01260002016100016200",
+      "sha256": "89a391581ea7168f71016171fb82b33b3428634b2df605726eef05433a93a458",
+      "note": "Level 63: payload empty, one link (level 62), referenced twice, under a and b. It unfolds to 2^64 − 1 nodes."
+    },
+    {
+      "name": "v2-bomb/root",
+      "bytes": "64786c320200010189a391581ea7168f71016171fb82b33b3428634b2df605726eef05433a93a4580001016100",
+      "sha256": "f98a24080530183bd501c1c2aa5cd39c9193fa8d733dc15a3ab2796a40db6166",
+      "note": "The bomb's root: payload empty, one entry a → level 63. It unfolds to 1 + (2^64 − 1) = 2^64 nodes, which wraps to 0 in 64-bit arithmetic."
+    },
+    {
+      "name": "v2-bad-chunk/duplicate-key",
+      "bytes": "64786c3202000101a9677a54bc70bd0072953ec21471ff76b5e357c6b8bd25ee89db2d045b2680090002016100016100",
+      "sha256": "c3567a6b53879d6ad8504601d057df1b5dc7cb900f25531c6843a767a354145a",
+      "note": "Header 64 78 6c 32 · 02 · 00 01, nlinks 01, the one hash (v2-chunk/childless-empty), then the body: payload length 00, count 02, entries 01 61 00; 01 61 00 (key length, key, link index)."
+    },
+    {
+      "name": "v2-bad-chunk/unsorted-keys",
+      "bytes": "64786c3202000101a9677a54bc70bd0072953ec21471ff76b5e357c6b8bd25ee89db2d045b2680090002016200016100",
+      "sha256": "73fac80901859c43e7b6dffc9054b66e03ec840ec619f0ce00f91c18238df428",
+      "note": "Header 64 78 6c 32 · 02 · 00 01, nlinks 01, the one hash (v2-chunk/childless-empty), then the body: payload length 00, count 02, entries 01 62 00; 01 61 00 (key length, key, link index)."
+    },
+    {
+      "name": "v2-bad-chunk/fixture-payload-ff-parent-of-a",
+      "bytes": "64786c321201fb44faaf3a9db590cbc4cb1abfdadb02010120d9df0b20c6ba8ccd6f0945ea3ec52717a851eb37d1c21f0c08f5bcdfce1ad101ff01016100",
+      "sha256": "606006b2be901d3012a67f826efb8bccf5d4d3b6599a0c6e7508658659f1b3ff",
+      "note": "Header 64 78 6c 32 · 12 · the fixture id, nlinks 01, the hash of v2-chunk/fixture-childless-a, then the body: payload length 01, payload ff (not UTF-8), count 01, entry 01 61 00. Its own payload is refused under the fixture setoid; its child is canonical."
+    },
+    {
+      "name": "v2-bad-chunk/fixture-payload-ff-parent-of-non-shortest",
+      "bytes": "64786c321201fb44faaf3a9db590cbc4cb1abfdadb020101519ef0a66737be8d9dbb084d51a34101515c6e557ccc23bc44e853b330cbf66401ff01016100",
+      "sha256": "a30edba6cf17b2030bf555cf2b183c86687156870bc4d62f6b2fab10093c8cd4",
+      "note": "Header 64 78 6c 32 · 12 · the fixture id, nlinks 01, the hash of v2-bad-chunk/fixture-child-with-non-shortest-length, then the body: payload length 01, payload ff (not UTF-8), count 01, entry 01 61 00. Its own payload is refused under the fixture setoid; its child's framing is refused too."
+    },
+    {
+      "name": "v2-bad-chunk/fixture-parent-of-identity-leaf",
+      "bytes": "64786c321201fb44faaf3a9db590cbc4cb1abfdadb020101a9677a54bc70bd0072953ec21471ff76b5e357c6b8bd25ee89db2d045b268009017001016100",
+      "sha256": "c6bd43860ccec054e3a0c5cc435b94fa9560f8bc7d9decde6c31c4e70b329d46",
+      "note": "Header 64 78 6c 32 · 12 · the fixture id, nlinks 01, the hash of v2-chunk/childless-empty (an identity-bytes chunk), then the body: payload length 01, payload p, count 01, entry 01 61 00."
+    },
+    {
+      "name": "v2-bad-chunk/identity-grandparent-of-a-fixture-chunk",
+      "bytes": "64786c3202000101cd929c0bef41bd2742f908c6d65d447fd050f0cebd12e502a62d81f6dce9d7fa0001016100",
+      "sha256": "66e8829490c7e4371fea3a73443a112a5f01c7855ef5c4d7889ca03ec4ca7475",
+      "note": "An identity-bytes chunk whose one child, under a, is v2-bad-chunk/parent-of-a-fixture-chunk, itself an identity-bytes chunk whose child under a is fixture-setoid. The mismatch sits two hops down."
+    },
+    {
+      "name": "v2-bad-chunk/childless-listing-a-link",
+      "bytes": "64786c3202000101a9677a54bc70bd0072953ec21471ff76b5e357c6b8bd25ee89db2d045b2680090000",
+      "sha256": "bbf1ab72fff8beea91c19a55c2d62b6b983e475197dbc00e5a5f21efd815e94d",
+      "note": "Header 64 78 6c 32 · 02 · 00 01, nlinks 01 (the hash of v2-chunk/childless-empty), then the body: payload length 00, count 00. A childless chunk that lists a link no entry uses."
+    }
+  ]
+}

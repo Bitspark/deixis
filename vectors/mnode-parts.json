@@ -1,0 +1,229 @@
+{
+  "description": "deixis mandatory Node[T] parts, contexts and cuts — decompose/compose of ADR 0010 §3, split/plug, replacement and cut/rebuild of §4 and PATH.md. decompose's result is {\"parts\": {\"own\": …, \"children\": […]}}. A context or skeleton is a node spelling with {\"hole\": {}} in place of each removed subtree. split's result is {\"defined\": {\"context\": …, \"subtree\": …}}, and cut's is {\"defined\": {\"skeleton\": …, \"subtrees\": [[path, node], …]}}; each is {\"undefined\": {}} outside its domain. Every case declares its slot. Hand-authored from docs/design/0010-mandatory-node-values.md, docs/TREE.md and docs/PATH.md as merged in 1a9bb6d, and from nothing else. No implementation of the mandatory API existed when these were written. Items X2, X3 and X11–X13; each note names the defect (W) it catches. op \"replace\" with a \"then\" field replaces twice at the same path. 26 cases.",
+  "profile": "deixis-mnode-parts",
+  "cases": [
+    {
+      "name": "m-parts-decompose-valued-parent",
+      "slot": "fixture", "op": "decompose",
+      "node": { "own": { "class": "p", "representation": "p" }, "children": [["6b", { "own": { "class": "c", "representation": "c" }, "children": [] }]] },
+      "result": { "parts": { "own": { "class": "p", "representation": "p" }, "children": [["6b", { "own": { "class": "c", "representation": "c" }, "children": [] }]] } },
+      "note": "X11. decompose(Node(t,m)) = (t,m): the own value is kept alongside the children, not inferred from them."
+    },
+    {
+      "name": "m-parts-decompose-childless-has-a-value",
+      "slot": "fixture", "op": "decompose",
+      "node": { "own": { "class": "a", "representation": "a" }, "children": [] },
+      "result": { "parts": { "own": { "class": "a", "representation": "a" }, "children": [] } },
+      "note": "X2. A childless node still has a T and decomposes to (t,{}) (ADR 0010 §3). The child map is present and empty. Catches W8."
+    },
+    {
+      "name": "m-parts-decompose-json-null-childless",
+      "slot": "json", "op": "decompose",
+      "node": { "own": null, "children": [] },
+      "result": { "parts": { "own": null, "children": [] } },
+      "note": "X2, X4. Node(null,∅) decomposes to (null,{}): the null is the value, and the node exists."
+    },
+    {
+      "name": "m-parts-decompose-children-are-whole-subtrees",
+      "slot": "fixture", "op": "decompose",
+      "node": { "own": { "class": "r", "representation": "r" }, "children": [["6b", { "own": { "class": "i", "representation": "i" }, "children": [["6a", { "own": { "class": "t", "representation": "t" }, "children": [] }]] }]] },
+      "result": { "parts": { "own": { "class": "r", "representation": "r" }, "children": [["6b", { "own": { "class": "i", "representation": "i" }, "children": [["6a", { "own": { "class": "t", "representation": "t" }, "children": [] }]] }]] } },
+      "note": "X11. The map holds every immediate child under its exact key as a whole subtree, not just the child's own value (ADR 0010 §3)."
+    },
+    {
+      "name": "m-parts-compose-with-supplied-parent",
+      "slot": "fixture", "op": "compose",
+      "own": { "class": "p", "representation": "p" },
+      "children": [["6b", { "own": { "class": "c", "representation": "c" }, "children": [] }]],
+      "result": { "own": { "class": "p", "representation": "p" }, "children": [["6b", { "own": { "class": "c", "representation": "c" }, "children": [] }]] },
+      "note": "X3, X11. compose((t,m)) = Node(t,m) with the parent value supplied. The pair with m-parts-compose-other-parent-same-children below shows it is not derived from the children. Catches W9."
+    },
+    {
+      "name": "m-parts-compose-other-parent-same-children",
+      "slot": "fixture", "op": "compose",
+      "own": { "class": "q", "representation": "p" },
+      "children": [["6b", { "own": { "class": "c", "representation": "c" }, "children": [] }]],
+      "result": { "own": { "class": "q", "representation": "p" }, "children": [["6b", { "own": { "class": "c", "representation": "c" }, "children": [] }]] },
+      "note": "X11. The same children with a different supplied value give a different node (TREE: no child-only rule can rebuild both). Catches W9."
+    },
+    {
+      "name": "m-parts-compose-childless",
+      "slot": "fixture", "op": "compose",
+      "own": { "class": "a", "representation": "a" },
+      "children": [],
+      "result": { "own": { "class": "a", "representation": "a" }, "children": [] },
+      "note": "X2. compose((t,{})) is an existing childless node carrying t."
+    },
+    {
+      "name": "m-parts-compose-option-instantiation-chooses-none-parent",
+      "slot": "option", "op": "compose",
+      "own": { "none": {} },
+      "children": [["61", { "own": { "some": { "class": "a", "representation": "a" } }, "children": [] }]],
+      "result": { "own": { "none": {} }, "children": [["61", { "own": { "some": { "class": "a", "representation": "a" } }, "children": [] }]] },
+      "note": "X3. The generic core cannot choose a parent value; an optional instantiation can supply none (ADR 0010 §3; TREE, Composition). Here none is supplied explicitly."
+    },
+    {
+      "name": "m-parts-compose-unit-instantiation-parent",
+      "slot": "unit", "op": "compose",
+      "own": {},
+      "children": [["61", { "own": {}, "children": [] }]],
+      "result": { "own": {}, "children": [["61", { "own": {}, "children": [] }]] },
+      "note": "X3. A unit instantiation supplies () as the parent value (ADR 0010 §3)."
+    },
+    {
+      "name": "m-ctx-split-interior",
+      "slot": "fixture", "op": "split",
+      "node": { "own": { "class": "r", "representation": "r" }, "children": [["6b", { "own": { "class": "i", "representation": "i" }, "children": [["6a", { "own": { "class": "t", "representation": "t" }, "children": [] }]] }], ["61", { "own": { "class": "s", "representation": "s" }, "children": [] }]] },
+      "path": ["6b"],
+      "result": { "defined": {
+        "context": { "own": { "class": "r", "representation": "r" }, "children": [["6b", { "hole": {} }], ["61", { "own": { "class": "s", "representation": "s" }, "children": [] }]] },
+        "subtree": { "own": { "class": "i", "representation": "i" }, "children": [["6a", { "own": { "class": "t", "representation": "t" }, "children": [] }]] } } },
+      "note": "X12. The context keeps the ancestor's own value r, the key to the hole and the sibling subtree at [61] (ADR 0010 §4)."
+    },
+    {
+      "name": "m-ctx-split-deep-keeps-every-ancestor-value",
+      "slot": "fixture", "op": "split",
+      "node": { "own": { "class": "r", "representation": "r" }, "children": [["6b", { "own": { "class": "i", "representation": "i" }, "children": [["6a", { "own": { "class": "t", "representation": "t" }, "children": [] }]] }], ["61", { "own": { "class": "s", "representation": "s" }, "children": [] }]] },
+      "path": ["6b", "6a"],
+      "result": { "defined": {
+        "context": { "own": { "class": "r", "representation": "r" }, "children": [["6b", { "own": { "class": "i", "representation": "i" }, "children": [["6a", { "hole": {} }]] }], ["61", { "own": { "class": "s", "representation": "s" }, "children": [] }]] },
+        "subtree": { "own": { "class": "t", "representation": "t" }, "children": [] } } },
+      "note": "X12. Both ancestor values are kept, the root's r and the interior i above the hole."
+    },
+    {
+      "name": "m-ctx-split-at-epsilon",
+      "slot": "fixture", "op": "split",
+      "node": { "own": { "class": "r", "representation": "r" }, "children": [["61", { "own": { "class": "s", "representation": "s" }, "children": [] }]] },
+      "path": [],
+      "result": { "defined": {
+        "context": { "hole": {} },
+        "subtree": { "own": { "class": "r", "representation": "r" }, "children": [["61", { "own": { "class": "s", "representation": "s" }, "children": [] }]] } } },
+      "note": "X12. At ε the context is the bare hole and the subtree is the whole tree."
+    },
+    {
+      "name": "m-ctx-split-missing-path",
+      "slot": "fixture", "op": "split",
+      "node": { "own": { "class": "r", "representation": "r" }, "children": [["61", { "own": { "class": "s", "representation": "s" }, "children": [] }]] },
+      "path": ["62"],
+      "result": { "undefined": {} },
+      "note": "X12. split_p is defined when p ∈ D_n; PATH: splitting at a path not in paths(N) is undefined."
+    },
+    {
+      "name": "m-ctx-plug-restores-the-split-tree",
+      "slot": "fixture", "op": "plug",
+      "context": { "own": { "class": "r", "representation": "r" }, "children": [["6b", { "hole": {} }], ["61", { "own": { "class": "s", "representation": "s" }, "children": [] }]] },
+      "subtree": { "own": { "class": "i", "representation": "i" }, "children": [["6a", { "own": { "class": "t", "representation": "t" }, "children": [] }]] },
+      "result": { "own": { "class": "r", "representation": "r" }, "children": [["6b", { "own": { "class": "i", "representation": "i" }, "children": [["6a", { "own": { "class": "t", "representation": "t" }, "children": [] }]] }], ["61", { "own": { "class": "s", "representation": "s" }, "children": [] }]] },
+      "note": "X12. plug_p(split_p(n)) ≡ n, using m-ctx-split-interior's parts."
+    },
+    {
+      "name": "m-ctx-plug-a-different-subtree",
+      "slot": "fixture", "op": "plug",
+      "context": { "own": { "class": "r", "representation": "r" }, "children": [["6b", { "hole": {} }], ["61", { "own": { "class": "s", "representation": "s" }, "children": [] }]] },
+      "subtree": { "own": { "class": "n", "representation": "n" }, "children": [["6c", { "own": { "class": "m", "representation": "m" }, "children": [] }]] },
+      "result": { "own": { "class": "r", "representation": "r" }, "children": [["6b", { "own": { "class": "n", "representation": "n" }, "children": [["6c", { "own": { "class": "m", "representation": "m" }, "children": [] }]] }], ["61", { "own": { "class": "s", "representation": "s" }, "children": [] }]] },
+      "note": "X12. The plugged subtree sits at the hole; the context's value r and its sibling are unchanged."
+    },
+    {
+      "name": "m-ctx-split-of-plugged-tree-returns-the-same-context",
+      "slot": "fixture", "op": "split",
+      "node": { "own": { "class": "r", "representation": "r" }, "children": [["6b", { "own": { "class": "n", "representation": "n" }, "children": [["6c", { "own": { "class": "m", "representation": "m" }, "children": [] }]] }], ["61", { "own": { "class": "s", "representation": "s" }, "children": [] }]] },
+      "path": ["6b"],
+      "result": { "defined": {
+        "context": { "own": { "class": "r", "representation": "r" }, "children": [["6b", { "hole": {} }], ["61", { "own": { "class": "s", "representation": "s" }, "children": [] }]] },
+        "subtree": { "own": { "class": "n", "representation": "n" }, "children": [["6c", { "own": { "class": "m", "representation": "m" }, "children": [] }]] } } },
+      "note": "X12. The converse law split_p(plug_p((C,s))) ≡ (C,s), applied to m-ctx-plug-a-different-subtree's result. It returns exactly the same context C, not merely some context that could have produced the tree (PATH: the law that is easy to omit)."
+    },
+    {
+      "name": "m-ctx-replace",
+      "slot": "fixture", "op": "replace",
+      "node": { "own": { "class": "r", "representation": "r" }, "children": [["6b", { "own": { "class": "i", "representation": "i" }, "children": [["6a", { "own": { "class": "t", "representation": "t" }, "children": [] }]] }], ["61", { "own": { "class": "s", "representation": "s" }, "children": [] }]] },
+      "path": ["6b"],
+      "subtree": { "own": { "class": "n", "representation": "n" }, "children": [] },
+      "result": { "defined": { "own": { "class": "r", "representation": "r" }, "children": [["6b", { "own": { "class": "n", "representation": "n" }, "children": [] }], ["61", { "own": { "class": "s", "representation": "s" }, "children": [] }]] } },
+      "note": "X12. n[p := s]: at(n[p := s],p) ≡ s, and everything outside the hole is kept."
+    },
+    {
+      "name": "m-ctx-replace-with-own-subtree-is-identity",
+      "slot": "fixture", "op": "replace",
+      "node": { "own": { "class": "r", "representation": "r" }, "children": [["6b", { "own": { "class": "i", "representation": "i" }, "children": [["6a", { "own": { "class": "t", "representation": "t" }, "children": [] }]] }], ["61", { "own": { "class": "s", "representation": "s" }, "children": [] }]] },
+      "path": ["6b"],
+      "subtree": { "own": { "class": "i", "representation": "i" }, "children": [["6a", { "own": { "class": "t", "representation": "t" }, "children": [] }]] },
+      "result": { "defined": { "own": { "class": "r", "representation": "r" }, "children": [["6b", { "own": { "class": "i", "representation": "i" }, "children": [["6a", { "own": { "class": "t", "representation": "t" }, "children": [] }]] }], ["61", { "own": { "class": "s", "representation": "s" }, "children": [] }]] } },
+      "note": "X12. n[p := at(n,p)] ≡ n."
+    },
+    {
+      "name": "m-ctx-replace-twice-keeps-only-the-last",
+      "slot": "fixture", "op": "replace",
+      "node": { "own": { "class": "r", "representation": "r" }, "children": [["6b", { "own": { "class": "i", "representation": "i" }, "children": [["6a", { "own": { "class": "t", "representation": "t" }, "children": [] }]] }], ["61", { "own": { "class": "s", "representation": "s" }, "children": [] }]] },
+      "path": ["6b"],
+      "subtree": { "own": { "class": "n", "representation": "n" }, "children": [["6c", { "own": { "class": "m", "representation": "m" }, "children": [] }]] },
+      "then": { "own": { "class": "u", "representation": "u" }, "children": [] },
+      "result": { "defined": { "own": { "class": "r", "representation": "r" }, "children": [["6b", { "own": { "class": "u", "representation": "u" }, "children": [] }], ["61", { "own": { "class": "s", "representation": "s" }, "children": [] }]] } },
+      "note": "X12. n[p := s][p := u] ≡ n[p := u]: replacing again at the same path leaves no trace of s, including its child [6c]. \"then\" is the second replacement, applied to the first's result."
+    },
+    {
+      "name": "m-ctx-replace-congruence",
+      "slot": "fixture", "op": "replace",
+      "node": { "own": { "class": "r", "representation": "r" }, "children": [["6b", { "own": { "class": "i", "representation": "i" }, "children": [] }], ["61", { "own": { "class": "s", "representation": "s" }, "children": [] }]] },
+      "path": ["6b"],
+      "subtree": { "own": { "class": "n", "representation": "lower" }, "children": [] },
+      "result": { "defined": { "own": { "class": "r", "representation": "r" }, "children": [["6b", { "own": { "class": "n", "representation": "UPPER" }, "children": [] }], ["61", { "own": { "class": "s", "representation": "s" }, "children": [] }]] } },
+      "note": "X12. s ≡ u ⇒ n[p := s] ≡ n[p := u]. The supplied subtree and the one in the expected result differ only in representation, which ≈ ignores, so the replacements are equal."
+    },
+    {
+      "name": "m-ctx-replace-missing-path",
+      "slot": "fixture", "op": "replace",
+      "node": { "own": { "class": "r", "representation": "r" }, "children": [["61", { "own": { "class": "s", "representation": "s" }, "children": [] }]] },
+      "path": ["62"],
+      "subtree": { "own": { "class": "n", "representation": "n" }, "children": [] },
+      "result": { "undefined": {} },
+      "note": "X12. Replacement is at an existing path; [62] is missing, so split is undefined and so is replacement. It does not insert (compare attachment)."
+    },
+    {
+      "name": "m-ctx-replace-keeps-a-null-ancestor-value",
+      "slot": "json", "op": "replace",
+      "node": { "own": null, "children": [["61", { "own": "a", "children": [] }]] },
+      "path": ["61"],
+      "subtree": { "own": "b", "children": [] },
+      "result": { "defined": { "own": null, "children": [["61", { "own": "b", "children": [] }]] } },
+      "note": "X12, X4. The root's own value is null and survives in the context as a value; the context retains every ancestor's own value (ADR 0010 §4). Catches W3."
+    },
+    {
+      "name": "m-cut-two-siblings",
+      "slot": "fixture", "op": "cut",
+      "node": { "own": { "class": "r", "representation": "r" }, "children": [["6b", { "own": { "class": "i", "representation": "i" }, "children": [["6a", { "own": { "class": "t", "representation": "t" }, "children": [] }]] }], ["61", { "own": { "class": "s", "representation": "s" }, "children": [] }]] },
+      "paths": [["6b"], ["61"]],
+      "result": { "defined": {
+        "skeleton": { "own": { "class": "r", "representation": "r" }, "children": [["6b", { "hole": {} }], ["61", { "hole": {} }]] },
+        "subtrees": [[["6b"], { "own": { "class": "i", "representation": "i" }, "children": [["6a", { "own": { "class": "t", "representation": "t" }, "children": [] }]] }], [["61"], { "own": { "class": "s", "representation": "s" }, "children": [] }]] } },
+      "note": "X13. cut_F(n) = (skeleton_F(n), {p ↦ at(n,p) | p ∈ F}). The skeleton keeps the root value r with a hole at each path of F."
+    },
+    {
+      "name": "m-cut-nested-prefix-free-set",
+      "slot": "fixture", "op": "cut",
+      "node": { "own": { "class": "r", "representation": "r" }, "children": [["6b", { "own": { "class": "i", "representation": "i" }, "children": [["6a", { "own": { "class": "t", "representation": "t" }, "children": [] }]] }], ["61", { "own": { "class": "s", "representation": "s" }, "children": [] }]] },
+      "paths": [["6b", "6a"], ["61"]],
+      "result": { "defined": {
+        "skeleton": { "own": { "class": "r", "representation": "r" }, "children": [["6b", { "own": { "class": "i", "representation": "i" }, "children": [["6a", { "hole": {} }]] }], ["61", { "hole": {} }]] },
+        "subtrees": [[["6b", "6a"], { "own": { "class": "t", "representation": "t" }, "children": [] }], [["61"], { "own": { "class": "s", "representation": "s" }, "children": [] }]] } },
+      "note": "X13. Holes at different depths. The interior value i above a hole survives in the skeleton (PATH: own values above a hole included)."
+    },
+    {
+      "name": "m-cut-missing-path-refuses",
+      "slot": "fixture", "op": "cut",
+      "node": { "own": { "class": "r", "representation": "r" }, "children": [["61", { "own": { "class": "s", "representation": "s" }, "children": [] }]] },
+      "paths": [["61"], ["62"]],
+      "result": { "undefined": {} },
+      "note": "X13. PATH: cutting is undefined when any path of F is missing; skipping that path would silently return a different cut."
+    },
+    {
+      "name": "m-cut-rebuild-restores",
+      "slot": "fixture", "op": "rebuild",
+      "skeleton": { "own": { "class": "r", "representation": "r" }, "children": [["6b", { "hole": {} }], ["61", { "hole": {} }]] },
+      "subtrees": [[["6b"], { "own": { "class": "i", "representation": "i" }, "children": [["6a", { "own": { "class": "t", "representation": "t" }, "children": [] }]] }], [["61"], { "own": { "class": "s", "representation": "s" }, "children": [] }]],
+      "result": { "own": { "class": "r", "representation": "r" }, "children": [["6b", { "own": { "class": "i", "representation": "i" }, "children": [["6a", { "own": { "class": "t", "representation": "t" }, "children": [] }]] }], ["61", { "own": { "class": "s", "representation": "s" }, "children": [] }]] },
+      "note": "X13. rebuild_F(cut_F(n)) ≡ n, using m-cut-two-siblings's parts."
+    }
+  ]
+}

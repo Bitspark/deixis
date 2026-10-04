@@ -1,0 +1,9 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Bitspark/atlas/main/schema/atlas-manifest.schema.json",
+  "name": "deixis",
+  "greek": "δεῖξις",
+  "gloss": "pointing, showing",
+  "is": "the structure of a finite keyed tree, independent of what its nodes hold",
+  "layer": "substance",
+  "dependsOn": []
+}

@@ -1,0 +1,13 @@
+[package]
+name = "bitspark-deixis-pos"
+version = "0.6.0"
+description = "deixis-pos-v1: the spelling κ : ℕ → Bytes of positions into deixis keys — injective, prefix-free, order-preserving. A reading above the floor; depends on nothing, not even deixis-core."
+edition.workspace = true
+license.workspace = true
+
+[lib]
+name = "deixis_pos"
+path = "src/lib.rs"
+
+# Intentionally dependency-free. κ is ℕ → Bytes; it does not even need the tree.
+[dependencies]

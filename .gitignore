@@ -1,0 +1,13 @@
+# Build artefacts of the four cores.
+target/
+node_modules/
+*/ts/dist/
+__pycache__/
+.mypy_cache/
+.ruff_cache/
+
+# Per-checkout local state.
+.worktrees/
+.claude/settings.local.json
+.DS_Store
+.env

@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: A vulnerability
+    url: https://github.com/Bitspark/deixis/security/advisories/new
+    about: Report it privately, not in an issue. SECURITY.md says what counts as one.
+  - name: What belongs in deixis
+    url: https://github.com/Bitspark/deixis/blob/main/CONTRIBUTING.md
+    about: Structure and never meaning, four cores held to one corpus, and the dependency rule.
+  - name: The codec's freeze
+    url: https://github.com/Bitspark/deixis/issues/1
+    about: What the candidate codec still needs before its bytes and addresses are stable.

@@ -1,0 +1,198 @@
+{
+  "description": "deixis mandatory Node[T] identity vectors — structural equality of ADR 0010 §3 (n ≡ m iff D_n = D_m and v_n(p) ≈ v_m(p) at every p ∈ D_n, with v TOTAL on D). Every case declares its slot: the carrier and its ≈, as defined in vectors/MNODE-PLAN.md. Hand-authored from docs/design/0010-mandatory-node-values.md, docs/TREE.md and docs/PATH.md as merged in 1a9bb6d, and from nothing else. No implementation of the mandatory API existed when these were written, so none can have been copied. Items X7–X10 and X19; each note names the defect (W) it catches. 24 cases.",
+  "profile": "deixis-mnode-identity",
+  "cases": [
+    {
+      "name": "m-fixture-same-class-different-representation",
+      "slot": "fixture",
+      "left":  { "own": { "class": "a", "representation": "first" }, "children": [] },
+      "right": { "own": { "class": "a", "representation": "second" }, "children": [] },
+      "equal": true,
+      "note": "X7. The fixture ≈ compares class only, so two childless nodes with ≈ values are equal."
+    },
+    {
+      "name": "m-fixture-different-class",
+      "slot": "fixture",
+      "left":  { "own": { "class": "a", "representation": "same" }, "children": [] },
+      "right": { "own": { "class": "b", "representation": "same" }, "children": [] },
+      "equal": false,
+      "note": "X7. v(ε) differ under ≈."
+    },
+    {
+      "name": "m-fixture-root-value-differs-over-identical-children",
+      "slot": "fixture",
+      "left":  { "own": { "class": "p", "representation": "p" }, "children": [["6b", { "own": { "class": "c", "representation": "c" }, "children": [] }]] },
+      "right": { "own": { "class": "q", "representation": "p" }, "children": [["6b", { "own": { "class": "c", "representation": "c" }, "children": [] }]] },
+      "equal": false,
+      "note": "X7, X11. Identical children, different root values: TREE says a parent's own value is never inferred from its children. Catches W5 (terminal-only comparison) and W9."
+    },
+    {
+      "name": "m-fixture-interior-value-differs-only",
+      "slot": "fixture",
+      "left":  { "own": { "class": "r", "representation": "r" }, "children": [["6b", { "own": { "class": "i1", "representation": "i" }, "children": [["6a", { "own": { "class": "t", "representation": "t" }, "children": [] }]] }]] },
+      "right": { "own": { "class": "r", "representation": "r" }, "children": [["6b", { "own": { "class": "i2", "representation": "i" }, "children": [["6a", { "own": { "class": "t", "representation": "t" }, "children": [] }]] }]] },
+      "equal": false,
+      "note": "X7. Same paths; the only difference is v([6b]), the value of an interior node, which has a child of its own. ≈ applies at every node, not only terminal ones. Catches W5."
+    },
+    {
+      "name": "m-fixture-interior-differs-only-in-representation",
+      "slot": "fixture",
+      "left":  { "own": { "class": "r", "representation": "r" }, "children": [["6b", { "own": { "class": "i", "representation": "lower" }, "children": [["6a", { "own": { "class": "t", "representation": "t" }, "children": [] }]] }]] },
+      "right": { "own": { "class": "r", "representation": "r" }, "children": [["6b", { "own": { "class": "i", "representation": "UPPER" }, "children": [["6a", { "own": { "class": "t", "representation": "t" }, "children": [] }]] }]] },
+      "equal": true,
+      "note": "X7. The coarse ≈ holds at the interior node as well: the relation is used at every node, and it ignores representation there too."
+    },
+    {
+      "name": "m-fixture-sibling-order-irrelevant",
+      "slot": "fixture",
+      "left":  { "own": { "class": "r", "representation": "r" }, "children": [["61", { "own": { "class": "x", "representation": "x" }, "children": [] }], ["62", { "own": { "class": "y", "representation": "y" }, "children": [] }]] },
+      "right": { "own": { "class": "r", "representation": "r" }, "children": [["62", { "own": { "class": "y", "representation": "y" }, "children": [] }], ["61", { "own": { "class": "x", "representation": "x" }, "children": [] }]] },
+      "equal": true,
+      "note": "X7. The children are a finite map; TREE says sibling order is not part of a node."
+    },
+    {
+      "name": "m-fixture-extra-child",
+      "slot": "fixture",
+      "left":  { "own": { "class": "r", "representation": "r" }, "children": [["61", { "own": { "class": "x", "representation": "x" }, "children": [] }]] },
+      "right": { "own": { "class": "r", "representation": "r" }, "children": [["61", { "own": { "class": "x", "representation": "x" }, "children": [] }], ["62", { "own": { "class": "y", "representation": "y" }, "children": [] }]] },
+      "equal": false,
+      "note": "X7. D_left = {ε,[61]} and D_right = {ε,[61],[62]}: key domains must be equal."
+    },
+    {
+      "name": "m-fixture-childless-vs-one-child-same-value",
+      "slot": "fixture",
+      "left":  { "own": { "class": "a", "representation": "a" }, "children": [] },
+      "right": { "own": { "class": "a", "representation": "a" }, "children": [["6b", { "own": { "class": "a", "representation": "a" }, "children": [] }]] },
+      "equal": false,
+      "note": "X7. TREE, 'What identity is not': deixis does not decide that a node with descendants equals a childless node, even when every value present is ≈."
+    },
+    {
+      "name": "m-fixture-empty-key-is-a-key",
+      "slot": "fixture",
+      "left":  { "own": { "class": "a", "representation": "a" }, "children": [["", { "own": { "class": "b", "representation": "b" }, "children": [] }]] },
+      "right": { "own": { "class": "a", "representation": "a" }, "children": [] },
+      "equal": false,
+      "note": "X19. D_left = {ε, [\"\"]}: the empty key is a key, and the path [\"\"] is not ε (ADR 0010 §3: empty key and empty path differ)."
+    },
+    {
+      "name": "m-fixture-keys-are-exact-bytes",
+      "slot": "fixture",
+      "left":  { "own": { "class": "a", "representation": "a" }, "children": [["ff", { "own": { "class": "b", "representation": "b" }, "children": [] }]] },
+      "right": { "own": { "class": "a", "representation": "a" }, "children": [["ff00", { "own": { "class": "b", "representation": "b" }, "children": [] }]] },
+      "equal": false,
+      "note": "X19. Keys are exact byte strings: ff and ff00 differ by a trailing zero byte. Neither is valid UTF-8, which does not matter."
+    },
+    {
+      "name": "m-option-none-vs-some-empty",
+      "slot": "option",
+      "left":  { "own": { "none": {} }, "children": [] },
+      "right": { "own": { "some": { "class": "", "representation": "" } }, "children": [] },
+      "equal": false,
+      "note": "X8. With tag-respecting option equality, none differs from some(e), even when e is the fixture's own empty value (TREE, 'Optionality is a slot choice'). Catches W6."
+    },
+    {
+      "name": "m-option-none-vs-none",
+      "slot": "option",
+      "left":  { "own": { "none": {} }, "children": [] },
+      "right": { "own": { "none": {} }, "children": [] },
+      "equal": true,
+      "note": "X8. none ≈ none. Both are existing childless nodes carrying the payload none."
+    },
+    {
+      "name": "m-option-some-coarse-inside",
+      "slot": "option",
+      "left":  { "own": { "some": { "class": "a", "representation": "one" } }, "children": [] },
+      "right": { "own": { "some": { "class": "a", "representation": "two" } }, "children": [] },
+      "equal": true,
+      "note": "X8. some(x) ≈ some(y) iff x ≈ y, and the fixture ≈ ignores representation."
+    },
+    {
+      "name": "m-option-paths-retained-under-none",
+      "slot": "option",
+      "left":  { "own": { "none": {} }, "children": [["61", { "own": { "none": {} }, "children": [] }]] },
+      "right": { "own": { "none": {} }, "children": [] },
+      "equal": false,
+      "note": "X10. PATH, 'Identity, extensionally', gives exactly this pair: the path [61] exists on the left although its payload is none. A none payload is not a missing node. Catches W3."
+    },
+    {
+      "name": "m-option-interior-none-vs-some",
+      "slot": "option",
+      "left":  { "own": { "some": { "class": "r", "representation": "r" } }, "children": [["6b", { "own": { "none": {} }, "children": [["6a", { "own": { "some": { "class": "t", "representation": "t" } }, "children": [] }]] }]] },
+      "right": { "own": { "some": { "class": "r", "representation": "r" } }, "children": [["6b", { "own": { "some": { "class": "i", "representation": "i" } }, "children": [["6a", { "own": { "some": { "class": "t", "representation": "t" } }, "children": [] }]] }]] },
+      "equal": false,
+      "note": "X8, X7. The only difference is the interior node's payload, none against some(i). Catches W5 and W6 together."
+    },
+    {
+      "name": "m-unit-same-paths-any-order",
+      "slot": "unit",
+      "left":  { "own": {}, "children": [["61", { "own": {}, "children": [] }], ["62", { "own": {}, "children": [] }]] },
+      "right": { "own": {}, "children": [["62", { "own": {}, "children": [] }], ["61", { "own": {}, "children": [] }]] },
+      "equal": true,
+      "note": "X9. Node[Unit] is pure keyed shape (ADR 0010 §1): every value is the unit, so identity is equality of path domains."
+    },
+    {
+      "name": "m-unit-different-paths",
+      "slot": "unit",
+      "left":  { "own": {}, "children": [["61", { "own": {}, "children": [] }]] },
+      "right": { "own": {}, "children": [["62", { "own": {}, "children": [] }]] },
+      "equal": false,
+      "note": "X9. Different path domains."
+    },
+    {
+      "name": "m-unit-childless-vs-one-child",
+      "slot": "unit",
+      "left":  { "own": {}, "children": [] },
+      "right": { "own": {}, "children": [["61", { "own": {}, "children": [] }]] },
+      "equal": false,
+      "note": "X9. D_left = {ε} and D_right = {ε,[61]}. Every value is ≈, so the domains alone decide."
+    },
+    {
+      "name": "m-json-null-vs-null",
+      "slot": "json",
+      "left":  { "own": null, "children": [] },
+      "right": { "own": null, "children": [] },
+      "equal": true,
+      "note": "X4. null is a legal payload of the json slot, and an existing childless node carries it."
+    },
+    {
+      "name": "m-json-null-vs-false",
+      "slot": "json",
+      "left":  { "own": null, "children": [] },
+      "right": { "own": false, "children": [] },
+      "equal": false,
+      "note": "X4. Structural JSON equality separates null from false; no payload is special to the core."
+    },
+    {
+      "name": "m-json-null-vs-empty-object",
+      "slot": "json",
+      "left":  { "own": null, "children": [] },
+      "right": { "own": {}, "children": [] },
+      "equal": false,
+      "note": "X4. Under the json slot, {} is an ordinary JSON object and differs from null. Under the unit slot the same spelling is the unit. The declared slot decides, never the spelling alone."
+    },
+    {
+      "name": "m-json-object-member-order-ignored",
+      "slot": "json",
+      "left":  { "own": { "a": "1", "b": "2" }, "children": [] },
+      "right": { "own": { "b": "2", "a": "1" }, "children": [] },
+      "equal": true,
+      "note": "X7. The json slot's ≈ ignores object member order (MNODE-PLAN, slots)."
+    },
+    {
+      "name": "m-json-null-child-is-an-existing-node",
+      "slot": "json",
+      "left":  { "own": "r", "children": [["61", { "own": null, "children": [] }]] },
+      "right": { "own": "r", "children": [] },
+      "equal": false,
+      "note": "X4, X10. The child at [61] holds a null payload and still exists: D_left = {ε,[61]}. TREE, 'Existing versus missing': no payload denotes a missing path. Catches W3."
+    },
+    {
+      "name": "m-json-null-interior-vs-string",
+      "slot": "json",
+      "left":  { "own": "r", "children": [["6b", { "own": null, "children": [["6a", { "own": "t", "children": [] }]] }]] },
+      "right": { "own": "r", "children": [["6b", { "own": "null", "children": [["6a", { "own": "t", "children": [] }]] }]] },
+      "equal": false,
+      "note": "X4, X7. The interior values are the JSON null and the string \"null\", which differ. The comparison happens at an interior node."
+    }
+  ]
+}

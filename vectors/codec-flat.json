@@ -1,0 +1,216 @@
+{
+  "description": "deixis-codec-v1 flat form (dxf1) — batch 1: the laws and canonicity. Octets hand-assembled from docs/CODEC.md §5 (flat grammar) and §3 (uvarint), never emitted by an implementation; see vectors/README.md's oracle clause and vectors/CODEC-PLAN.md for the plan this batch executes. Every case carries the leaf-codec id in its own header, so a replayer needs no out-of-band framing. Batch 1 covers laws/canonicity only: fault codes are batch 2, precedence batch 3.",
+  "spec": "docs/CODEC-v1.md",
+  "status": "HISTORICAL: the withdrawn deixis-codec-v1 candidate (ADR 0011 §5), specified by docs/CODEC-v1.md; kept as its evidence, not rewritten. As authored: DRAFT — batch 1 of the plan, authored against a CANDIDATE CONTRACT. Not frozen; a spec change before the freeze invalidates these octets and they are re-derived, not patched.",
+  "bundle": {
+    "id": "0001",
+    "name": "deixis/identity-bytes",
+    "note": "The public bootstrap id (CODEC.md §13): carrier is Bytes, ≈ is byte equality, e = id, D = id. Chosen for batch 1 because e being the identity makes every payload readable directly in the octets, so a reader can check the assembly by eye. The coarse fixture setoid (the private id in README.md) enters in batch 2, where non_canonical_payload needs a slot whose ≈ ignores part of its carrier."
+  },
+  "header": {
+    "hex": "64786631020001",
+    "derivation": "\"dxf1\" = 64 78 66 31 · cuvarint(len(id)) = 02 · id = 00 01. Identical in every case below; the per-case `bytes` field carries it inline rather than by reference, because a case a replayer cannot read alone is a case nobody checks."
+  },
+  "cases": [
+    {
+      "name": "flat/leaf-empty-payload",
+      "kind": "accept",
+      "node": {
+        "leaf": ""
+      },
+      "bytes": "647866310200010000",
+      "note": "Leaf with an empty payload: tag 00, cuvarint(0) = 00, no payload octets. The empty byte string is a legal member of im(e) under identity-bytes, and this case pins that a zero length is a length and not an absence.",
+      "pins": [
+        "The magic is exactly `\"dxf1\"`",
+        "node   := 0x00 ‖ cuvarint(len(payload)) ‖ payload      # Leaf;  payload = e(x)",
+        "header := \"dxf1\" ‖ cuvarint(len(id)) ‖ id",
+        "`uvarint` is unsigned LEB128: seven bits per octet, least-significant group first,\nthe high bit of each octet set on all but the last.",
+        "flat   := header ‖ node",
+        "id := 0x00 ‖ cuvarint(n)              # PUBLIC — registry-assigned, n ≥ 1\n    | 0x01 ‖ ns{16} ‖ cuvarint(k)     # PRIVATE / EXPERIMENTAL — self-scoped",
+        "- Total length is 2..32 octets; outside that range the artifact is **invalid**.",
+        "- `e : T → Bytes` — total, computable, and **lawful**: `x ≈ y ⟺ e(x) = e(y)`."
+      ]
+    },
+    {
+      "name": "flat/leaf-two-octets",
+      "kind": "accept",
+      "node": {
+        "leaf": "6869"
+      },
+      "bytes": "6478663102000100026869",
+      "note": "Leaf(0x6869): tag 00, cuvarint(2) = 02, payload 68 69. The smallest case in which the length prefix and the payload are distinguishable in the octets.",
+      "pins": [
+        "The magic is exactly `\"dxf1\"`",
+        "node   := 0x00 ‖ cuvarint(len(payload)) ‖ payload      # Leaf;  payload = e(x)",
+        "header := \"dxf1\" ‖ cuvarint(len(id)) ‖ id",
+        "`uvarint` is unsigned LEB128: seven bits per octet, least-significant group first,\nthe high bit of each octet set on all but the last.",
+        "flat   := header ‖ node",
+        "id := 0x00 ‖ cuvarint(n)              # PUBLIC — registry-assigned, n ≥ 1\n    | 0x01 ‖ ns{16} ‖ cuvarint(k)     # PRIVATE / EXPERIMENTAL — self-scoped",
+        "- Total length is 2..32 octets; outside that range the artifact is **invalid**.",
+        "- `e : T → Bytes` — total, computable, and **lawful**: `x ≈ y ⟺ e(x) = e(y)`.",
+        "- `D : Bytes ⇀ T` — an exact partial inverse: `D(e(x)) ≈ x`, and `D(b)` is defined",
+        "`D` MUST be **computable**, and membership in `im(e)` MUST\n  be **decidable**."
+      ]
+    },
+    {
+      "name": "flat/empty-struct",
+      "kind": "accept",
+      "node": {
+        "struct": []
+      },
+      "bytes": "647866310200010100",
+      "note": "Struct(∅) = 0x01 ‖ 0x00, which CODEC.md §5 names outright as a legal node distinct from every leaf. Paired with flat/leaf-empty-payload above: identical in length, different in tag, and an implementation that conflates emptiness with absence produces one where the other is required. This is TREE.md's Leaf(x) ≠ Struct(∅) reaching the octets.",
+      "pins": [
+        "An empty struct is `0x01 ‖ 0x00` and is a legal node, distinct from every leaf.",
+        "header := \"dxf1\" ‖ cuvarint(len(id)) ‖ id",
+        "3. `count` equals the number of entries that follow; entries are read sequentially",
+        "flat   := header ‖ node",
+        "        | 0x01 ‖ cuvarint(count) ‖ entry*              # Struct; count = |entries|",
+        "id := 0x00 ‖ cuvarint(n)              # PUBLIC — registry-assigned, n ≥ 1\n    | 0x01 ‖ ns{16} ‖ cuvarint(k)     # PRIVATE / EXPERIMENTAL — self-scoped"
+      ]
+    },
+    {
+      "name": "flat/empty-key",
+      "kind": "accept",
+      "node": {
+        "struct": [
+          [
+            "",
+            {
+              "leaf": "01"
+            }
+          ]
+        ]
+      },
+      "bytes": "64786631020001010100000101",
+      "note": "The empty byte string is a legal KEY: count 01, cuvarint(len(key)) = 00, zero key octets, then the child leaf 00 01 01. Keys are uninterpreted bytes (TREE.md), so nothing licenses a decoder to treat a zero-length key as malformed.",
+      "pins": [
+        "entry  := cuvarint(len(key)) ‖ key ‖ node",
+        "header := \"dxf1\" ‖ cuvarint(len(id)) ‖ id",
+        "3. `count` equals the number of entries that follow; entries are read sequentially",
+        "flat   := header ‖ node",
+        "        | 0x01 ‖ cuvarint(count) ‖ entry*              # Struct; count = |entries|"
+      ]
+    },
+    {
+      "name": "flat/prefix-order-a-before-ab",
+      "kind": "accept",
+      "node": {
+        "struct": [
+          [
+            "61",
+            {
+              "leaf": "01"
+            }
+          ],
+          [
+            "6162",
+            {
+              "leaf": "02"
+            }
+          ]
+        ]
+      },
+      "bytes": "6478663102000101020161000101026162000102",
+      "note": "Sibling keys \"a\" (61) and \"ab\" (6162): the shorter-orders-first edge of §2's key order, where a prefix precedes its extension. A core that compares octet-by-octet and forgets the prefix rule emits these two entries in the opposite order and fails HERE by producing wrong bytes; its twin — the same pair spelled out of order, refused as unsorted_keys — is invalid/unsorted-keys-prefix-pair in BATCH 2. (This note said batch 3 until 2026-09-03; that was a filing error of mine. Batch 3 is fault PRECEDENCE — two conditions present at once — and a plain code belongs in batch 2.) The two failures are different defects with different fixes, which is why the pair is split across batches rather than carried by one case.",
+      "pins": [
+        "4. Entry keys are in **strictly ascending lexicographic order** (§2).",
+        "header := \"dxf1\" ‖ cuvarint(len(id)) ‖ id",
+        "3. `count` equals the number of entries that follow; entries are read sequentially",
+        "as unsigned values at each position; at the first difference the smaller octet\n  orders first; if no difference is found before one string ends, the **shorter\n  string orders first**.",
+        "flat   := header ‖ node",
+        "        | 0x01 ‖ cuvarint(count) ‖ entry*              # Struct; count = |entries|",
+        "id := 0x00 ‖ cuvarint(n)              # PUBLIC — registry-assigned, n ≥ 1\n    | 0x01 ‖ ns{16} ‖ cuvarint(k)     # PRIVATE / EXPERIMENTAL — self-scoped",
+        "- Total length is 2..32 octets; outside that range the artifact is **invalid**."
+      ]
+    },
+    {
+      "name": "flat/insertion-order-invariance",
+      "kind": "accept",
+      "authored_order": [
+        [
+          "6162",
+          {
+            "leaf": "02"
+          }
+        ],
+        [
+          "61",
+          {
+            "leaf": "01"
+          }
+        ]
+      ],
+      "node": {
+        "struct": [
+          [
+            "61",
+            {
+              "leaf": "01"
+            }
+          ],
+          [
+            "6162",
+            {
+              "leaf": "02"
+            }
+          ]
+        ]
+      },
+      "bytes": "6478663102000101020161000101026162000102",
+      "note": "The SAME value as flat/prefix-order-a-before-ab, authored out of sorted order. A replayer MUST feed `authored_order` to its constructor and MUST still produce these octets — identical, to the byte. It pins canonical order as a property of the VALUE rather than of how the case was written, which is the cross-form metamorphic property the codec advice asked for, and it is why vectors/README.md's insertion-order convention had to reach this corpus too.",
+      "pins": [
+        "4. Entry keys are in **strictly ascending lexicographic order** (§2).",
+        "3. `count` equals the number of entries that follow; entries are read sequentially",
+        "as unsigned values at each position; at the first difference the smaller octet\n  orders first; if no difference is found before one string ends, the **shorter\n  string orders first**.",
+        "        | 0x01 ‖ cuvarint(count) ‖ entry*              # Struct; count = |entries|"
+      ]
+    },
+    {
+      "name": "flat/nested-identical-subtrees",
+      "kind": "accept",
+      "node": {
+        "struct": [
+          [
+            "61",
+            {
+              "struct": [
+                [
+                  "62",
+                  {
+                    "leaf": "01"
+                  }
+                ]
+              ]
+            }
+          ],
+          [
+            "63",
+            {
+              "struct": [
+                [
+                  "62",
+                  {
+                    "leaf": "01"
+                  }
+                ]
+              ]
+            }
+          ]
+        ]
+      },
+      "bytes": "647866310200010102016101010162000101016301010162000101",
+      "note": "Two structurally identical subtrees under different keys. In the FLAT form sharing does not exist — the subtree is spelled twice, in full, and that is canonical. Its linked counterpart is the positive-sharing case (one chunk, referenced twice, its hash listed once), and the pair is what makes law 2's 'the chunk set is a function of the value' checkable: the same value, two forms, one identity.",
+      "pins": [
+        "`node` has no reference production: every child is spelled inline, so a value whose\nsubtrees are identical spells them **in full, each time**",
+        "header := \"dxf1\" ‖ cuvarint(len(id)) ‖ id",
+        "3. `count` equals the number of entries that follow; entries are read sequentially",
+        "flat   := header ‖ node",
+        "        | 0x01 ‖ cuvarint(count) ‖ entry*              # Struct; count = |entries|"
+      ]
+    }
+  ],
+  "pending": {
+    "note": "Batch 1 is not complete until the linked form and the bridge land — CODEC-PLAN.md ruling 4 puts bridge cases IN batch 1, because they are law 2 and a late bridge batch would invalidate reviewed work. Still owed here: codec-linked.json (dxl1 chunks, links headers in first-use order, the positive-sharing case above in its shared spelling), each bridge case referencing a flat case BY NAME per ruling 1, full 32-octet digests per ruling 2, and addresses spelled version-qualified as (dxl1, digest). Those need SHA-256 over chunk octets, which is the one part of this corpus no reader can check by eye — so each will carry its preimage as hex beside its digest."
+  }
+}

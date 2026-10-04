@@ -1,0 +1,510 @@
+{
+  "spec": "docs/CODEC.md §10",
+  "status": "DRAFT, batch 2 of CODEC-V2-PLAN: authored against the deixis-codec-v2 CANDIDATE CONTRACT. Not frozen; a contract change before the freeze invalidates these octets, which are then re-derived, not patched.",
+  "source": "CODEC.md v2 as merged on main at b42d777 (malformed_slot_codec_id; F1-F3; F4 and first-use precision)",
+  "why_loses_to_naive_is_recorded": "A precedence case is only worth writing if a plausible implementation gets it wrong. loses_to_naive names the code the obvious strategy produces, so each case states the defect it would catch.",
+  "vacuous_pairs": {
+    "uvarint_overflow vs non_shortest_uvarint": "mutually exclusive; §10 records it as unexercisable",
+    "duplicate_key vs unsorted_keys": "mutually exclusive; §10 records it as unexercisable",
+    "unexpected_eof vs trailing_bytes": "mutually exclusive; §10 records it as unexercisable"
+  },
+  "holding": "Every decoding case states `holding`: the base slot-codec ids the decoder holds for that case (§2.1's modifier, stated with the ids it ranges over as §16 requires). option-of over a held id is held (§13). The harness decoder holds 00 01 and the fixture setoid's id unless a case says otherwise.",
+  "precedence_cases": [
+    {
+      "name": "v2-precedence/eof-beats-unknown-magic",
+      "row": "artifact start",
+      "conditions": [
+        "fewer than four octets available",
+        "the octets present are not a dxf2 prefix"
+      ],
+      "class": "invalid",
+      "code": "unexpected_eof",
+      "loses_to_naive": "unknown_magic",
+      "streaming_code": "need_more_input",
+      "fault_locus": "header",
+      "min_profile": "flat-header-validator",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "bytes": "ffff",
+      "note": "Two octets that cannot begin \"dxf2\". Availability is judged before content; answering unknown_magic refuses an artifact that may still be arriving.",
+      "pins": [
+        "Fewer than four is `unexpected_eof`"
+      ]
+    },
+    {
+      "name": "v2-precedence/malformed-beats-overflow",
+      "row": "any uvarint",
+      "conditions": [
+        "more than ten octets",
+        "a value past 2^64 − 1 already by the tenth octet"
+      ],
+      "class": "invalid",
+      "code": "malformed_uvarint",
+      "loses_to_naive": "uvarint_overflow",
+      "fault_locus": "body",
+      "min_profile": "flat-decoder",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "bytes": "64786632020001ffffffffffffffffffff01",
+      "note": "Ten octets ff, each continuing, then 01. By the tenth octet the value exceeds the domain, which an accumulate-and-check reader reports first; the length fault is listed first.",
+      "pins": [
+        "| any `uvarint` | ill-formed continuation, or > 10 octets | `malformed_uvarint` |"
+      ]
+    },
+    {
+      "name": "v2-precedence/id-length-judged-when-read",
+      "row": "slot-codec-id",
+      "conditions": [
+        "the id length 33 is outside 2..32",
+        "the input ends before the id's octets"
+      ],
+      "class": "invalid",
+      "code": "malformed_slot_codec_id",
+      "loses_to_naive": "unexpected_eof",
+      "streaming_code": "malformed_slot_codec_id",
+      "fault_locus": "header",
+      "min_profile": "flat-header-validator",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "bytes": "6478663221",
+      "note": "The length is judged when it is read, so the missing octets never become the question. Open or closed, the verdict is the same: no octets that could arrive make a 33-octet id legal, so this is never need_more_input.",
+      "pins": [
+        "`malformed_slot_codec_id`, judged when the length is read. The bound is on the"
+      ]
+    },
+    {
+      "name": "v2-precedence/non-shortest-beats-n-zero",
+      "row": "any uvarint, then slot-codec-id",
+      "conditions": [
+        "n spelled in two octets (80 00)",
+        "n = 0"
+      ],
+      "class": "invalid",
+      "code": "non_shortest_uvarint",
+      "loses_to_naive": "malformed_slot_codec_id",
+      "fault_locus": "header",
+      "min_profile": "flat-header-validator",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "bytes": "64786632030080000000",
+      "note": "Id 00 80 00: n = 0, spelled non-shortest. The integer rows precede the id row; a reader that decodes n leniently and then tests n = 0 says malformed_slot_codec_id.",
+      "pins": [
+        "not a second way to name the codec: the id is inside the hashed octets (§7), so",
+        "- `n = 0` is permanently reserved and is `malformed_slot_codec_id` — it can never"
+      ]
+    },
+    {
+      "name": "v2-precedence/malformed-id-beats-unsupported",
+      "row": "slot-codec-id, then §11",
+      "conditions": [
+        "an octet left over inside the inner id",
+        "the inner n = 127 is not held"
+      ],
+      "class": "invalid",
+      "code": "malformed_slot_codec_id",
+      "loses_to_naive": "unsupported_slot_codec",
+      "fault_locus": "header",
+      "min_profile": "flat-header-validator",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "bytes": "647866320402007f050000",
+      "note": "Id 02 00 7f 05. A reader that looks n = 127 up on sight answers unsupported; the octet left over makes the id malformed, and a malformed id outranks an unsupported one.",
+      "pins": [
+        "whole id breaks the length bound. A malformed id outranks an unsupported one, as",
+        "option-of id is `0x02` and one whole inner id. Octets missing or left over within the"
+      ]
+    },
+    {
+      "name": "v2-precedence/framing-beats-unsupported",
+      "row": "entry boundary, then §11",
+      "conditions": [
+        "keys out of order",
+        "the id 00 7f is not held"
+      ],
+      "class": "invalid",
+      "code": "unsorted_keys",
+      "loses_to_naive": "unsupported_slot_codec",
+      "fault_locus": "body",
+      "min_profile": "flat-decoder",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "bytes": "6478663202007f00020162000001610000",
+      "note": "V9 at the flat scale. The id is read first and is unsupported; the body's keys b, a are out of order. Framing is decidable without the codec, so it is ruled first.",
+      "pins": [
+        "⭐ **READ FIRST, RULED LAST.**",
+        "1. Framing faults **outrank** `unsupported_slot_codec`. A **codec-blind** profile"
+      ]
+    },
+    {
+      "name": "v2-precedence/framing-beats-unsupported-reserved-form",
+      "row": "end of input, then §11",
+      "conditions": [
+        "one octet after the root",
+        "the id 03 00 is a reserved form"
+      ],
+      "class": "invalid",
+      "code": "trailing_bytes",
+      "loses_to_naive": "unsupported_slot_codec",
+      "fault_locus": "body",
+      "min_profile": "flat-decoder",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "bytes": "647866320203000000ff",
+      "note": "The same rule with a reserved form: its octets are not even judged, and the remainder still is.",
+      "pins": [
+        "1. Framing faults **outrank** `unsupported_slot_codec`. A **codec-blind** profile"
+      ]
+    },
+    {
+      "name": "v2-precedence/unsupported-beats-non-canonical-payload",
+      "row": "§11",
+      "conditions": [
+        "the fixture setoid is not held",
+        "the payload c0 80 would be outside its im(e)"
+      ],
+      "class": "unsupported",
+      "code": "unsupported_slot_codec",
+      "loses_to_naive": "non_canonical_payload",
+      "fault_locus": "header",
+      "min_profile": "flat-header-validator",
+      "holding": [],
+      "bytes": "647866321201fb44faaf3a9db590cbc4cb1abfdadb020102c08000",
+      "note": "Decoded with nothing held. A decoder that validates UTF-8 on its own account reports non_canonical_payload about a codec it does not hold.",
+      "pins": [
+        "2. `unsupported_slot_codec` outranks any payload-level judgment.",
+        "3. A **codec-blind** profile (§2.1) MUST report **unsupported**, and MUST NOT report"
+      ]
+    },
+    {
+      "name": "v2-precedence/framing-beats-payload-seen-earlier",
+      "row": "entry boundary, then the payload",
+      "conditions": [
+        "the root's payload ff is outside im(e)",
+        "the root's keys b, a are out of order"
+      ],
+      "class": "invalid",
+      "code": "unsorted_keys",
+      "loses_to_naive": "non_canonical_payload",
+      "fault_locus": "body",
+      "min_profile": "flat-decoder",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "bytes": "647866321201fb44faaf3a9db590cbc4cb1abfdadb020101ff0201620161000161016100",
+      "note": "V9, ruled last. The payload fault comes EARLIER in the octets than the key fault, and still loses. A decoder that applies D to each payload as it reads it reports non_canonical_payload.",
+      "pins": [
+        "⭐ **READ FIRST, RULED LAST.**",
+        "2. `unsupported_slot_codec` outranks any payload-level judgment.",
+        "4. Entry keys are in **strictly ascending lexicographic order** (§2). An entry key"
+      ]
+    },
+    {
+      "name": "v2-precedence/trailing-beats-payload",
+      "row": "end of input, then the payload",
+      "conditions": [
+        "the root's payload ff is outside im(e)",
+        "one octet after the root"
+      ],
+      "class": "invalid",
+      "code": "trailing_bytes",
+      "loses_to_naive": "non_canonical_payload",
+      "fault_locus": "body",
+      "min_profile": "flat-decoder",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "bytes": "647866321201fb44faaf3a9db590cbc4cb1abfdadb020101ff00ff",
+      "note": "The remainder is a framing fault; the payload is judged last.",
+      "pins": [
+        "2. `unsupported_slot_codec` outranks any payload-level judgment.",
+        "6. After the root node is read, no octets may remain: any remainder is"
+      ]
+    },
+    {
+      "name": "v2-precedence/id-cut-after-its-octets-spell-n-zero",
+      "row": "end of input, then slot-codec-id",
+      "conditions": [
+        "the input ends inside the id's stated extent (3 octets, 2 present)",
+        "the two present octets already spell n = 0"
+      ],
+      "class": "invalid",
+      "code": "unexpected_eof",
+      "loses_to_naive": "malformed_slot_codec_id",
+      "streaming_code": "need_more_input",
+      "fault_locus": "header",
+      "min_profile": "flat-header-validator",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "bytes": "64786632030000",
+      "note": "F5. No third octet can repair n = 0, and a reader judging the id octet by octet says malformed_slot_codec_id. A length-framed field is judged only once its stated extent is read, so this is unexpected_eof, and need_more_input while the stream is open.",
+      "pins": [
+        "**A length-framed field is judged only once its stated extent has been read.** The id,",
+        "present octets already spell `n = 0`, or a key whose first octet already sorts before"
+      ]
+    },
+    {
+      "name": "v2-precedence/key-cut-after-it-sorts-early",
+      "row": "end of input, then entry boundary",
+      "conditions": [
+        "the input ends inside the second key's stated extent (2 octets, 1 present)",
+        "its present octet 61 already sorts before the first key 62"
+      ],
+      "class": "invalid",
+      "code": "unexpected_eof",
+      "loses_to_naive": "unsorted_keys",
+      "streaming_code": "need_more_input",
+      "fault_locus": "body",
+      "min_profile": "flat-decoder",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "bytes": "647866320200010002016200000261",
+      "note": "F5. Root 00 · 02 · 01 62 00 00, then the second key's length 02 and one octet 61. Every completion sorts before 62; the key is still judged only once its two octets are read.",
+      "pins": [
+        "**A length-framed field is judged only once its stated extent has been read.** The id,",
+        "present octets already spell `n = 0`, or a key whose first octet already sorts before"
+      ]
+    },
+    {
+      "name": "v2-precedence/payload-cut-after-it-fails-utf8",
+      "row": "end of input, then the payload",
+      "conditions": [
+        "the input ends inside the root's payload (3 octets, 1 present)",
+        "its present octet ff is already not UTF-8"
+      ],
+      "class": "invalid",
+      "code": "unexpected_eof",
+      "loses_to_naive": "non_canonical_payload",
+      "streaming_code": "need_more_input",
+      "fault_locus": "body",
+      "min_profile": "flat-decoder",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "bytes": "647866321201fb44faaf3a9db590cbc4cb1abfdadb020103ff",
+      "note": "F5, and the payload is judged last in any case. A decoder that validates UTF-8 as octets arrive says non_canonical_payload.",
+      "pins": [
+        "**A length-framed field is judged only once its stated extent has been read.** The id,",
+        "2. `unsupported_slot_codec` outranks any payload-level judgment."
+      ]
+    },
+    {
+      "name": "v2-precedence/duplicate-hash-beats-bad-index",
+      "row": "links header",
+      "conditions": [
+        "the same hash listed twice",
+        "b → 2 with nlinks 2"
+      ],
+      "class": "invalid",
+      "code": "duplicate_link_hash",
+      "loses_to_naive": "bad_link_index",
+      "fault_locus": "links",
+      "min_profile": "closure-checker",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "root": {
+        "space": "dxl2",
+        "digest": "c655770495d0b0debdc97ed0329a5d115263d603750ac29ff484e8b026c7480d"
+      },
+      "root_chunk": "v2-bad-chunk/duplicate-hash-and-bad-index",
+      "store": [
+        [
+          "c655770495d0b0debdc97ed0329a5d115263d603750ac29ff484e8b026c7480d",
+          "v2-bad-chunk/duplicate-hash-and-bad-index"
+        ],
+        [
+          "a9677a54bc70bd0072953ec21471ff76b5e357c6b8bd25ee89db2d045b268009",
+          "v2-chunk/childless-empty"
+        ]
+      ],
+      "note": "The duplicate is visible in the header before any index is read; a reader that validates indices as it meets them reports bad_link_index.",
+      "pins": [
+        "3. The same hash MUST NOT appear twice: `duplicate_link_hash`.",
+        "4. Every `link-index` is `< nlinks`: otherwise `bad_link_index`."
+      ]
+    },
+    {
+      "name": "v2-precedence/bad-index-beats-unused-link",
+      "row": "links header",
+      "conditions": [
+        "b → 2 with nlinks 2",
+        "childless-01 is listed and never used"
+      ],
+      "class": "invalid",
+      "code": "bad_link_index",
+      "loses_to_naive": "unused_link",
+      "fault_locus": "links",
+      "min_profile": "closure-checker",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "root": {
+        "space": "dxl2",
+        "digest": "4d05fee6fe4459aab8892eda853c63c445dd6b56a802c4087e2fef7f9342f4fd"
+      },
+      "root_chunk": "v2-bad-chunk/bad-index-and-unused-link",
+      "store": [
+        [
+          "4d05fee6fe4459aab8892eda853c63c445dd6b56a802c4087e2fef7f9342f4fd",
+          "v2-bad-chunk/bad-index-and-unused-link"
+        ],
+        [
+          "a9677a54bc70bd0072953ec21471ff76b5e357c6b8bd25ee89db2d045b268009",
+          "v2-chunk/childless-empty"
+        ],
+        [
+          "038a411f936d20a4a35f092cf7eb4a67452cafadf0d25cc6d11b3937236cf163",
+          "v2-chunk/childless-01"
+        ]
+      ],
+      "note": "A reader that tallies usage first and checks indices later reports unused_link.",
+      "pins": [
+        "4. Every `link-index` is `< nlinks`: otherwise `bad_link_index`.",
+        "5. Every listed hash MUST be referenced by at least one `lentry`: an unreferenced"
+      ]
+    },
+    {
+      "name": "v2-precedence/out-of-order-beats-unused-link",
+      "row": "links header",
+      "conditions": [
+        "first-use order lists childless-empty first",
+        "childless-01 is never used"
+      ],
+      "class": "invalid",
+      "code": "links_out_of_order",
+      "loses_to_naive": "unused_link",
+      "fault_locus": "links",
+      "min_profile": "closure-checker",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "root": {
+        "space": "dxl2",
+        "digest": "846358de8a02990d138fdc5bf3f7a85c22d1b1017f36e727414b7f92953b2640"
+      },
+      "root_chunk": "v2-bad-chunk/out-of-order-and-unused-link",
+      "store": [
+        [
+          "846358de8a02990d138fdc5bf3f7a85c22d1b1017f36e727414b7f92953b2640",
+          "v2-bad-chunk/out-of-order-and-unused-link"
+        ],
+        [
+          "a9677a54bc70bd0072953ec21471ff76b5e357c6b8bd25ee89db2d045b268009",
+          "v2-chunk/childless-empty"
+        ],
+        [
+          "038a411f936d20a4a35f092cf7eb4a67452cafadf0d25cc6d11b3937236cf163",
+          "v2-chunk/childless-01"
+        ]
+      ],
+      "note": "Two hashes and one entry: both defects hold, and §10 lists first-use order first.",
+      "pins": [
+        "6. The header order MUST equal first-use order: otherwise `links_out_of_order`.",
+        "5. Every listed hash MUST be referenced by at least one `lentry`: an unreferenced",
+        "a header `[h1, h2]` whose only entry references `1` is `links_out_of_order` (§10 ranks"
+      ]
+    },
+    {
+      "name": "v2-precedence/framing-beats-slot-codec-mismatch",
+      "row": "any uvarint, then the child-chunk row",
+      "conditions": [
+        "the child chunk's id differs from the parent's",
+        "the child's payload length is non-shortest (81 00)"
+      ],
+      "class": "invalid",
+      "code": "non_shortest_uvarint",
+      "loses_to_naive": "slot_codec_mismatch",
+      "fault_locus": "links",
+      "min_profile": "closure-checker",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "root": {
+        "space": "dxl2",
+        "digest": "8998c3cdd9441fe0cc42fd28e7f3b5fd80c2a1db1f34adec1a928812221ab100"
+      },
+      "root_chunk": "v2-bad-chunk/parent-of-non-shortest-fixture-child",
+      "store": [
+        [
+          "8998c3cdd9441fe0cc42fd28e7f3b5fd80c2a1db1f34adec1a928812221ab100",
+          "v2-bad-chunk/parent-of-non-shortest-fixture-child"
+        ],
+        [
+          "519ef0a66737be8d9dbb084d51a34101515c6e557ccc23bc44e853b330cbf664",
+          "v2-bad-chunk/fixture-child-with-non-shortest-length"
+        ]
+      ],
+      "note": "V9 at the linked scale: the child's id is read first and differs, and its body is malformed. Framing wins; comparing ids on sight reports slot_codec_mismatch.",
+      "pins": [
+        "⭐ **READ FIRST, RULED LAST.**",
+        "| child chunk | its id differs from the parent's | `slot_codec_mismatch` |"
+      ]
+    },
+    {
+      "name": "v2-precedence/links-header-beats-slot-codec-mismatch",
+      "row": "links header, then the child-chunk row",
+      "conditions": [
+        "the child chunk's id differs from the parent's",
+        "the child's links header lists one hash twice"
+      ],
+      "class": "invalid",
+      "code": "duplicate_link_hash",
+      "loses_to_naive": "slot_codec_mismatch",
+      "fault_locus": "links",
+      "min_profile": "closure-checker",
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "root": {
+        "space": "dxl2",
+        "digest": "6b78d430f22ed7e0eae23a0f84c246b53a705de128874e578cb27a497549bc20"
+      },
+      "root_chunk": "v2-bad-chunk/parent-of-duplicate-hash-fixture-child",
+      "store": [
+        [
+          "6b78d430f22ed7e0eae23a0f84c246b53a705de128874e578cb27a497549bc20",
+          "v2-bad-chunk/parent-of-duplicate-hash-fixture-child"
+        ],
+        [
+          "af3b688b6e82c8f46f78706b48062a2bfffb7556165e00857b3c44fc18a7e2dd",
+          "v2-bad-chunk/fixture-child-with-duplicate-hash"
+        ],
+        [
+          "a9677a54bc70bd0072953ec21471ff76b5e357c6b8bd25ee89db2d045b268009",
+          "v2-chunk/childless-empty"
+        ]
+      ],
+      "note": "The same mistake with a links-header fault in the child.",
+      "pins": [
+        "3. The same hash MUST NOT appear twice: `duplicate_link_hash`.",
+        "| child chunk | its id differs from the parent's | `slot_codec_mismatch` |"
+      ]
+    }
+  ]
+}

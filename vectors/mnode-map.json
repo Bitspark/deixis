@@ -1,0 +1,85 @@
+{
+  "description": "deixis mandatory Node[T] mapping vectors — map of ADR 0010 §4: map(f,Node(t,m)) = Node(f(t), {k ↦ map(f,m[k])}). f is applied at every node, and the domain is unchanged. The named functions (id, class-suffix-x, representation-upper, none-to-z, option-map-class-suffix-x, wrap-in-array) are defined in vectors/MNODE-PLAN.md. \"f\" as a list applies each function in order. op \"at-after-map\" asserts at(map(f,n),p) with equal definedness. Every case declares its slot. Hand-authored from docs/design/0010-mandatory-node-values.md, docs/TREE.md and docs/PATH.md as merged in 1a9bb6d, and from nothing else. No implementation of the mandatory API existed when these were written. Items X5 and X6; each note names the defect (W) it catches. 11 cases.",
+  "profile": "deixis-mnode-map",
+  "cases": [
+    {
+      "name": "m-map-id",
+      "slot": "fixture", "op": "map", "f": "id",
+      "node":   { "own": { "class": "r", "representation": "r" }, "children": [["6b", { "own": { "class": "i", "representation": "i" }, "children": [["6a", { "own": { "class": "t", "representation": "t" }, "children": [] }]] }], ["61", { "own": { "class": "s", "representation": "s" }, "children": [] }]] },
+      "result": { "own": { "class": "r", "representation": "r" }, "children": [["6b", { "own": { "class": "i", "representation": "i" }, "children": [["6a", { "own": { "class": "t", "representation": "t" }, "children": [] }]] }], ["61", { "own": { "class": "s", "representation": "s" }, "children": [] }]] },
+      "note": "X5. map(id,n) ≡ n."
+    },
+    {
+      "name": "m-map-applies-at-every-node",
+      "slot": "fixture", "op": "map", "f": "class-suffix-x",
+      "node":   { "own": { "class": "r", "representation": "r" }, "children": [["6b", { "own": { "class": "i", "representation": "i" }, "children": [["6a", { "own": { "class": "t", "representation": "t" }, "children": [] }]] }], ["61", { "own": { "class": "s", "representation": "s" }, "children": [] }]] },
+      "result": { "own": { "class": "rx", "representation": "r" }, "children": [["6b", { "own": { "class": "ix", "representation": "i" }, "children": [["6a", { "own": { "class": "tx", "representation": "t" }, "children": [] }]] }], ["61", { "own": { "class": "sx", "representation": "s" }, "children": [] }]] },
+      "note": "X5. The function reaches the root (r), the interior node (i) and both terminals (t, s). ADR 0010 §4: mapping visits the own value of every node. Catches W4 (skipping the root or interior nodes)."
+    },
+    {
+      "name": "m-map-on-a-childless-root",
+      "slot": "fixture", "op": "map", "f": "class-suffix-x",
+      "node":   { "own": { "class": "a", "representation": "a" }, "children": [] },
+      "result": { "own": { "class": "ax", "representation": "a" }, "children": [] },
+      "note": "X5. A single childless node is mapped too. Catches an implementation that maps only below the root."
+    },
+    {
+      "name": "m-map-invisible-to-equality-gives-equal-tree",
+      "slot": "fixture", "op": "map", "f": "representation-upper",
+      "node":   { "own": { "class": "r", "representation": "r" }, "children": [["61", { "own": { "class": "s", "representation": "s" }, "children": [] }]] },
+      "result": { "own": { "class": "r", "representation": "R" }, "children": [["61", { "own": { "class": "s", "representation": "S" }, "children": [] }]] },
+      "note": "X5. f respects ≈ and changes only what ≈ ignores, so map(f,n) ≡ n under the lifted identity (TREE, 'Setoids ride along')."
+    },
+    {
+      "name": "m-map-domain-unchanged-with-empty-and-non-utf8-keys",
+      "slot": "fixture", "op": "map", "f": "class-suffix-x",
+      "node":   { "own": { "class": "a", "representation": "a" }, "children": [["", { "own": { "class": "b", "representation": "b" }, "children": [] }], ["ff00", { "own": { "class": "c", "representation": "c" }, "children": [] }]] },
+      "result": { "own": { "class": "ax", "representation": "a" }, "children": [["", { "own": { "class": "bx", "representation": "b" }, "children": [] }], ["ff00", { "own": { "class": "cx", "representation": "c" }, "children": [] }]] },
+      "note": "X5. D_map(f,n) = D_n: keys are untouched, including the empty key and a non-UTF-8 key; only values move."
+    },
+    {
+      "name": "m-map-twice",
+      "slot": "fixture", "op": "map", "f": ["class-suffix-x", "class-suffix-x"],
+      "node":   { "own": { "class": "r", "representation": "r" }, "children": [["6b", { "own": { "class": "i", "representation": "i" }, "children": [["6a", { "own": { "class": "t", "representation": "t" }, "children": [] }]] }], ["61", { "own": { "class": "s", "representation": "s" }, "children": [] }]] },
+      "result": { "own": { "class": "rxx", "representation": "r" }, "children": [["6b", { "own": { "class": "ixx", "representation": "i" }, "children": [["6a", { "own": { "class": "txx", "representation": "t" }, "children": [] }]] }], ["61", { "own": { "class": "sxx", "representation": "s" }, "children": [] }]] },
+      "note": "X5. map(g,map(f,n)) ≡ map(g∘f,n): each node is mapped exactly once per pass, never skipped and never doubled."
+    },
+    {
+      "name": "m-map-at-after-map-commutes",
+      "slot": "fixture", "op": "at-after-map", "f": "class-suffix-x",
+      "node":   { "own": { "class": "r", "representation": "r" }, "children": [["6b", { "own": { "class": "i", "representation": "i" }, "children": [["6a", { "own": { "class": "t", "representation": "t" }, "children": [] }]] }], ["61", { "own": { "class": "s", "representation": "s" }, "children": [] }]] },
+      "path": ["6b"],
+      "result": { "defined": { "own": { "class": "ix", "representation": "i" }, "children": [["6a", { "own": { "class": "tx", "representation": "t" }, "children": [] }]] } },
+      "note": "X5. at(map(f,n),p) ≡ map(f,at(n,p)) (ADR 0010 §4)."
+    },
+    {
+      "name": "m-map-at-after-map-missing",
+      "slot": "fixture", "op": "at-after-map", "f": "class-suffix-x",
+      "node":   { "own": { "class": "r", "representation": "r" }, "children": [["61", { "own": { "class": "s", "representation": "s" }, "children": [] }]] },
+      "path": ["62"],
+      "result": { "undefined": {} },
+      "note": "X5. Both sides of the law have equal definedness: [62] is missing before mapping and after it (TREE: (map f N)/p is defined exactly when N/p is)."
+    },
+    {
+      "name": "m-map-option-generic-changes-none",
+      "slot": "option", "op": "map", "f": "none-to-z",
+      "node":   { "own": { "none": {} }, "children": [["61", { "own": { "some": { "class": "a", "representation": "a" } }, "children": [] }], ["62", { "own": { "none": {} }, "children": [["63", { "own": { "some": { "class": "b", "representation": "b" } }, "children": [] }]] }]] },
+      "result": { "own": { "some": { "class": "z", "representation": "z" } }, "children": [["61", { "own": { "some": { "class": "a", "representation": "a" } }, "children": [] }], ["62", { "own": { "some": { "class": "z", "representation": "z" } }, "children": [["63", { "own": { "some": { "class": "b", "representation": "b" } }, "children": [] }]] }]] },
+      "note": "X6. Generic map applies f to the whole payload at every node, none included: ADR 0010 §4, 'For T = Option[A], generic mapping may transform None'. The root and the interior node [62] carried none and now carry some(z). Catches W4 (skipping none payloads)."
+    },
+    {
+      "name": "m-map-option-map-specialization-keeps-none",
+      "slot": "option", "op": "map", "f": "option-map-class-suffix-x",
+      "node":   { "own": { "none": {} }, "children": [["61", { "own": { "some": { "class": "a", "representation": "a" } }, "children": [] }], ["62", { "own": { "none": {} }, "children": [["63", { "own": { "some": { "class": "b", "representation": "b" } }, "children": [] }]] }]] },
+      "result": { "own": { "none": {} }, "children": [["61", { "own": { "some": { "class": "ax", "representation": "a" } }, "children": [] }], ["62", { "own": { "none": {} }, "children": [["63", { "own": { "some": { "class": "bx", "representation": "b" } }, "children": [] }]] }]] },
+      "note": "X6. The presence-preserving mapping is the explicit specialization map(Option.map(f),n): none stays none, and each some is mapped inside. Paired with m-map-option-generic-changes-none: the same tree gives different results for the two functions, so an implementation that folds them into one fails one case of the pair."
+    },
+    {
+      "name": "m-map-json-reaches-null-payloads",
+      "slot": "json", "op": "map", "f": "wrap-in-array",
+      "node":   { "own": null, "children": [["61", { "own": null, "children": [] }], ["62", { "own": "s", "children": [["63", { "own": false, "children": [] }]] }]] },
+      "result": { "own": [null], "children": [["61", { "own": [null], "children": [] }], ["62", { "own": ["s"], "children": [["63", { "own": [false], "children": [] }]] }]] },
+      "note": "X5. The null payloads at the root and at [61] are values, so f reaches them: null ↦ [null]. Catches W4 (null read as absence and skipped)."
+    }
+  ]
+}

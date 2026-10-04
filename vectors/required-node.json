@@ -1,0 +1,601 @@
+{
+  "description": "Independent required-value expectations for ADR 0010. Payloads are direct Fixture values, compared by class. The existing node-* corpus separately chooses Option[Fixture]; these cases require no option wrapper. Expected results are authored from the structural laws before adding the CLI handlers.",
+  "cases": [
+    {
+      "name": "required-parts-retain-parent-and-children",
+      "op": "roundtrip",
+      "tree": {
+        "own": {
+          "class": "root",
+          "representation": "root"
+        },
+        "children": [
+          [
+            "61",
+            {
+              "own": {
+                "class": "child",
+                "representation": "child"
+              },
+              "children": []
+            }
+          ]
+        ]
+      },
+      "expected": {
+        "defined": {
+          "own": {
+            "class": "root",
+            "representation": "root"
+          },
+          "children": [
+            [
+              "61",
+              {
+                "own": {
+                  "class": "child",
+                  "representation": "child"
+                },
+                "children": []
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "name": "required-root-own-value",
+      "op": "valueAt",
+      "tree": {
+        "own": {
+          "class": "root",
+          "representation": "root"
+        },
+        "children": [
+          [
+            "61",
+            {
+              "own": {
+                "class": "child",
+                "representation": "child"
+              },
+              "children": []
+            }
+          ]
+        ]
+      },
+      "path": [],
+      "expected": {
+        "defined": {
+          "class": "root",
+          "representation": "root"
+        }
+      }
+    },
+    {
+      "name": "required-child-own-value",
+      "op": "valueAt",
+      "tree": {
+        "own": {
+          "class": "root",
+          "representation": "root"
+        },
+        "children": [
+          [
+            "61",
+            {
+              "own": {
+                "class": "child",
+                "representation": "child"
+              },
+              "children": []
+            }
+          ]
+        ]
+      },
+      "path": [
+        "61"
+      ],
+      "expected": {
+        "defined": {
+          "class": "child",
+          "representation": "child"
+        }
+      }
+    },
+    {
+      "name": "required-empty-payload-is-present",
+      "op": "valueAt",
+      "tree": {
+        "own": {
+          "class": "",
+          "representation": ""
+        },
+        "children": []
+      },
+      "path": [],
+      "expected": {
+        "defined": {
+          "class": "",
+          "representation": ""
+        }
+      }
+    },
+    {
+      "name": "required-missing-value-path-refuses",
+      "op": "valueAt",
+      "tree": {
+        "own": {
+          "class": "root",
+          "representation": "root"
+        },
+        "children": [
+          [
+            "61",
+            {
+              "own": {
+                "class": "child",
+                "representation": "child"
+              },
+              "children": []
+            }
+          ]
+        ]
+      },
+      "path": [
+        "62"
+      ],
+      "expected": {
+        "undefined": {}
+      }
+    },
+    {
+      "name": "required-select-child",
+      "op": "at",
+      "tree": {
+        "own": {
+          "class": "root",
+          "representation": "root"
+        },
+        "children": [
+          [
+            "61",
+            {
+              "own": {
+                "class": "child",
+                "representation": "child"
+              },
+              "children": []
+            }
+          ]
+        ]
+      },
+      "path": [
+        "61"
+      ],
+      "expected": {
+        "defined": {
+          "own": {
+            "class": "child",
+            "representation": "child"
+          },
+          "children": []
+        }
+      }
+    },
+    {
+      "name": "required-missing-subtree-refuses",
+      "op": "at",
+      "tree": {
+        "own": {
+          "class": "root",
+          "representation": "root"
+        },
+        "children": [
+          [
+            "61",
+            {
+              "own": {
+                "class": "child",
+                "representation": "child"
+              },
+              "children": []
+            }
+          ]
+        ]
+      },
+      "path": [
+        "61",
+        "62"
+      ],
+      "expected": {
+        "undefined": {}
+      }
+    },
+    {
+      "name": "required-attach-at-valued-root",
+      "op": "attach",
+      "tree": {
+        "own": {
+          "class": "root",
+          "representation": "root"
+        },
+        "children": [
+          [
+            "61",
+            {
+              "own": {
+                "class": "child",
+                "representation": "child"
+              },
+              "children": []
+            }
+          ]
+        ]
+      },
+      "parent": [],
+      "key": "62",
+      "subtree": {
+        "own": {
+          "class": "new",
+          "representation": "new"
+        },
+        "children": [
+          [
+            "00",
+            {
+              "own": {
+                "class": "nested",
+                "representation": "nested"
+              },
+              "children": []
+            }
+          ]
+        ]
+      },
+      "expected": {
+        "defined": {
+          "own": {
+            "class": "root",
+            "representation": "root"
+          },
+          "children": [
+            [
+              "61",
+              {
+                "own": {
+                  "class": "child",
+                  "representation": "child"
+                },
+                "children": []
+              }
+            ],
+            [
+              "62",
+              {
+                "own": {
+                  "class": "new",
+                  "representation": "new"
+                },
+                "children": [
+                  [
+                    "00",
+                    {
+                      "own": {
+                        "class": "nested",
+                        "representation": "nested"
+                      },
+                      "children": []
+                    }
+                  ]
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "name": "required-attach-below-valued-child",
+      "op": "attach",
+      "tree": {
+        "own": {
+          "class": "root",
+          "representation": "root"
+        },
+        "children": [
+          [
+            "61",
+            {
+              "own": {
+                "class": "child",
+                "representation": "child"
+              },
+              "children": []
+            }
+          ]
+        ]
+      },
+      "parent": [
+        "61"
+      ],
+      "key": "62",
+      "subtree": {
+        "own": {
+          "class": "new",
+          "representation": "new"
+        },
+        "children": [
+          [
+            "00",
+            {
+              "own": {
+                "class": "nested",
+                "representation": "nested"
+              },
+              "children": []
+            }
+          ]
+        ]
+      },
+      "expected": {
+        "defined": {
+          "own": {
+            "class": "root",
+            "representation": "root"
+          },
+          "children": [
+            [
+              "61",
+              {
+                "own": {
+                  "class": "child",
+                  "representation": "child"
+                },
+                "children": [
+                  [
+                    "62",
+                    {
+                      "own": {
+                        "class": "new",
+                        "representation": "new"
+                      },
+                      "children": [
+                        [
+                          "00",
+                          {
+                            "own": {
+                              "class": "nested",
+                              "representation": "nested"
+                            },
+                            "children": []
+                          }
+                        ]
+                      ]
+                    }
+                  ]
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "name": "required-attach-occupied-key-refuses",
+      "op": "attach",
+      "tree": {
+        "own": {
+          "class": "root",
+          "representation": "root"
+        },
+        "children": [
+          [
+            "61",
+            {
+              "own": {
+                "class": "child",
+                "representation": "child"
+              },
+              "children": []
+            }
+          ]
+        ]
+      },
+      "parent": [],
+      "key": "61",
+      "subtree": {
+        "own": {
+          "class": "new",
+          "representation": "new"
+        },
+        "children": [
+          [
+            "00",
+            {
+              "own": {
+                "class": "nested",
+                "representation": "nested"
+              },
+              "children": []
+            }
+          ]
+        ]
+      },
+      "expected": {
+        "undefined": {}
+      }
+    },
+    {
+      "name": "required-attach-missing-parent-refuses",
+      "op": "attach",
+      "tree": {
+        "own": {
+          "class": "root",
+          "representation": "root"
+        },
+        "children": [
+          [
+            "61",
+            {
+              "own": {
+                "class": "child",
+                "representation": "child"
+              },
+              "children": []
+            }
+          ]
+        ]
+      },
+      "parent": [
+        "ff"
+      ],
+      "key": "61",
+      "subtree": {
+        "own": {
+          "class": "new",
+          "representation": "new"
+        },
+        "children": [
+          [
+            "00",
+            {
+              "own": {
+                "class": "nested",
+                "representation": "nested"
+              },
+              "children": []
+            }
+          ]
+        ]
+      },
+      "expected": {
+        "undefined": {}
+      }
+    },
+    {
+      "name": "required-identity-lifts-coarse-slot-relation",
+      "op": "equal",
+      "left": {
+        "own": {
+          "class": "root",
+          "representation": "root"
+        },
+        "children": [
+          [
+            "61",
+            {
+              "own": {
+                "class": "child",
+                "representation": "child"
+              },
+              "children": []
+            }
+          ]
+        ]
+      },
+      "right": {
+        "own": {
+          "class": "root",
+          "representation": "ROOT"
+        },
+        "children": [
+          [
+            "61",
+            {
+              "own": {
+                "class": "child",
+                "representation": "CHILD"
+              },
+              "children": []
+            }
+          ]
+        ]
+      },
+      "equal": true
+    },
+    {
+      "name": "required-identity-retains-parent-value",
+      "op": "equal",
+      "left": {
+        "own": {
+          "class": "root",
+          "representation": "root"
+        },
+        "children": [
+          [
+            "61",
+            {
+              "own": {
+                "class": "child",
+                "representation": "child"
+              },
+              "children": []
+            }
+          ]
+        ]
+      },
+      "right": {
+        "own": {
+          "class": "other",
+          "representation": "other"
+        },
+        "children": [
+          [
+            "61",
+            {
+              "own": {
+                "class": "child",
+                "representation": "child"
+              },
+              "children": []
+            }
+          ]
+        ]
+      },
+      "equal": false
+    },
+    {
+      "name": "required-tag-looking-payload-is-opaque",
+      "op": "roundtrip",
+      "tree": {
+        "own": {
+          "class": "none",
+          "representation": "none"
+        },
+        "children": [
+          [
+            "",
+            {
+              "own": {
+                "class": "some",
+                "representation": "some"
+              },
+              "children": []
+            }
+          ]
+        ]
+      },
+      "expected": {
+        "defined": {
+          "own": {
+            "class": "none",
+            "representation": "none"
+          },
+          "children": [
+            [
+              "",
+              {
+                "own": {
+                  "class": "some",
+                  "representation": "some"
+                },
+                "children": []
+              }
+            ]
+          ]
+        }
+      }
+    }
+  ]
+}

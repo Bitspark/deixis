@@ -1,0 +1,44 @@
+{
+  "name": "@bitspark/deixis-core",
+  "version": "0.6.0",
+  "description": "deixis/core: the finite keyed tree Node(T) = T × (Bytes ⇀ Node(T)). The payload carries no bounds; equality is supplied at the call site.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./codec": {
+      "types": "./dist/codec.d.ts",
+      "default": "./dist/codec.js"
+    }
+  },
+  "files": [
+    "dist/index.js",
+    "dist/index.d.ts",
+    "dist/codec.js",
+    "dist/codec.d.ts",
+    "dist/codec-internal.js",
+    "dist/codec-internal.d.ts",
+    "dist/sha256.js",
+    "dist/sha256.d.ts"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "tsc && node --test dist/index.test.js dist/vectors.test.js dist/sha256.test.js dist/codec.test.js"
+  },
+  "devDependencies": {
+    "@types/node": "^24.1.0",
+    "typescript": "^5.9.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Bitspark/deixis.git"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org"
+  }
+}

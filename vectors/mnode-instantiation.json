@@ -1,0 +1,70 @@
+{
+  "description": "deixis mandatory Node[T] instantiation vectors — the Some-wrapping embedding M[T] → O[T] = M[Option[T]] of ADR 0010 §2, and heterogeneous named assembly with a supplied parent of §5. op \"embed-some\" maps every value v to some(v); its input is in \"slot\" and its result in \"result_slot\". op \"assemble\" injects each child (\"left\" or \"right\") into the common carrier and composes under the supplied \"parent\"; its result is {\"defined\": …}, or, when two children share a key, the refusal {\"error\": \"duplicate_key\", \"key\": <hex>} at case level, as in invalid.json. Slots are defined in vectors/MNODE-PLAN.md. Hand-authored from docs/design/0010-mandatory-node-values.md, docs/TREE.md and docs/PATH.md as merged in 1a9bb6d, and from nothing else. No implementation of the mandatory API existed when these were written. Items X16 and X17. 7 cases.",
+  "profile": "deixis-mnode-instantiation",
+  "cases": [
+    {
+      "name": "m-inst-embed-some-wraps-every-node",
+      "slot": "fixture",
+      "result_slot": "option",
+      "op": "embed-some",
+      "node": {"own": {"class": "r", "representation": "r"}, "children": [["61", {"own": {"class": "s", "representation": "s"}, "children": [["62", {"own": {"class": "t", "representation": "t"}, "children": []}]]}]]},
+      "result": {"own": {"some": {"class": "r", "representation": "r"}}, "children": [["61", {"own": {"some": {"class": "s", "representation": "s"}}, "children": [["62", {"own": {"some": {"class": "t", "representation": "t"}}, "children": []}]]}]]},
+      "note": "X16. For a fixed T, M[T] embeds in O[T] by wrapping each value in some (ADR 0010 §2): every node, root and interior included, and no none anywhere in the image."
+    },
+    {
+      "name": "m-inst-embed-some-childless",
+      "slot": "fixture",
+      "result_slot": "option",
+      "op": "embed-some",
+      "node": {"own": {"class": "a", "representation": "a"}, "children": []},
+      "result": {"own": {"some": {"class": "a", "representation": "a"}}, "children": []},
+      "note": "X16. A childless node's value is wrapped too."
+    },
+    {
+      "name": "m-inst-embed-some-keeps-paths",
+      "slot": "fixture",
+      "result_slot": "option",
+      "op": "embed-some",
+      "node": {"own": {"class": "a", "representation": "a"}, "children": [["", {"own": {"class": "b", "representation": "b"}, "children": []}], ["ff00", {"own": {"class": "c", "representation": "c"}, "children": []}]]},
+      "result": {"own": {"some": {"class": "a", "representation": "a"}}, "children": [["", {"own": {"some": {"class": "b", "representation": "b"}}, "children": []}], ["ff00", {"own": {"some": {"class": "c", "representation": "c"}}, "children": []}]]},
+      "note": "X16. The embedding is a map, so it changes values only; the empty key and a non-UTF-8 key survive exactly."
+    },
+    {
+      "name": "m-inst-assemble-under-a-supplied-left-parent",
+      "slot": "sum",
+      "op": "assemble",
+      "parent": {"left": {"class": "p", "representation": "p"}},
+      "children": [["61", "left", {"own": {"class": "a", "representation": "a"}, "children": []}], ["62", "right", {"own": null, "children": [["63", {"own": "x", "children": []}]]}]],
+      "result": {"defined": {"own": {"left": {"class": "p", "representation": "p"}}, "children": [["61", {"own": {"left": {"class": "a", "representation": "a"}}, "children": []}], ["62", {"own": {"right": null}, "children": [["63", {"own": {"right": "x"}, "children": []}]]}]]}},
+      "note": "X17. The common carrier is C = fixture ⊎ json. The children are mapped in by left and right at every one of their nodes, and composed under the supplied parent value left(p) (ADR 0010 §5). The null inside the right child is a value and is injected like any other."
+    },
+    {
+      "name": "m-inst-assemble-under-a-supplied-right-null-parent",
+      "slot": "sum",
+      "op": "assemble",
+      "parent": {"right": null},
+      "children": [["61", "left", {"own": {"class": "a", "representation": "a"}, "children": []}]],
+      "result": {"defined": {"own": {"right": null}, "children": [["61", {"own": {"left": {"class": "a", "representation": "a"}}, "children": []}]]}},
+      "note": "X17, X4. A root value is still required in the sum; here the supplied one is right(null). A null inside the sum is a legal supplied value, not an absent parent."
+    },
+    {
+      "name": "m-inst-assemble-option-sum-allows-a-none-root",
+      "slot": "option-sum",
+      "op": "assemble",
+      "parent": {"none": {}},
+      "children": [["61", "left", {"own": {"class": "a", "representation": "a"}, "children": []}], ["62", "right", {"own": "x", "children": []}]],
+      "result": {"defined": {"own": {"none": {}}, "children": [["61", {"own": {"some": {"left": {"class": "a", "representation": "a"}}}, "children": []}], ["62", {"own": {"some": {"right": "x"}}, "children": []}]]}},
+      "note": "X17. With C = Option[A ⊎ B], the root may be none (ADR 0010 §5: 'taking C = Option[A ⊎ B] permits None at the root'). The children are injected as some(left …) and some(right …). The none is supplied explicitly, not defaulted."
+    },
+    {
+      "name": "m-inst-assemble-needs-distinct-keys",
+      "slot": "sum",
+      "op": "assemble",
+      "parent": {"left": {"class": "p", "representation": "p"}},
+      "children": [["61", "left", {"own": {"class": "a", "representation": "a"}, "children": []}], ["61", "right", {"own": "x", "children": []}]],
+      "error": "duplicate_key",
+      "key": "61",
+      "note": "X17, X20. Children are assembled under distinct keys (§5). Two children under 61 do not compose, even though they come from different carriers: a tagged sum never by itself resolves an overlap."
+    }
+  ]
+}

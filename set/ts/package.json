@@ -1,0 +1,18 @@
+{
+  "name": "@bitspark/deixis-set",
+  "version": "0.6.0",
+  "description": "deixis-set-v1: the finite-set container by self-keying, slot-member form. Reference-parity implementation over @bitspark/deixis-core.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "private": true,
+  "scripts": {
+    "build": "tsc",
+    "test": "tsc && node --test dist/index.test.js"
+  },
+  "devDependencies": {
+    "@types/node": "^24.1.0",
+    "typescript": "^5.9.3"
+  }
+}

@@ -1,0 +1,359 @@
+{
+  "description": "deixis-codec-v1 linked form (dxl1) and the bridge — batch 1. Chunk octets hand-assembled from docs/CODEC.md §6; the SHA-256 digests are the one part of this corpus no reader can check by eye, so every digest carries its PREIMAGE as hex beside it and a replayer MUST recompute rather than trust. Bridge cases reference their flat counterpart BY NAME (CODEC-PLAN.md ruling 1) — the harness resolves names corpus-wide and fails loudly on a dangling one.",
+  "spec": "docs/CODEC-v1.md",
+  "status": "HISTORICAL: the withdrawn deixis-codec-v1 candidate (ADR 0011 §5), specified by docs/CODEC-v1.md; kept as its evidence, not rewritten. As authored: DRAFT — batch 1, authored against a CANDIDATE CONTRACT. Not frozen.",
+  "bundle": {
+    "id": "0001",
+    "name": "deixis/identity-bytes"
+  },
+  "header": {
+    "hex": "64786c31020001",
+    "derivation": "\"dxl1\" = 64 78 6c 31 · cuvarint(len(id)) = 02 · id = 00 01. Note the third octet differs from the flat header by one bit-pattern (66 → 6c): the two magics are one suite and move together (§16), and nothing here may be read as licensing a per-form version."
+  },
+  "chunks": [
+    {
+      "name": "chunk/leaf-01",
+      "value": {
+        "leaf": "01"
+      },
+      "nlinks": 0,
+      "bytes": "64786c3102000100000101",
+      "sha256": "a07bb26f3cc2752b5629373525b9a3ebb19d37ca95acf2bc498996e521bbc1ba",
+      "note": "A leaf chunk: header, cuvarint(0) for an empty links header, then the body 00 01 01. A leaf has no children, so nlinks is 0 and the links header occupies exactly one octet — not zero.",
+      "pins": [
+        "1. The magic is exactly `\"dxl1\"`.",
+        "- v1 pins **SHA-256**. Hash agility is a new codec version, never a parameter.",
+        "The magic and\n  the `id` are therefore *inside* the hashed octets:",
+        "chunk  := \"dxl1\" ‖ cuvarint(len(id)) ‖ id\n        ‖ cuvarint(nlinks) ‖ hash{32}*                 # ← the LINKS HEADER",
+        "`uvarint` is unsigned LEB128: seven bits per octet, least-significant group first,\nthe high bit of each octet set on all but the last.",
+        "A leaf chunk has `nlinks = 0`. **One node, one chunk**",
+        "id := 0x00 ‖ cuvarint(n)              # PUBLIC — registry-assigned, n ≥ 1\n    | 0x01 ‖ ns{16} ‖ cuvarint(k)     # PRIVATE / EXPERIMENTAL — self-scoped",
+        "- Total length is 2..32 octets; outside that range the artifact is **invalid**.",
+        "- `e : T → Bytes` — total, computable, and **lawful**: `x ≈ y ⟺ e(x) = e(y)`.",
+        "under SHA-256 collision resistance**."
+      ]
+    },
+    {
+      "name": "chunk/leaf-02",
+      "value": {
+        "leaf": "02"
+      },
+      "nlinks": 0,
+      "bytes": "64786c3102000100000102",
+      "sha256": "0fcf34e81c7a04811b4a1c4a89bd84e3a205e17a6b546920d09410ed08a91ed2",
+      "note": "A second leaf chunk, differing from chunk/leaf-01 in one payload octet. It exists so the case below has TWO DISTINCT children and therefore a links header whose ORDER can be wrong.",
+      "pins": [
+        "1. The magic is exactly `\"dxl1\"`.",
+        "- v1 pins **SHA-256**. Hash agility is a new codec version, never a parameter.",
+        "The magic and\n  the `id` are therefore *inside* the hashed octets:",
+        "chunk  := \"dxl1\" ‖ cuvarint(len(id)) ‖ id\n        ‖ cuvarint(nlinks) ‖ hash{32}*                 # ← the LINKS HEADER",
+        "`uvarint` is unsigned LEB128: seven bits per octet, least-significant group first,\nthe high bit of each octet set on all but the last.",
+        "- `e : T → Bytes` — total, computable, and **lawful**: `x ≈ y ⟺ e(x) = e(y)`."
+      ]
+    },
+    {
+      "name": "chunk/inner-struct",
+      "value": {
+        "struct": [
+          [
+            "62",
+            {
+              "leaf": "01"
+            }
+          ]
+        ]
+      },
+      "nlinks": 1,
+      "links": [
+        "a07bb26f3cc2752b5629373525b9a3ebb19d37ca95acf2bc498996e521bbc1ba"
+      ],
+      "bytes": "64786c3102000101a07bb26f3cc2752b5629373525b9a3ebb19d37ca95acf2bc498996e521bbc1ba0101016200",
+      "sha256": "8220a42b8aa5efc806c1130cc67d5336082ea5e9793abd8becb54f1aaf6248c7",
+      "note": "Struct{62 ↦ Leaf(01)}: nlinks 01, one 32-octet hash (chunk/leaf-01's), then body 01 01 | 01 62 | 00 — the lentry ends in a LINK INDEX, never a raw hash. That is §6's rule that a body MUST NOT contain a hash, and it is what makes the links header the sole place a child is named.",
+      "pins": [
+        "Each hash in the links header is the SHA-256 (§7) of the referenced child's **entire\nchunk octets** under this same layout.",
+        "Bodies reference children only by index into\nthat header; a body MUST NOT contain a raw hash.",
+        "chunk  := \"dxl1\" ‖ cuvarint(len(id)) ‖ id\n        ‖ cuvarint(nlinks) ‖ hash{32}*                 # ← the LINKS HEADER",
+        "lentry := cuvarint(len(key)) ‖ key ‖ cuvarint(link-index)",
+        "2. `nlinks` equals the number of hashes present.",
+        "7. Key ordering, tag, count, payload and trailing rules are as in §5.",
+        "id := 0x00 ‖ cuvarint(n)              # PUBLIC — registry-assigned, n ≥ 1\n    | 0x01 ‖ ns{16} ‖ cuvarint(k)     # PRIVATE / EXPERIMENTAL — self-scoped",
+        "- Total length is 2..32 octets; outside that range the artifact is **invalid**."
+      ]
+    },
+    {
+      "name": "chunk/root-shared",
+      "value": {
+        "struct": [
+          [
+            "61",
+            {
+              "struct": [
+                [
+                  "62",
+                  {
+                    "leaf": "01"
+                  }
+                ]
+              ]
+            }
+          ],
+          [
+            "63",
+            {
+              "struct": [
+                [
+                  "62",
+                  {
+                    "leaf": "01"
+                  }
+                ]
+              ]
+            }
+          ]
+        ]
+      },
+      "nlinks": 1,
+      "links": [
+        "8220a42b8aa5efc806c1130cc67d5336082ea5e9793abd8becb54f1aaf6248c7"
+      ],
+      "bytes": "64786c31020001018220a42b8aa5efc806c1130cc67d5336082ea5e9793abd8becb54f1aaf6248c70102016100016300",
+      "sha256": "e7ce3e5a007a805c26223e9fb1c02f58d9f3ae4fe78868f974668058976617aa",
+      "note": "THE POSITIVE SHARING CASE (law 2). Two identical subtrees under keys 61 and 63: the chunk is emitted ONCE, its hash listed ONCE in the header, and referenced TWICE from the body — both lentries carry link-index 00. First-use order is trivial here (one distinct child), and that is a LIMIT of this case rather than a design: a one-element header has exactly one order, so §6's first-use rule cannot be violated here and this case pins WHICH chunks without pinning IN WHAT ORDER the header names them. The author placed the multi-child case in batch 2; the codec lane overturned that on 2026-08-30 — see linked/first-use-order, which is its lawful twin and CAN fail. A core that emits the chunk twice produces a different closure for the same value and passes every other case in this corpus — which is why the invalid direction (duplicate_link_hash) does not cover this and never could.",
+      "pins": [
+        "Each hash in the links header is the SHA-256 (§7) of the referenced child's **entire\nchunk octets** under this same layout.",
+        "Each distinct child hash is appended to the links header at the moment it is\nfirst referenced.",
+        "3. The same hash MUST NOT appear twice: `duplicate_link_hash`.",
+        "chunk  := \"dxl1\" ‖ cuvarint(len(id)) ‖ id\n        ‖ cuvarint(nlinks) ‖ hash{32}*                 # ← the LINKS HEADER",
+        "lentry := cuvarint(len(key)) ‖ key ‖ cuvarint(link-index)",
+        "2. `nlinks` equals the number of hashes present.",
+        "7. Key ordering, tag, count, payload and trailing rules are as in §5.",
+        "under SHA-256 collision resistance**."
+      ]
+    },
+    {
+      "name": "chunk/root-two-children",
+      "value": {
+        "struct": [
+          [
+            "61",
+            {
+              "leaf": "01"
+            }
+          ],
+          [
+            "63",
+            {
+              "leaf": "02"
+            }
+          ]
+        ]
+      },
+      "nlinks": 2,
+      "links": [
+        "a07bb26f3cc2752b5629373525b9a3ebb19d37ca95acf2bc498996e521bbc1ba",
+        "0fcf34e81c7a04811b4a1c4a89bd84e3a205e17a6b546920d09410ed08a91ed2"
+      ],
+      "bytes": "64786c3102000102a07bb26f3cc2752b5629373525b9a3ebb19d37ca95acf2bc498996e521bbc1ba0fcf34e81c7a04811b4a1c4a89bd84e3a205e17a6b546920d09410ed08a91ed20102016100016301",
+      "sha256": "075a4e46b7f22946df838ee44be29716552911f92f20c9c2108925b695636ee1",
+      "note": "Struct{61 ↦ Leaf(01), 63 ↦ Leaf(02)}: two DISTINCT children, so the links header genuinely orders two hashes and §6's first-use rule is a constraint rather than a tautology. Scanning entries in canonical key order, 61 is first (index 0) and 63 second (index 1) — so the header lists chunk/leaf-01's hash before chunk/leaf-02's.",
+      "pins": [
+        "Each hash in the links header is the SHA-256 (§7) of the referenced child's **entire\nchunk octets** under this same layout.",
+        "Each distinct child hash is appended to the links header at the moment it is\nfirst referenced.",
+        "chunk  := \"dxl1\" ‖ cuvarint(len(id)) ‖ id\n        ‖ cuvarint(nlinks) ‖ hash{32}*                 # ← the LINKS HEADER",
+        "lentry := cuvarint(len(key)) ‖ key ‖ cuvarint(link-index)",
+        "2. `nlinks` equals the number of hashes present.",
+        "7. Key ordering, tag, count, payload and trailing rules are as in §5.",
+        "under SHA-256 collision resistance**."
+      ]
+    }
+  ],
+  "cases": [
+    {
+      "name": "linked/sharing-is-lawful",
+      "kind": "accept",
+      "chunk": "chunk/root-shared",
+      "closure": [
+        "chunk/root-shared",
+        "chunk/inner-struct",
+        "chunk/leaf-01"
+      ],
+      "assert": {
+        "distinct_chunks": 3,
+        "links_header_entries": 1,
+        "references_to_index_0": 2
+      },
+      "note": "The closure is exactly three chunks for a value with four nodes, because one subtree occurs twice and is stored once. Assert the CHUNK SET, not just acceptance: a decoder that accepts the artifact while materialising four chunks has not disagreed with any byte here, and has still broken law 2.",
+      "pins": [
+        "3. The same hash MUST NOT appear twice: `duplicate_link_hash`.",
+        "Each distinct child hash is appended to the links header at the moment it is\nfirst referenced.",
+        "2. `nlinks` equals the number of hashes present.",
+        "A leaf chunk has `nlinks = 0`. **One node, one chunk**",
+        "7. Key ordering, tag, count, payload and trailing rules are as in §5."
+      ]
+    },
+    {
+      "name": "linked/first-use-order",
+      "kind": "accept",
+      "chunk": "chunk/root-two-children",
+      "closure": [
+        "chunk/root-two-children",
+        "chunk/leaf-01",
+        "chunk/leaf-02"
+      ],
+      "assert": {
+        "links_header_order": [
+          "a07bb26f3cc2752b5629373525b9a3ebb19d37ca95acf2bc498996e521bbc1ba",
+          "0fcf34e81c7a04811b4a1c4a89bd84e3a205e17a6b546920d09410ed08a91ed2"
+        ],
+        "address": {
+          "space": "dxl1",
+          "digest": "075a4e46b7f22946df838ee44be29716552911f92f20c9c2108925b695636ee1"
+        }
+      },
+      "discriminates": {
+        "against": "a core that SORTS the links header by hash instead of listing hashes in first-use order",
+        "counterfactual_address": "5567e8a394a470b24ea20767be86496b1512f431cf3db1a6e982cab4c4c3d45b",
+        "why": "The two hashes are in OPPOSITE relative order under the two rules: first-use gives a07bb26f… then 0fcf34e8…, while sorting by hash gives 0fcf34e8… first. A hash-sorting encoder therefore emits different octets and a DIFFERENT ADDRESS for this value — recomputed here so the discrimination is checkable rather than asserted. The counterfactual is NOT a case: its refusal (links_out_of_order) is BATCH 2's, and this is its lawful twin. (This note said batch 3 until 2026-09-03 — a filing error of mine, made in both batch-1 files at once. Batch 3 is fault PRECEDENCE; a plain code belongs in batch 2.) ⛔ AND THE COUNTERFACTUAL HOLDS THE VALUE FIXED, WHICH IS THE WHOLE POINT AND IS ONE EDIT AWAY FROM BEING LOST: swapping the header order forces the body's LINK INDICES TO BE RENUMBERED, because an index is a position INTO that header. The counterfactual above carries 61 ↦ index 1 and 63 ↦ index 0. Swapping the header and LEAVING the indices alone yields 740c856eb14b285bddff51a67dbf2db8dada12d5ed7bb5a5acf6f7000574ec2f — which encodes 61 ↦ Leaf(02) and 63 ↦ Leaf(01), i.e. A DIFFERENT VALUE. That digest would still differ from the lawful address, so the case would appear to discriminate while proving nothing: two values SHOULD have two addresses. A counterfactual that changes the value is not a counterfactual. Recorded here because a later editor regenerating this digest has a one-line way to get it wrong and no tell."
+      },
+      "note": "⛔ THIS CASE EXISTS BECAUSE linked/sharing-is-lawful CANNOT FAIL ON ORDER. That case has nlinks=1, and a one-element header has exactly one order, so §6's first-use rule is unexercisable there — it pins WHICH chunks and not IN WHAT ORDER the header names them, which are the two halves of law 2's determinism. A case that cannot fail is not evidence about the rule it names. (Ruled by the codec lane, 2026-08-30, against the author's own placement of this case in batch 2.)",
+      "pins": [
+        "Each distinct child hash is appended to the links header at the moment it is\nfirst referenced.",
+        "6. The header order MUST equal first-use order: otherwise `links_out_of_order`.",
+        "2. `nlinks` equals the number of hashes present.",
+        "7. Key ordering, tag, count, payload and trailing rules are as in §5."
+      ]
+    },
+    {
+      "name": "bridge/nested-identical-subtrees",
+      "kind": "bridge",
+      "ref": "flat/nested-identical-subtrees",
+      "chunk": "chunk/root-shared",
+      "address": {
+        "space": "dxl1",
+        "digest": "e7ce3e5a007a805c26223e9fb1c02f58d9f3ae4fe78868f974668058976617aa"
+      },
+      "assert": {
+        "same_value": true,
+        "same_identity_under_slot_equality": true
+      },
+      "note": "The bridge, and it is in batch 1 because it IS law 2: the flat case named in `ref` and the linked closure above denote one value. Its flat octets are NOT repeated here — ruling 1 — because two copies of one byte string drift silently and editing the flat case would leave a stale copy passing. The `ref` resolves corpus-wide at load; a dangling one fails the run rather than skipping the assertion.",
+      "pins": [
+        "`node` has no reference production: every child is spelled inline, so a value whose\nsubtrees are identical spells them **in full, each time**",
+        "Each hash in the links header is the SHA-256 (§7) of the referenced child's **entire\nchunk octets** under this same layout.",
+        "chunk  := \"dxl1\" ‖ cuvarint(len(id)) ‖ id\n        ‖ cuvarint(nlinks) ‖ hash{32}*                 # ← the LINKS HEADER",
+        "A leaf chunk has `nlinks = 0`. **One node, one chunk**",
+        "7. Key ordering, tag, count, payload and trailing rules are as in §5.",
+        "under SHA-256 collision resistance**."
+      ]
+    },
+    {
+      "name": "address/flat-digest-is-not-an-address",
+      "kind": "distinct",
+      "ref": "flat/nested-identical-subtrees",
+      "flat_digest": "745273dbb43a01f456842d4f7dee2042e8aae1f44eda1c62ea4ba3a4a8656c3c",
+      "address": {
+        "space": "dxl1",
+        "digest": "e7ce3e5a007a805c26223e9fb1c02f58d9f3ae4fe78868f974668058976617aa"
+      },
+      "assert": {
+        "distinct": true
+      },
+      "note": "ONE value, TWO digests, and they are not interchangeable. The left is SHA-256 over the flat artifact's octets; the right is the value's ADDRESS — the linked ROOT hash, and nothing else (§7). Conflating them is the named failure the three-notion clause exists to prevent, and this is the only place a corpus can catch it: every other case would pass a core that quietly used the flat digest as an address. The address is spelled VERSION-QUALIFIED as (dxl1, digest) per ruling 2 — a bare 32 octets is not an address, and a corpus that spells it bare teaches the habit it should be refusing.",
+      "pins": [
+        "- **The content address of a value is the SHA-256 of its linked-form root chunk, and\n  nothing else, ever.**",
+        "One value under two leaf codecs has two\n  addresses.",
+        "under SHA-256 collision resistance**."
+      ]
+    }
+  ],
+  "method": {
+    "octets": "Hand-assembled from CODEC.md §6, never emitted by an implementation.",
+    "digests": "SHA-256, computed with a tool because no reader computes one by hand. Each is published WITH its preimage (`bytes`), so the corpus is checkable rather than trusted: recompute, do not accept. A digest whose preimage is absent is an assertion; one whose preimage is present is evidence.",
+    "verification": "Every chunk's octets were parsed back through a reader written from the grammar — header, links header, body, link indices in range, no trailing bytes — and each digest recomputed from the published preimage."
+  },
+  "pending": {
+    "note": "Batch 2 is now complete: all fifteen §9 invalid codes have at least one case (ten in codec-invalid.json, these five here) plus the unsupported class boundary. `limit_exceeded` (resource-refused) is deliberately NOT a case and cannot be one — two conforming implementations with different local limits return different correct answers for one octet string, so there is no expected verdict to assert (CODEC.md §8 law 3, §9, §12). Batch 3 is fault PRECEDENCE: one case per row of §10, with BOTH conditions genuinely observable — the leaf-holding/leaf-blind pair on the non_canonical_payload cases is already flagged there."
+  },
+  "invalid_cases": [
+    {
+      "name": "invalid/bad-link-index",
+      "class": "invalid",
+      "code": "bad_link_index",
+      "fault_locus": "links",
+      "min_profile": "closure-checker",
+      "bytes": "64786c3102000101a07bb26f3cc2752b5629373525b9a3ebb19d37ca95acf2bc498996e521bbc1ba0101016101",
+      "clause": "§6 rule 4 — every link-index is < nlinks.",
+      "note": "nlinks 01 with ONE hash listed, and the lentry carries index 01 — one past the end. The header is well formed and the body's key ordering is fine, so every check except the range check passes. ⚠ A decoder that indexes without bounds-checking reads whatever follows the header in memory, so the failure direction is worse than a wrong value.",
+      "pins": [
+        "4. Every `link-index` is `< nlinks`: otherwise `bad_link_index`.",
+        "lentry := cuvarint(len(key)) ‖ key ‖ cuvarint(link-index)",
+        "2. `nlinks` equals the number of hashes present."
+      ]
+    },
+    {
+      "name": "invalid/unused-link",
+      "class": "invalid",
+      "code": "unused_link",
+      "fault_locus": "links",
+      "min_profile": "closure-checker",
+      "bytes": "64786c3102000102a07bb26f3cc2752b5629373525b9a3ebb19d37ca95acf2bc498996e521bbc1ba0fcf34e81c7a04811b4a1c4a89bd84e3a205e17a6b546920d09410ed08a91ed20101016100",
+      "clause": "§6 rule 5 — every listed hash MUST be referenced by at least one lentry.",
+      "note": "Two hashes listed, ONE entry, referencing index 0 — so chunk/leaf-02's hash is listed and never used. Nothing is missing and nothing is out of range; the closure simply carries a chunk the value does not need. ⇒ This is the rule that makes the links header a FUNCTION of the value rather than a superset of it: without it, one value would have unboundedly many valid spellings and therefore unboundedly many addresses.",
+      "pins": [
+        "5. Every listed hash MUST be referenced by at least one `lentry`: an unreferenced\n   hash is `unused_link`.",
+        "2. `nlinks` equals the number of hashes present."
+      ]
+    },
+    {
+      "name": "invalid/duplicate-link-hash",
+      "class": "invalid",
+      "code": "duplicate_link_hash",
+      "fault_locus": "links",
+      "min_profile": "closure-checker",
+      "bytes": "64786c3102000102a07bb26f3cc2752b5629373525b9a3ebb19d37ca95acf2bc498996e521bbc1baa07bb26f3cc2752b5629373525b9a3ebb19d37ca95acf2bc498996e521bbc1ba0102016100016301",
+      "clause": "§6 rule 3 — the same hash MUST NOT appear twice.",
+      "note": "chunk/leaf-01's hash listed at BOTH index 0 and index 1, with entries 61 and 63 pointing at one each. Both indices are in range and both hashes are referenced, so rules 4 and 5 pass — only rule 3 fires. ⭐ Its LAWFUL twin is linked/sharing-is-lawful: the same value, spelled with the hash listed ONCE and referenced twice. The pair is what pins first-use order as deduplicating: this spelling is what an encoder produces if it appends per REFERENCE instead of per DISTINCT CHILD.",
+      "pins": [
+        "3. The same hash MUST NOT appear twice: `duplicate_link_hash`.",
+        "2. `nlinks` equals the number of hashes present."
+      ]
+    },
+    {
+      "name": "invalid/links-out-of-order",
+      "class": "invalid",
+      "code": "links_out_of_order",
+      "fault_locus": "links",
+      "min_profile": "closure-checker",
+      "ref": "linked/first-use-order",
+      "bytes": "64786c31020001020fcf34e81c7a04811b4a1c4a89bd84e3a205e17a6b546920d09410ed08a91ed2a07bb26f3cc2752b5629373525b9a3ebb19d37ca95acf2bc498996e521bbc1ba0102016101016300",
+      "sha256": "5567e8a394a470b24ea20767be86496b1512f431cf3db1a6e982cab4c4c3d45b",
+      "clause": "§6 — each distinct child hash is appended at the moment it is FIRST REFERENCED, scanning the body in canonical key order.",
+      "note": "⭐ THESE ARE EXACTLY THE OCTETS batch 1 published as `linked/first-use-order`'s counterfactual address, and the digest here is that same 5567e8a3… — recomputed, matching. So the lawful twin and its refusal are now ONE artifact pair rather than a case and a number in a note. Scanning in key order gives 61 first, so first-use order is [chunk/leaf-01, chunk/leaf-02]; this header lists them reversed, which is what a core produces if it SORTS the header by hash. ⚠ The link indices are RENUMBERED to match (61→1, 63→0), so this spelling denotes THE SAME VALUE as the lawful case — that is what makes it a counterfactual rather than a different tree, and batch 1 records the naive non-renumbered variant (740c856e…) as the trap.",
+      "pins": [
+        "6. The header order MUST equal first-use order: otherwise `links_out_of_order`.",
+        "Each distinct child hash is appended to the links header at the moment it is\nfirst referenced."
+      ]
+    },
+    {
+      "name": "invalid/leaf-codec-mismatch",
+      "class": "invalid",
+      "code": "leaf_codec_mismatch",
+      "fault_locus": "links",
+      "min_profile": "closure-checker",
+      "bytes": "64786c3102000101e9d6bd760eb82e6b4d0d8684ca63acfc0202fe53a026e0a9fab4ad4174be3c690101016100",
+      "child_chunk": {
+        "bytes": "64786c3102000200000101",
+        "sha256": "e9d6bd760eb82e6b4d0d8684ca63acfc0202fe53a026e0a9fab4ad4174be3c69",
+        "note": "Byte-identical to chunk/leaf-01 EXCEPT its id is 0002 (ontos-codec-v1) where the parent's is 0001. That one octet is the whole fault."
+      },
+      "clause": "§4 — one artifact, one leaf codec: every chunk of one linked closure carries the same id, and a child whose id differs from its parent's MUST be refused.",
+      "note": "⛔ UNREACHABLE IN THE FLAT FORM, which is why it appears only here: a flat artifact names its id exactly ONCE, in its header, so there is no second id to disagree with. ⚠ And it is invisible to anyone holding ONE chunk — parent and child are each individually well formed, and the fault is a RELATION between two headers. That is what makes `links` the right locus even though the differing octet sits in a header: the observational position that can see it is the one that holds the closure.",
+      "pins": [
+        "One value under two leaf codecs has two\n  addresses.",
+        "id := 0x00 ‖ cuvarint(n)              # PUBLIC — registry-assigned, n ≥ 1\n    | 0x01 ‖ ns{16} ‖ cuvarint(k)     # PRIVATE / EXPERIMENTAL — self-scoped",
+        "- `e : T → Bytes` — total, computable, and **lawful**: `x ≈ y ⟺ e(x) = e(y)`."
+      ]
+    }
+  ]
+}

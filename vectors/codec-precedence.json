@@ -1,0 +1,184 @@
+{
+  "description": "deixis-codec-v1 — batch 3: FAULT PRECEDENCE (CODEC.md §10). Each case makes TWO conditions genuinely observable in one artifact and asserts the first-listed code, together with the code a natural implementation would report instead. Octets hand-assembled; no implementation emitted any of them.",
+  "spec": "docs/CODEC-v1.md §10",
+  "status": "HISTORICAL: the withdrawn deixis-codec-v1 candidate (ADR 0011 §5), specified by docs/CODEC-v1.md; kept as its evidence, not rewritten. As authored: DRAFT — batch 3, authored against a CANDIDATE CONTRACT. Not frozen.",
+  "why_loses_to_naive_is_recorded": "A precedence case is only worth writing if a plausible implementation gets it WRONG — otherwise it asserts an ordering nothing was going to violate. `loses_to_naive` names the code the obvious implementation strategy produces, so each case states the defect it would catch rather than merely the rule it quotes. Where that field would be empty, the row is not a precedence case.",
+  "vacuous_pairs": {
+    "uvarint_overflow vs non_shortest_uvarint": {
+      "why": "non-shortest requires a SHORTER spelling of the same value to exist, so the value fits in <= 9 octets, i.e. < 2^63. Overflow requires the value >= 2^64. The conditions are disjoint.",
+      "consequence": "No octet string exhibits both, so the row's ordering can never be exercised."
+    },
+    "duplicate_key vs unsorted_keys": {
+      "why": "one key cannot both EQUAL and PRECEDE its predecessor at one entry boundary.",
+      "consequence": "Disjoint at a single step. Two entries could exhibit one each, but §10 is scoped to conditions seen together AT ONE STEP, so that is two faults and not a precedence."
+    },
+    "unexpected_eof vs trailing_bytes": {
+      "why": "input cannot simultaneously end mid-structure and have octets remaining after a complete root.",
+      "consequence": "Disjoint. They are the two DIRECTIONS of one boundary, not an ordered pair."
+    }
+  },
+  "vacuous_pairs_note": "⛔ THREE ORDERINGS IN §10 CANNOT BE EXERCISED, because their conditions are mutually exclusive. §10's own preamble scopes the table to conditions 'genuinely observable at one parser step', so these rows are not WRONG — but no case can be written for them, and a corpus claiming to cover §10 row by row would either omit them silently or invent an unreachable fixture. Recorded here so the absence is a stated result rather than a gap. Routed to the spec lane as a question: an ordering that cannot be violated may still be worth keeping as documentation, but it should not read as a testable requirement.",
+  "precedence_cases": [
+    {
+      "name": "precedence/eof-beats-unknown-magic",
+      "row": "artifact start",
+      "conditions": [
+        "fewer than four octets available",
+        "the octets present are not a dxf1/dxl1 prefix"
+      ],
+      "code": "unexpected_eof",
+      "loses_to_naive": "unknown_magic",
+      "streaming_code": "need_more_input",
+      "fault_locus": "header",
+      "min_profile": "flat-header-validator",
+      "bytes": "ffff",
+      "note": "TWO octets, and they are not a magic prefix. Both conditions hold, and §10 puts unexpected_eof first. ⚠ The wrong answer is the NATURAL implementation: compare what you have against \"dxf1\", see it differ, report unknown_magic. §5.1 already forbids that and §14 says why — need_more_input is NON-TERMINAL, so a decoder answering unknown_magic here refuses an artifact that is merely still arriving. This case is what distinguishes a decoder that checks AVAILABILITY before CONTENT from one that does not.",
+      "pins": [
+        "Fewer than four is `unexpected_eof`\n   (streaming: `need_more_input`), never `unknown_magic`:"
+      ]
+    },
+    {
+      "name": "precedence/malformed-beats-overflow",
+      "row": "any uvarint",
+      "conditions": [
+        "more than ten octets",
+        "the accumulated value is >= 2^64"
+      ],
+      "code": "malformed_uvarint",
+      "loses_to_naive": "uvarint_overflow",
+      "fault_locus": "body",
+      "min_profile": "flat-decoder",
+      "bytes": "6478663102000100ffffffffffffffffffff01",
+      "note": "An eleven-octet uvarint whose value is far past 2^64. A decoder that accumulates first and checks the domain afterwards reports uvarint_overflow; §10 orders the LENGTH bound above the DOMAIN bound, so malformed_uvarint wins. ⇒ The ordering encodes that the length bound is checkable WITHOUT accumulating, and a decoder must refuse before it has a value at all.",
+      "pins": [
+        "2. **Length.** At most ten octets.",
+        "1. **Domain.** The value lies in `[0, 2^64 − 1]`."
+      ]
+    },
+    {
+      "name": "precedence/duplicate-hash-beats-bad-index",
+      "row": "links header",
+      "conditions": [
+        "the same hash listed twice",
+        "an index >= nlinks"
+      ],
+      "code": "duplicate_link_hash",
+      "loses_to_naive": "bad_link_index",
+      "fault_locus": "links",
+      "min_profile": "closure-checker",
+      "bytes": "64786c3102000102a07bb26f3cc2752b5629373525b9a3ebb19d37ca95acf2bc498996e521bbc1baa07bb26f3cc2752b5629373525b9a3ebb19d37ca95acf2bc498996e521bbc1ba0101016105",
+      "note": "chunk/leaf-01's hash listed twice AND the single lentry carrying index 05 against nlinks 2. ⚠ The natural order of operations loses here: a decoder validates the body as it walks it and hits the bad index FIRST, because the duplicate is only visible once the whole header is read. §10 orders the header fault above it, so the header must be validated as a UNIT before any lentry is resolved.",
+      "pins": [
+        "3. The same hash MUST NOT appear twice: `duplicate_link_hash`.",
+        "4. Every `link-index` is `< nlinks`: otherwise `bad_link_index`."
+      ]
+    },
+    {
+      "name": "precedence/bad-index-beats-unused-link",
+      "row": "links header",
+      "conditions": [
+        "an index >= nlinks",
+        "listed hashes that no lentry uses"
+      ],
+      "code": "bad_link_index",
+      "loses_to_naive": "unused_link",
+      "fault_locus": "links",
+      "min_profile": "closure-checker",
+      "bytes": "64786c3102000102a07bb26f3cc2752b5629373525b9a3ebb19d37ca95acf2bc498996e521bbc1ba0fcf34e81c7a04811b4a1c4a89bd84e3a205e17a6b546920d09410ed08a91ed20101016105",
+      "note": "Two distinct hashes, one lentry, index 05 out of range — so BOTH listed hashes are also unreferenced. Distinct hashes, so duplicate_link_hash does not fire and this pair is isolated. A decoder that computes the referenced set first and diffs it against the header reports unused_link; §10 says the range fault wins.",
+      "pins": [
+        "4. Every `link-index` is `< nlinks`: otherwise `bad_link_index`.",
+        "5. Every listed hash MUST be referenced by at least one `lentry`: an unreferenced\n   hash is `unused_link`."
+      ]
+    },
+    {
+      "name": "precedence/out-of-order-beats-unused-link",
+      "row": "links header",
+      "conditions": [
+        "first-use order violated",
+        "a listed hash no lentry uses"
+      ],
+      "code": "links_out_of_order",
+      "loses_to_naive": "unused_link",
+      "fault_locus": "links",
+      "min_profile": "closure-checker",
+      "bytes": "64786c31020001020fcf34e81c7a04811b4a1c4a89bd84e3a205e17a6b546920d09410ed08a91ed2a07bb26f3cc2752b5629373525b9a3ebb19d37ca95acf2bc498996e521bbc1ba0101016101",
+      "note": "Header [leaf-02, leaf-01]; the one lentry references index 01 = leaf-01. First use is therefore leaf-01, which should head the list — violated — and leaf-02 is referenced by nothing. Both fire; order wins. ⭐ Note the two faults have a COMMON CAUSE here: a header carrying a chunk the value does not need is exactly a header that cannot be in first-use order, since first-use order is defined by the references. That makes this the row where an implementation is most likely to report the second-listed code and believe it complete.",
+      "pins": [
+        "6. The header order MUST equal first-use order: otherwise `links_out_of_order`.",
+        "5. Every listed hash MUST be referenced by at least one `lentry`: an unreferenced\n   hash is `unused_link`."
+      ]
+    },
+    {
+      "name": "precedence/framing-beats-unsupported-codec",
+      "row": "§10 preamble — unsupported_leaf_codec sits BELOW every framing fault",
+      "conditions": [
+        "the leaf-codec id is reserved (0x02..0xff)",
+        "the tag octet is not 0x00/0x01"
+      ],
+      "code": "unknown_tag",
+      "loses_to_naive": "unsupported_leaf_codec",
+      "fault_locus": "body",
+      "min_profile": "flat-decoder",
+      "bytes": "6478663102ff0102",
+      "note": "A RESERVED id and a bad tag in one artifact. ⚠ The natural implementation loses: an id is read BEFORE a tag, so a decoder that resolves its codec table on sight of the id returns unsupported_leaf_codec and never looks at the body. §10 puts every framing fault above it, and §9 says why — `unsupported` claims the octets MAY be a value, and here they provably are not, so the weaker claim would be false. ⇒ Capability is judged LAST among framing questions, however early the id is read."
+    },
+    {
+      "name": "precedence/unsupported-beats-non-canonical-payload",
+      "row": "§10 preamble — unsupported_leaf_codec sits ABOVE every payload-level judgment",
+      "conditions": [
+        "the decoder is leaf-blind for this id",
+        "the payload is outside im(e)"
+      ],
+      "code": "unsupported_leaf_codec",
+      "loses_to_naive": "non_canonical_payload",
+      "modifier": "leaf-blind",
+      "fault_locus": "header",
+      "min_profile": "flat-header-validator",
+      "ref": "invalid/non-canonical-payload-overlong-utf8",
+      "bytes": "647866311201fb44faaf3a9db590cbc4cb1abfdadb02010002c080",
+      "note": "⭐ THE SAME OCTETS as the batch-2 case in `ref`, and the FIRST case where the MODIFIER does work the profile table cannot. Leaf-HOLDING, the payload is an overlong NUL and outside im(e): non_canonical_payload. Leaf-BLIND, the decoder cannot apply D at all and must report unsupported_leaf_codec — and per §9 its judgment that the framing was well formed stands permanently. Neither verdict is a fallback for the other: both are correct, for different readers, on identical bytes. ⇒ A replayer that ignores `modifier` MUST score one of the two conforming decoders as wrong, whichever verdict it picked."
+    },
+    {
+      "name": "precedence/framing-beats-leaf-codec-mismatch",
+      "row": "§10 tag octet (row 3) above child chunk (last row)",
+      "conditions": [
+        "the child chunk's id differs from the parent's",
+        "that same child chunk's tag octet is not 0x00/0x01"
+      ],
+      "code": "unknown_tag",
+      "loses_to_naive": "leaf_codec_mismatch",
+      "fault_locus": "links",
+      "min_profile": "closure-checker",
+      "bytes": "64786c310200010173f33e4e46b5a99970151e100cfcfdeda2e73728271145bf268ad379110df7c70101016100",
+      "child_chunk": {
+        "bytes": "64786c310200020002",
+        "sha256": "73f33e4e46b5a99970151e100cfcfdeda2e73728271145bf268ad379110df7c7",
+        "note": "NINE octets carrying two faults at once: id 0002 where the parent's is 0001, and a body whose only octet is tag 0x02. Both are properties of this one chunk, so they are genuinely observable at one step and §10's ordering applies."
+      },
+      "note": "⚠ THE NATURAL IMPLEMENTATION LOSES, and for a defensible reason: a child's ID is read BEFORE its body, so a decoder that compares ids on sight of the child header reports leaf_codec_mismatch and never parses the tag. §10 puts the tag row above the child-chunk row, so the framing fault wins. ⇒ Same shape as precedence/framing-beats-unsupported-codec one level down: an id being READABLE early does not make the judgment that turns on it EARLY in precedence. Both cases say the id is read first and ruled on last."
+    },
+    {
+      "name": "precedence/links-header-beats-leaf-codec-mismatch",
+      "row": "§10 links header (row 5) above child chunk (last row)",
+      "conditions": [
+        "the parent lists the same hash twice",
+        "the child that hash names has an id differing from the parent's"
+      ],
+      "code": "duplicate_link_hash",
+      "loses_to_naive": "leaf_codec_mismatch",
+      "fault_locus": "links",
+      "min_profile": "closure-checker",
+      "bytes": "64786c3102000102e9d6bd760eb82e6b4d0d8684ca63acfc0202fe53a026e0a9fab4ad4174be3c69e9d6bd760eb82e6b4d0d8684ca63acfc0202fe53a026e0a9fab4ad4174be3c690102016100016301",
+      "child_chunk": {
+        "bytes": "64786c3102000200000101",
+        "sha256": "e9d6bd760eb82e6b4d0d8684ca63acfc0202fe53a026e0a9fab4ad4174be3c69",
+        "note": "Byte-identical to the child in invalid/leaf-codec-mismatch, and the digest is the same e9d6bd76… — recomputed here rather than copied. Reusing it is deliberate: the two cases then differ ONLY in the parent, so what the corpus is testing is the parent's header and not some second property of the child."
+      },
+      "note": "⭐ THIS ONE IS OVERDETERMINED, AND SAYING SO IS THE POINT. §10's table orders it, and SEQUENCE orders it too: a link-index cannot be resolved until the links header has been read, so a decoder that validates the header as a unit — which precedence/duplicate-hash-beats-bad-index already requires — CANNOT reach the child. ⇒ The case therefore catches only an implementation that fetches children EAGERLY, before finishing the header it got their hashes from. That is a real strategy (it parallelises retrieval) and it is the one this row exists for. Recorded as overdetermined so nobody reads a pass here as evidence the TABLE was consulted."
+    }
+  ],
+  "pending": {
+    "note": "Batch 3's writable rows are now covered. What remains is NOT a gap in the corpus but a question for the spec: the three orderings in `vacuous_pairs` cannot be exercised at all, and §10 presents them in a table whose other rows are testable. `limit_exceeded` appears in no case by construction — §10's preamble puts it outside invalidity, and two conforming implementations disagree on it for one octet string, so there is no expected verdict to assert."
+  }
+}

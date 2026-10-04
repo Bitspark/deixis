@@ -1,0 +1,2421 @@
+{
+  "spec": "docs/CODEC.md",
+  "status": "DRAFT, batch 1 of CODEC-V2-PLAN: authored against the deixis-codec-v2 CANDIDATE CONTRACT. Not frozen.",
+  "source": "CODEC.md v2 at 343cda9 (identical on main at 63f919f)",
+  "bundle": {
+    "id": "0001",
+    "name": "identity-bytes"
+  },
+  "header": {
+    "hex": "64786c32020001",
+    "derivation": "\"dxl2\" = 64 78 6c 32 · cuvarint(len(id)) = 02 · id = 00 01."
+  },
+  "method": {
+    "octets": "Hand-assembled from CODEC.md v2 §6, never emitted by an implementation.",
+    "digests": "SHA-256, computed with a tool over each chunk's published bytes, so every digest is checkable: recompute, do not trust."
+  },
+  "chunks": [
+    {
+      "name": "v2-chunk/childless-empty",
+      "value": {
+        "own": "",
+        "children": []
+      },
+      "bytes": "64786c32020001000000",
+      "sha256": "a9677a54bc70bd0072953ec21471ff76b5e357c6b8bd25ee89db2d045b268009",
+      "note": "Header 64 78 6c 32 · 02 · 00 01, nlinks 00, then the body: payload length 00, count 00.",
+      "pins": [
+        "chunk  := \"dxl2\" ‖ cuvarint(len(id)) ‖ id",
+        "A childless node's chunk has `nlinks = 0`."
+      ]
+    },
+    {
+      "name": "v2-chunk/childless-01",
+      "value": {
+        "own": "01",
+        "children": []
+      },
+      "bytes": "64786c3202000100010100",
+      "sha256": "038a411f936d20a4a35f092cf7eb4a67452cafadf0d25cc6d11b3937236cf163",
+      "note": "nlinks 00, body 01 01 00.",
+      "pins": [
+        "chunk  := \"dxl2\" ‖ cuvarint(len(id)) ‖ id",
+        "A childless node's chunk has `nlinks = 0`.",
+        "body   := cuvarint(len(payload)) ‖ payload ‖ cuvarint(count) ‖ lentry*"
+      ]
+    },
+    {
+      "name": "v2-chunk/inner-shared",
+      "value": {
+        "own": "01",
+        "children": [
+          [
+            "63",
+            {
+              "own": "",
+              "children": []
+            }
+          ]
+        ]
+      },
+      "bytes": "64786c3202000101a9677a54bc70bd0072953ec21471ff76b5e357c6b8bd25ee89db2d045b268009010101016300",
+      "sha256": "e3e193d0fd01a9dd862ff22cc794340080bbd67bd3d2728da0b37fd8224111f8",
+      "note": "S from v2-flat/shared-subtrees-spelled-in-full as a chunk: nlinks 01, the digest of v2-chunk/childless-empty, then the body 01 01 (payload) · 01 (count) · 01 63 00 (key c, link-index 0). Its own payload is in its body.",
+      "pins": [
+        "body   := cuvarint(len(payload)) ‖ payload ‖ cuvarint(count) ‖ lentry*",
+        "lentry := cuvarint(len(key)) ‖ key ‖ cuvarint(link-index)",
+        "Every chunk carries its node's own"
+      ]
+    },
+    {
+      "name": "v2-chunk/root-shared",
+      "value": {
+        "own": "",
+        "children": [
+          [
+            "61",
+            {
+              "own": "01",
+              "children": [
+                [
+                  "63",
+                  {
+                    "own": "",
+                    "children": []
+                  }
+                ]
+              ]
+            }
+          ],
+          [
+            "62",
+            {
+              "own": "01",
+              "children": [
+                [
+                  "63",
+                  {
+                    "own": "",
+                    "children": []
+                  }
+                ]
+              ]
+            }
+          ]
+        ]
+      },
+      "bytes": "64786c3202000101e3e193d0fd01a9dd862ff22cc794340080bbd67bd3d2728da0b37fd8224111f80002016100016200",
+      "sha256": "21b92f5754e55c77768e7e2ee138797ace7a1408829df6f8241ccd7e5e5581a2",
+      "note": "The root of the shared value: ONE distinct child hash, listed once (nlinks 01), referenced twice by index 0 under a and b. Body 00 (payload) · 02 · 01 61 00 · 01 62 00.",
+      "pins": [
+        "Each distinct child hash is appended to the links header at the moment it is",
+        "lentry := cuvarint(len(key)) ‖ key ‖ cuvarint(link-index)"
+      ]
+    },
+    {
+      "name": "v2-chunk/parent-aa-child-01",
+      "value": {
+        "own": "aa",
+        "children": [
+          [
+            "61",
+            {
+              "own": "01",
+              "children": []
+            }
+          ]
+        ]
+      },
+      "bytes": "64786c3202000101038a411f936d20a4a35f092cf7eb4a67452cafadf0d25cc6d11b3937236cf16301aa01016100",
+      "sha256": "a59bbd548d8a6c3f4cb6fa23d97403fdc245689d2ea72d2ea6818cc5830692b4",
+      "note": "V1 for the linked form: the parent's payload aa is in its own chunk body (01 aa), before its count and link entry.",
+      "pins": [
+        "body   := cuvarint(len(payload)) ‖ payload ‖ cuvarint(count) ‖ lentry*",
+        "Every chunk carries its node's own"
+      ]
+    },
+    {
+      "name": "v2-chunk/root-keys-7f-80",
+      "value": {
+        "own": "",
+        "children": [
+          [
+            "7f",
+            {
+              "own": "",
+              "children": []
+            }
+          ],
+          [
+            "80",
+            {
+              "own": "",
+              "children": []
+            }
+          ]
+        ]
+      },
+      "bytes": "64786c3202000101a9677a54bc70bd0072953ec21471ff76b5e357c6b8bd25ee89db2d045b2680090002017f00018000",
+      "sha256": "72dd1cc52793d740f8bee03fe2b9d06abe2d58a5d73939b5ff0f07009cb2e5e3",
+      "note": "Header 64 78 6c 32 · 02 · 00 01, nlinks 01, the one hash (v2-chunk/childless-empty), then the body: payload length 00, count 02, entries 01 7f 00; 01 80 00 (key length, key, link index). Both children are the one empty leaf, so it is listed once and referenced twice.",
+      "pins": [
+        "7. Key ordering, count, payload and trailing rules are as in §5."
+      ]
+    },
+    {
+      "name": "v2-chunk/root-keys-80-c3a9",
+      "value": {
+        "own": "",
+        "children": [
+          [
+            "80",
+            {
+              "own": "",
+              "children": []
+            }
+          ],
+          [
+            "c3a9",
+            {
+              "own": "",
+              "children": []
+            }
+          ]
+        ]
+      },
+      "bytes": "64786c3202000101a9677a54bc70bd0072953ec21471ff76b5e357c6b8bd25ee89db2d045b268009000201800002c3a900",
+      "sha256": "a95526787d0ee31885b2aef8ecde13307844f99e864da5ce874d981884ecf78f",
+      "note": "Header 64 78 6c 32 · 02 · 00 01, nlinks 01, the one hash (v2-chunk/childless-empty), then the body: payload length 00, count 02, entries 01 80 00; 02 c3 a9 00 (key length, key, link index). Both children are the one empty leaf, so it is listed once and referenced twice.",
+      "pins": [
+        "7. Key ordering, count, payload and trailing rules are as in §5."
+      ]
+    },
+    {
+      "name": "v2-chunk/root-keys-ee8080-f0908080",
+      "value": {
+        "own": "",
+        "children": [
+          [
+            "ee8080",
+            {
+              "own": "",
+              "children": []
+            }
+          ],
+          [
+            "f0908080",
+            {
+              "own": "",
+              "children": []
+            }
+          ]
+        ]
+      },
+      "bytes": "64786c3202000101a9677a54bc70bd0072953ec21471ff76b5e357c6b8bd25ee89db2d045b268009000203ee80800004f090808000",
+      "sha256": "34b01d6a9ed4f3799f1714ac9e1f41028a8a2747032d0ca79ac10c203cd07e43",
+      "note": "Header 64 78 6c 32 · 02 · 00 01, nlinks 01, the one hash (v2-chunk/childless-empty), then the body: payload length 00, count 02, entries 03 ee 80 80 00; 04 f0 90 80 80 00 (key length, key, link index). Both children are the one empty leaf, so it is listed once and referenced twice.",
+      "pins": [
+        "7. Key ordering, count, payload and trailing rules are as in §5."
+      ]
+    },
+    {
+      "name": "v2-chunk/root-two-leaves",
+      "value": {
+        "own": "",
+        "children": [
+          [
+            "61",
+            {
+              "own": "",
+              "children": []
+            }
+          ],
+          [
+            "62",
+            {
+              "own": "01",
+              "children": []
+            }
+          ]
+        ]
+      },
+      "bytes": "64786c3202000102a9677a54bc70bd0072953ec21471ff76b5e357c6b8bd25ee89db2d045b268009038a411f936d20a4a35f092cf7eb4a67452cafadf0d25cc6d11b3937236cf1630002016100016201",
+      "sha256": "2970ba7f22f467809b42e02305053f961a7234bf5fcf9adf1d3d677a9630c7ed",
+      "note": "Header 64 78 6c 32 · 02 · 00 01, nlinks 02, the hashes of v2-chunk/childless-empty then v2-chunk/childless-01 (first-use order: a is scanned first), then the body: payload length 00, count 02, entries 01 61 00 and 01 62 01. Two different children, so a store can omit one.",
+      "pins": [
+        "Each distinct child hash is appended to the links header at the moment it is"
+      ]
+    },
+    {
+      "name": "v2-chunk/root-keys-01-7f-80-ff",
+      "value": {
+        "own": "",
+        "children": [
+          [
+            "01",
+            {
+              "own": "",
+              "children": []
+            }
+          ],
+          [
+            "7f",
+            {
+              "own": "",
+              "children": []
+            }
+          ],
+          [
+            "80",
+            {
+              "own": "",
+              "children": []
+            }
+          ],
+          [
+            "ff",
+            {
+              "own": "",
+              "children": []
+            }
+          ]
+        ]
+      },
+      "bytes": "64786c3202000101a9677a54bc70bd0072953ec21471ff76b5e357c6b8bd25ee89db2d045b2680090004010100017f0001800001ff00",
+      "sha256": "8f34402517803fd6ce0eef6321aa0971992e885397782392c481dcbf87ef8904",
+      "note": "Header 64 78 6c 32 · 02 · 00 01, nlinks 01, the hash of v2-chunk/childless-empty, then the body: payload length 00, count 04, entries 01 01 00; 01 7f 00; 01 80 00; 01 ff 00. Four keys either side of the top bit, in unsigned octet order, all linking to one empty leaf.",
+      "pins": [
+        "as unsigned values at each position; at the first difference the smaller octet"
+      ]
+    },
+    {
+      "name": "v2-chunk/root-seven-keys",
+      "value": {
+        "own": "",
+        "children": [
+          [
+            "01",
+            {
+              "own": "",
+              "children": []
+            }
+          ],
+          [
+            "7f",
+            {
+              "own": "",
+              "children": []
+            }
+          ],
+          [
+            "80",
+            {
+              "own": "",
+              "children": []
+            }
+          ],
+          [
+            "c3a9",
+            {
+              "own": "",
+              "children": []
+            }
+          ],
+          [
+            "ee8080",
+            {
+              "own": "",
+              "children": []
+            }
+          ],
+          [
+            "f0908080",
+            {
+              "own": "",
+              "children": []
+            }
+          ],
+          [
+            "ff",
+            {
+              "own": "",
+              "children": []
+            }
+          ]
+        ]
+      },
+      "bytes": "64786c3202000101a9677a54bc70bd0072953ec21471ff76b5e357c6b8bd25ee89db2d045b2680090007010100017f0001800002c3a90003ee80800004f09080800001ff00",
+      "sha256": "ff8dc4c8a4c368f573b0a6559279a9c69049b284e845c0998b6090e4652ef274",
+      "note": "The seven keys of v2-flat/keys-seven-across-three-orders in one chunk, every entry linking to v2-chunk/childless-empty (nlinks 01, index 00 throughout).",
+      "pins": [
+        "7. Key ordering, count, payload and trailing rules are as in §5."
+      ]
+    }
+  ],
+  "cases": [
+    {
+      "name": "v2-linked/sharing-is-lawful",
+      "kind": "accept",
+      "chunk": "v2-chunk/root-shared",
+      "closure": [
+        "v2-chunk/root-shared",
+        "v2-chunk/inner-shared",
+        "v2-chunk/childless-empty"
+      ],
+      "assert": {
+        "distinct_chunks": 3,
+        "links_header_entries": 1,
+        "references_to_index_0": 2
+      },
+      "note": "Area 10. Four nodes, three chunks: the shared subtree is stored once and referenced twice. A core that emits it twice produces a different closure for the same value.",
+      "pins": [
+        "Each distinct child hash is appended to the links header at the moment it is"
+      ]
+    },
+    {
+      "name": "v2-linked/parent-payload-in-chunk",
+      "kind": "accept",
+      "chunk": "v2-chunk/parent-aa-child-01",
+      "closure": [
+        "v2-chunk/parent-aa-child-01",
+        "v2-chunk/childless-01"
+      ],
+      "assert": {
+        "distinct_chunks": 2,
+        "links_header_entries": 1
+      },
+      "note": "V1. The parent chunk carries its own payload aa.",
+      "pins": [
+        "Every chunk carries its node's own"
+      ]
+    },
+    {
+      "name": "v2-bridge/shared-subtrees",
+      "kind": "bridge",
+      "ref": "v2-flat/shared-subtrees-spelled-in-full",
+      "chunk": "v2-chunk/root-shared",
+      "address": {
+        "space": "dxl2",
+        "digest": "21b92f5754e55c77768e7e2ee138797ace7a1408829df6f8241ccd7e5e5581a2"
+      },
+      "assert": {
+        "same_value": true,
+        "same_identity_under_slot_equality": true
+      },
+      "note": "The flat case and the linked root denote one value; decoding either gives it. The address is version-qualified.",
+      "pins": [
+        "it MUST travel as the pair `(address-space = \"dxl2\", digest{32})`."
+      ]
+    },
+    {
+      "name": "v2-bridge/parent-payload",
+      "kind": "bridge",
+      "ref": "v2-flat/parent-payload-and-child",
+      "chunk": "v2-chunk/parent-aa-child-01",
+      "address": {
+        "space": "dxl2",
+        "digest": "a59bbd548d8a6c3f4cb6fa23d97403fdc245689d2ea72d2ea6818cc5830692b4"
+      },
+      "assert": {
+        "same_value": true,
+        "same_identity_under_slot_equality": true
+      },
+      "note": "V1 across forms: a parent's payload survives both encodings.",
+      "pins": [
+        "it MUST travel as the pair `(address-space = \"dxl2\", digest{32})`."
+      ]
+    },
+    {
+      "name": "v2-address/flat-digest-is-not-an-address",
+      "kind": "distinct",
+      "ref": "v2-flat/shared-subtrees-spelled-in-full",
+      "flat_digest": "cedd5be795d0ba39560bf3c617d1879fdee4e7274da133a2c2cf1d4c0ffd3e43",
+      "address": {
+        "space": "dxl2",
+        "digest": "21b92f5754e55c77768e7e2ee138797ace7a1408829df6f8241ccd7e5e5581a2"
+      },
+      "assert": {
+        "distinct": true
+      },
+      "note": "Area 14. The flat digest is a lawful invariant and is never an address; the address is the linked root's digest.",
+      "pins": [
+        "**The content address of a value is the SHA-256 of its linked-form root chunk, and",
+        "The flat form's digest is a lawful invariant but is never an"
+      ]
+    },
+    {
+      "name": "v2-linked/keys-unsigned-octet-order",
+      "kind": "accept",
+      "chunk": "v2-chunk/root-keys-7f-80",
+      "closure": [
+        "v2-chunk/root-keys-7f-80",
+        "v2-chunk/childless-empty"
+      ],
+      "assert": {
+        "distinct_chunks": 2,
+        "links_header_entries": 1,
+        "references_to_index_0": 2
+      },
+      "note": "The linked twin of v2-flat/keys-unsigned-octet-order: section 6 rule 7 applies section 5's key ordering to a chunk body. 7f and 80 differ only in the top bit. Unsigned, 7f < 80. A comparison of SIGNED octets reads 80 as -128 and puts it first. Decoded as text they agree with the octets (U+007F before a lone 0x80), so this pair separates signed from unsigned and nothing else.",
+      "pins": [
+        "as unsigned values at each position; at the first difference the smaller octet",
+        "This order is total on octet strings and is the only order",
+        "4. Entry keys are in **strictly ascending lexicographic order** (§2). An entry key",
+        "7. Key ordering, count, payload and trailing rules are as in §5."
+      ]
+    },
+    {
+      "name": "v2-linked/keys-octet-order-not-code-points",
+      "kind": "accept",
+      "chunk": "v2-chunk/root-keys-80-c3a9",
+      "closure": [
+        "v2-chunk/root-keys-80-c3a9",
+        "v2-chunk/childless-empty"
+      ],
+      "assert": {
+        "distinct_chunks": 2,
+        "links_header_entries": 1,
+        "references_to_index_0": 2
+      },
+      "note": "The linked twin of v2-flat/keys-octet-order-not-code-points: section 6 rule 7 applies section 5's key ordering to a chunk body. 80 < c3 as octets. c3 a9 is the UTF-8 of U+00E9; a lone 80 is not UTF-8, and a core that decodes keys to host strings maps it to U+DC80 (surrogateescape) or U+FFFD (replacement), both after U+00E9, so host-string comparison reverses the pair, by code point and by UTF-16 code unit alike. Signed octets agree with unsigned here (-128 < -61), so this pair separates octet order from host-string order and not from signed order.",
+      "pins": [
+        "as unsigned values at each position; at the first difference the smaller octet",
+        "This order is total on octet strings and is the only order",
+        "4. Entry keys are in **strictly ascending lexicographic order** (§2). An entry key",
+        "7. Key ordering, count, payload and trailing rules are as in §5."
+      ]
+    },
+    {
+      "name": "v2-linked/keys-octet-order-not-utf16",
+      "kind": "accept",
+      "chunk": "v2-chunk/root-keys-ee8080-f0908080",
+      "closure": [
+        "v2-chunk/root-keys-ee8080-f0908080",
+        "v2-chunk/childless-empty"
+      ],
+      "assert": {
+        "distinct_chunks": 2,
+        "links_header_entries": 1,
+        "references_to_index_0": 2
+      },
+      "note": "The linked twin of v2-flat/keys-octet-order-not-utf16: section 6 rule 7 applies section 5's key ordering to a chunk body. ee < f0 as octets: U+E000 before U+10000, which is also code-point order. In UTF-16, U+10000 is the pair D800 DC00 and D800 < E000, so a core comparing host strings by code unit reverses it. Signed octets agree (-18 < -16), so this pair separates octet order from UTF-16 order and nothing else.",
+      "pins": [
+        "as unsigned values at each position; at the first difference the smaller octet",
+        "This order is total on octet strings and is the only order",
+        "4. Entry keys are in **strictly ascending lexicographic order** (§2). An entry key",
+        "7. Key ordering, count, payload and trailing rules are as in §5."
+      ]
+    },
+    {
+      "name": "v2-linked/keys-seven-across-three-orders",
+      "kind": "accept",
+      "chunk": "v2-chunk/root-seven-keys",
+      "closure": [
+        "v2-chunk/root-seven-keys",
+        "v2-chunk/childless-empty"
+      ],
+      "assert": {
+        "distinct_chunks": 2,
+        "links_header_entries": 1,
+        "references_to_index_0": 7
+      },
+      "note": "The linked twin of v2-flat/keys-seven-across-three-orders: encodeLinked must emit the entries in unsigned octet order, and resolve and checkClosure must accept them.",
+      "pins": [
+        "as unsigned values at each position; at the first difference the smaller octet",
+        "4. Entry keys are in **strictly ascending lexicographic order** (§2). An entry key",
+        "7. Key ordering, count, payload and trailing rules are as in §5."
+      ]
+    }
+  ],
+  "navigate_cases": [
+    {
+      "name": "v2-navigate/root-alone",
+      "root": {
+        "space": "dxl2",
+        "digest": "72dd1cc52793d740f8bee03fe2b9d06abe2d58a5d73939b5ff0f07009cb2e5e3"
+      },
+      "root_chunk": "v2-chunk/root-keys-7f-80",
+      "store": [
+        [
+          "72dd1cc52793d740f8bee03fe2b9d06abe2d58a5d73939b5ff0f07009cb2e5e3",
+          "v2-chunk/root-keys-7f-80"
+        ],
+        [
+          "a9677a54bc70bd0072953ec21471ff76b5e357c6b8bd25ee89db2d045b268009",
+          "v2-chunk/childless-empty"
+        ]
+      ],
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "path": [],
+      "expect": {
+        "node": {
+          "own": "",
+          "children": [
+            [
+              "7f",
+              "a9677a54bc70bd0072953ec21471ff76b5e357c6b8bd25ee89db2d045b268009"
+            ],
+            [
+              "80",
+              "a9677a54bc70bd0072953ec21471ff76b5e357c6b8bd25ee89db2d045b268009"
+            ]
+          ]
+        }
+      },
+      "clause": "§14: resolve-root.",
+      "note": "An empty path is resolve-root and nothing else: the answer is the root chunk's own value and its entries, each with the digest its link index names. The child is in the store and must not be needed.",
+      "pins": [
+        "| **resolve-root** | the CALLER, from outside the closure | that this closure is the value that was asked for |",
+        "| open / navigate lazily | no materialization; per-chunk verification against the referencing hash |"
+      ]
+    },
+    {
+      "name": "v2-navigate/lookup-7f-80-first",
+      "root": {
+        "space": "dxl2",
+        "digest": "72dd1cc52793d740f8bee03fe2b9d06abe2d58a5d73939b5ff0f07009cb2e5e3"
+      },
+      "root_chunk": "v2-chunk/root-keys-7f-80",
+      "store": [
+        [
+          "72dd1cc52793d740f8bee03fe2b9d06abe2d58a5d73939b5ff0f07009cb2e5e3",
+          "v2-chunk/root-keys-7f-80"
+        ],
+        [
+          "a9677a54bc70bd0072953ec21471ff76b5e357c6b8bd25ee89db2d045b268009",
+          "v2-chunk/childless-empty"
+        ]
+      ],
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "path": [
+        "7f"
+      ],
+      "expect": {
+        "node": {
+          "own": "",
+          "children": []
+        }
+      },
+      "clause": "§14: resolve-child; §2's order.",
+      "note": "Both entries reference the one empty leaf, so every hop that finds 7f answers the leaf. The pair is ordered by unsigned octets; a lookup that searches it under signed octets may miss one of the two keys, and which one depends on how it picks a midpoint, so both keys are asked.",
+      "pins": [
+        "| **resolve-child** | a links header in an ALREADY-VERIFIED parent | that this chunk is the one that parent references |",
+        "as unsigned values at each position; at the first difference the smaller octet"
+      ]
+    },
+    {
+      "name": "v2-navigate/lookup-7f-80-second",
+      "root": {
+        "space": "dxl2",
+        "digest": "72dd1cc52793d740f8bee03fe2b9d06abe2d58a5d73939b5ff0f07009cb2e5e3"
+      },
+      "root_chunk": "v2-chunk/root-keys-7f-80",
+      "store": [
+        [
+          "72dd1cc52793d740f8bee03fe2b9d06abe2d58a5d73939b5ff0f07009cb2e5e3",
+          "v2-chunk/root-keys-7f-80"
+        ],
+        [
+          "a9677a54bc70bd0072953ec21471ff76b5e357c6b8bd25ee89db2d045b268009",
+          "v2-chunk/childless-empty"
+        ]
+      ],
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "path": [
+        "80"
+      ],
+      "expect": {
+        "node": {
+          "own": "",
+          "children": []
+        }
+      },
+      "clause": "§14: resolve-child; §2's order.",
+      "note": "Both entries reference the one empty leaf, so every hop that finds 80 answers the leaf. The pair is ordered by unsigned octets; a lookup that searches it under signed octets may miss one of the two keys, and which one depends on how it picks a midpoint, so both keys are asked.",
+      "pins": [
+        "| **resolve-child** | a links header in an ALREADY-VERIFIED parent | that this chunk is the one that parent references |",
+        "as unsigned values at each position; at the first difference the smaller octet"
+      ]
+    },
+    {
+      "name": "v2-navigate/lookup-80-c3a9-first",
+      "root": {
+        "space": "dxl2",
+        "digest": "a95526787d0ee31885b2aef8ecde13307844f99e864da5ce874d981884ecf78f"
+      },
+      "root_chunk": "v2-chunk/root-keys-80-c3a9",
+      "store": [
+        [
+          "a95526787d0ee31885b2aef8ecde13307844f99e864da5ce874d981884ecf78f",
+          "v2-chunk/root-keys-80-c3a9"
+        ],
+        [
+          "a9677a54bc70bd0072953ec21471ff76b5e357c6b8bd25ee89db2d045b268009",
+          "v2-chunk/childless-empty"
+        ]
+      ],
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "path": [
+        "80"
+      ],
+      "expect": {
+        "node": {
+          "own": "",
+          "children": []
+        }
+      },
+      "clause": "§14: resolve-child; §2's order.",
+      "note": "Both entries reference the one empty leaf, so every hop that finds 80 answers the leaf. The pair is ordered by unsigned octets; a lookup that searches it under host strings may miss one of the two keys, and which one depends on how it picks a midpoint, so both keys are asked.",
+      "pins": [
+        "| **resolve-child** | a links header in an ALREADY-VERIFIED parent | that this chunk is the one that parent references |",
+        "as unsigned values at each position; at the first difference the smaller octet"
+      ]
+    },
+    {
+      "name": "v2-navigate/lookup-80-c3a9-second",
+      "root": {
+        "space": "dxl2",
+        "digest": "a95526787d0ee31885b2aef8ecde13307844f99e864da5ce874d981884ecf78f"
+      },
+      "root_chunk": "v2-chunk/root-keys-80-c3a9",
+      "store": [
+        [
+          "a95526787d0ee31885b2aef8ecde13307844f99e864da5ce874d981884ecf78f",
+          "v2-chunk/root-keys-80-c3a9"
+        ],
+        [
+          "a9677a54bc70bd0072953ec21471ff76b5e357c6b8bd25ee89db2d045b268009",
+          "v2-chunk/childless-empty"
+        ]
+      ],
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "path": [
+        "c3a9"
+      ],
+      "expect": {
+        "node": {
+          "own": "",
+          "children": []
+        }
+      },
+      "clause": "§14: resolve-child; §2's order.",
+      "note": "Both entries reference the one empty leaf, so every hop that finds c3a9 answers the leaf. The pair is ordered by unsigned octets; a lookup that searches it under host strings may miss one of the two keys, and which one depends on how it picks a midpoint, so both keys are asked.",
+      "pins": [
+        "| **resolve-child** | a links header in an ALREADY-VERIFIED parent | that this chunk is the one that parent references |",
+        "as unsigned values at each position; at the first difference the smaller octet"
+      ]
+    },
+    {
+      "name": "v2-navigate/lookup-ee8080-f0908080-first",
+      "root": {
+        "space": "dxl2",
+        "digest": "34b01d6a9ed4f3799f1714ac9e1f41028a8a2747032d0ca79ac10c203cd07e43"
+      },
+      "root_chunk": "v2-chunk/root-keys-ee8080-f0908080",
+      "store": [
+        [
+          "34b01d6a9ed4f3799f1714ac9e1f41028a8a2747032d0ca79ac10c203cd07e43",
+          "v2-chunk/root-keys-ee8080-f0908080"
+        ],
+        [
+          "a9677a54bc70bd0072953ec21471ff76b5e357c6b8bd25ee89db2d045b268009",
+          "v2-chunk/childless-empty"
+        ]
+      ],
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "path": [
+        "ee8080"
+      ],
+      "expect": {
+        "node": {
+          "own": "",
+          "children": []
+        }
+      },
+      "clause": "§14: resolve-child; §2's order.",
+      "note": "Both entries reference the one empty leaf, so every hop that finds ee8080 answers the leaf. The pair is ordered by unsigned octets; a lookup that searches it under UTF-16 code units may miss one of the two keys, and which one depends on how it picks a midpoint, so both keys are asked.",
+      "pins": [
+        "| **resolve-child** | a links header in an ALREADY-VERIFIED parent | that this chunk is the one that parent references |",
+        "as unsigned values at each position; at the first difference the smaller octet"
+      ]
+    },
+    {
+      "name": "v2-navigate/lookup-ee8080-f0908080-second",
+      "root": {
+        "space": "dxl2",
+        "digest": "34b01d6a9ed4f3799f1714ac9e1f41028a8a2747032d0ca79ac10c203cd07e43"
+      },
+      "root_chunk": "v2-chunk/root-keys-ee8080-f0908080",
+      "store": [
+        [
+          "34b01d6a9ed4f3799f1714ac9e1f41028a8a2747032d0ca79ac10c203cd07e43",
+          "v2-chunk/root-keys-ee8080-f0908080"
+        ],
+        [
+          "a9677a54bc70bd0072953ec21471ff76b5e357c6b8bd25ee89db2d045b268009",
+          "v2-chunk/childless-empty"
+        ]
+      ],
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "path": [
+        "f0908080"
+      ],
+      "expect": {
+        "node": {
+          "own": "",
+          "children": []
+        }
+      },
+      "clause": "§14: resolve-child; §2's order.",
+      "note": "Both entries reference the one empty leaf, so every hop that finds f0908080 answers the leaf. The pair is ordered by unsigned octets; a lookup that searches it under UTF-16 code units may miss one of the two keys, and which one depends on how it picks a midpoint, so both keys are asked.",
+      "pins": [
+        "| **resolve-child** | a links header in an ALREADY-VERIFIED parent | that this chunk is the one that parent references |",
+        "as unsigned values at each position; at the first difference the smaller octet"
+      ]
+    },
+    {
+      "name": "v2-navigate/absent-at-the-root",
+      "root": {
+        "space": "dxl2",
+        "digest": "72dd1cc52793d740f8bee03fe2b9d06abe2d58a5d73939b5ff0f07009cb2e5e3"
+      },
+      "root_chunk": "v2-chunk/root-keys-7f-80",
+      "store": [
+        [
+          "72dd1cc52793d740f8bee03fe2b9d06abe2d58a5d73939b5ff0f07009cb2e5e3",
+          "v2-chunk/root-keys-7f-80"
+        ],
+        [
+          "a9677a54bc70bd0072953ec21471ff76b5e357c6b8bd25ee89db2d045b268009",
+          "v2-chunk/childless-empty"
+        ]
+      ],
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "path": [
+        "81"
+      ],
+      "expect": {
+        "absent": 0
+      },
+      "clause": "§14: resolve-child.",
+      "note": "No entry of the root has key 81, so path[0] is absent. Absence is a lookup result, not a verdict: the closure is canonical.",
+      "pins": [
+        "| **resolve-child** | a links header in an ALREADY-VERIFIED parent | that this chunk is the one that parent references |"
+      ]
+    },
+    {
+      "name": "v2-navigate/absent-below",
+      "root": {
+        "space": "dxl2",
+        "digest": "72dd1cc52793d740f8bee03fe2b9d06abe2d58a5d73939b5ff0f07009cb2e5e3"
+      },
+      "root_chunk": "v2-chunk/root-keys-7f-80",
+      "store": [
+        [
+          "72dd1cc52793d740f8bee03fe2b9d06abe2d58a5d73939b5ff0f07009cb2e5e3",
+          "v2-chunk/root-keys-7f-80"
+        ],
+        [
+          "a9677a54bc70bd0072953ec21471ff76b5e357c6b8bd25ee89db2d045b268009",
+          "v2-chunk/childless-empty"
+        ]
+      ],
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "path": [
+        "7f",
+        "61"
+      ],
+      "expect": {
+        "absent": 1
+      },
+      "clause": "§14: resolve-child.",
+      "note": "7f is found and resolved to the empty leaf, which has no entries, so path[1] is absent and its index is 1.",
+      "pins": [
+        "| **resolve-child** | a links header in an ALREADY-VERIFIED parent | that this chunk is the one that parent references |"
+      ]
+    },
+    {
+      "name": "v2-navigate/own-payload-at-the-root",
+      "root": {
+        "space": "dxl2",
+        "digest": "a59bbd548d8a6c3f4cb6fa23d97403fdc245689d2ea72d2ea6818cc5830692b4"
+      },
+      "root_chunk": "v2-chunk/parent-aa-child-01",
+      "store": [
+        [
+          "a59bbd548d8a6c3f4cb6fa23d97403fdc245689d2ea72d2ea6818cc5830692b4",
+          "v2-chunk/parent-aa-child-01"
+        ],
+        [
+          "038a411f936d20a4a35f092cf7eb4a67452cafadf0d25cc6d11b3937236cf163",
+          "v2-chunk/childless-01"
+        ]
+      ],
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "path": [],
+      "expect": {
+        "node": {
+          "own": "aa",
+          "children": [
+            [
+              "61",
+              "038a411f936d20a4a35f092cf7eb4a67452cafadf0d25cc6d11b3937236cf163"
+            ]
+          ]
+        }
+      },
+      "clause": "§14: resolve-root.",
+      "note": "The root's own value is aa, its one entry a (61) links to v2-chunk/childless-01.",
+      "pins": [
+        "| **resolve-root** | the CALLER, from outside the closure | that this closure is the value that was asked for |"
+      ]
+    },
+    {
+      "name": "v2-navigate/own-payload-at-the-child",
+      "root": {
+        "space": "dxl2",
+        "digest": "a59bbd548d8a6c3f4cb6fa23d97403fdc245689d2ea72d2ea6818cc5830692b4"
+      },
+      "root_chunk": "v2-chunk/parent-aa-child-01",
+      "store": [
+        [
+          "a59bbd548d8a6c3f4cb6fa23d97403fdc245689d2ea72d2ea6818cc5830692b4",
+          "v2-chunk/parent-aa-child-01"
+        ],
+        [
+          "038a411f936d20a4a35f092cf7eb4a67452cafadf0d25cc6d11b3937236cf163",
+          "v2-chunk/childless-01"
+        ]
+      ],
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "path": [
+        "61"
+      ],
+      "expect": {
+        "node": {
+          "own": "01",
+          "children": []
+        }
+      },
+      "clause": "§14: resolve-child.",
+      "note": "One hop under a reaches the child, whose own value is 01.",
+      "pins": [
+        "| **resolve-child** | a links header in an ALREADY-VERIFIED parent | that this chunk is the one that parent references |"
+      ]
+    },
+    {
+      "name": "v2-navigate/two-links-each-by-its-index",
+      "root": {
+        "space": "dxl2",
+        "digest": "2970ba7f22f467809b42e02305053f961a7234bf5fcf9adf1d3d677a9630c7ed"
+      },
+      "root_chunk": "v2-chunk/root-two-leaves",
+      "store": [
+        [
+          "2970ba7f22f467809b42e02305053f961a7234bf5fcf9adf1d3d677a9630c7ed",
+          "v2-chunk/root-two-leaves"
+        ]
+      ],
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "path": [],
+      "expect": {
+        "node": {
+          "own": "",
+          "children": [
+            [
+              "61",
+              "a9677a54bc70bd0072953ec21471ff76b5e357c6b8bd25ee89db2d045b268009"
+            ],
+            [
+              "62",
+              "038a411f936d20a4a35f092cf7eb4a67452cafadf0d25cc6d11b3937236cf163"
+            ]
+          ]
+        }
+      },
+      "clause": "§6: bodies reference children only by index; §14: navigate lazily.",
+      "note": "The root's two entries link to two different chunks, by index 0 and 1, so the answer must pair each key with its own digest. The store holds the root alone: answering the root fetches neither child. Every other answered node in this file links all its entries to one chunk, which cannot show a key paired with the wrong link.",
+      "pins": [
+        "| **resolve-root** | the CALLER, from outside the closure | that this closure is the value that was asked for |",
+        "| open / navigate lazily | no materialization; per-chunk verification against the referencing hash |"
+      ]
+    },
+    {
+      "name": "v2-navigate/missing-sibling-not-fetched",
+      "root": {
+        "space": "dxl2",
+        "digest": "2970ba7f22f467809b42e02305053f961a7234bf5fcf9adf1d3d677a9630c7ed"
+      },
+      "root_chunk": "v2-chunk/root-two-leaves",
+      "store": [
+        [
+          "2970ba7f22f467809b42e02305053f961a7234bf5fcf9adf1d3d677a9630c7ed",
+          "v2-chunk/root-two-leaves"
+        ],
+        [
+          "a9677a54bc70bd0072953ec21471ff76b5e357c6b8bd25ee89db2d045b268009",
+          "v2-chunk/childless-empty"
+        ]
+      ],
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "path": [
+        "61"
+      ],
+      "expect": {
+        "node": {
+          "own": "",
+          "children": []
+        }
+      },
+      "clause": "§14: navigate lazily.",
+      "note": "The store lacks v2-chunk/childless-01, the child under b. resolve would report missing_chunk; navigating under a fetches the root and the leaf under a only, so the missing sibling is never asked for.",
+      "pins": [
+        "| open / navigate lazily | no materialization; per-chunk verification against the referencing hash |",
+        "| **resolve-child** | a links header in an ALREADY-VERIFIED parent | that this chunk is the one that parent references |"
+      ]
+    },
+    {
+      "name": "v2-navigate/missing-child-on-the-path",
+      "root": {
+        "space": "dxl2",
+        "digest": "2970ba7f22f467809b42e02305053f961a7234bf5fcf9adf1d3d677a9630c7ed"
+      },
+      "root_chunk": "v2-chunk/root-two-leaves",
+      "store": [
+        [
+          "2970ba7f22f467809b42e02305053f961a7234bf5fcf9adf1d3d677a9630c7ed",
+          "v2-chunk/root-two-leaves"
+        ],
+        [
+          "a9677a54bc70bd0072953ec21471ff76b5e357c6b8bd25ee89db2d045b268009",
+          "v2-chunk/childless-empty"
+        ]
+      ],
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "path": [
+        "62"
+      ],
+      "expect": {
+        "class": "store",
+        "code": "missing_chunk",
+        "digest": "038a411f936d20a4a35f092cf7eb4a67452cafadf0d25cc6d11b3937236cf163"
+      },
+      "clause": "§9 (store layer); §14: resolve-child.",
+      "note": "The same store, navigated under b: the child the path needs is absent, a store fault naming its digest, never a decoder verdict.",
+      "pins": [
+        "| **resolve-child** | a links header in an ALREADY-VERIFIED parent | that this chunk is the one that parent references |"
+      ]
+    },
+    {
+      "name": "v2-navigate/child-against-its-link-hash",
+      "root": {
+        "space": "dxl2",
+        "digest": "a59bbd548d8a6c3f4cb6fa23d97403fdc245689d2ea72d2ea6818cc5830692b4"
+      },
+      "root_chunk": "v2-chunk/parent-aa-child-01",
+      "store": [
+        [
+          "a59bbd548d8a6c3f4cb6fa23d97403fdc245689d2ea72d2ea6818cc5830692b4",
+          "v2-chunk/parent-aa-child-01"
+        ],
+        [
+          "038a411f936d20a4a35f092cf7eb4a67452cafadf0d25cc6d11b3937236cf163",
+          "v2-chunk/childless-empty"
+        ]
+      ],
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "path": [
+        "61"
+      ],
+      "expect": {
+        "class": "store",
+        "code": "hash_mismatch",
+        "digest": "038a411f936d20a4a35f092cf7eb4a67452cafadf0d25cc6d11b3937236cf163"
+      },
+      "clause": "§14: every chunk fetched during traversal is verified against the hash by which it was reached.",
+      "note": "The store files the empty leaf's octets under the digest the root's links header names for a. Reached by that hash, the child fails its verification.",
+      "pins": [
+        "| **resolve-child** | a links header in an ALREADY-VERIFIED parent | that this chunk is the one that parent references |",
+        "| open / navigate lazily | no materialization; per-chunk verification against the referencing hash |"
+      ]
+    },
+    {
+      "name": "v2-navigate/unfetched-child-not-verified",
+      "root": {
+        "space": "dxl2",
+        "digest": "a59bbd548d8a6c3f4cb6fa23d97403fdc245689d2ea72d2ea6818cc5830692b4"
+      },
+      "root_chunk": "v2-chunk/parent-aa-child-01",
+      "store": [
+        [
+          "a59bbd548d8a6c3f4cb6fa23d97403fdc245689d2ea72d2ea6818cc5830692b4",
+          "v2-chunk/parent-aa-child-01"
+        ],
+        [
+          "038a411f936d20a4a35f092cf7eb4a67452cafadf0d25cc6d11b3937236cf163",
+          "v2-chunk/childless-empty"
+        ]
+      ],
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "path": [],
+      "expect": {
+        "node": {
+          "own": "aa",
+          "children": [
+            [
+              "61",
+              "038a411f936d20a4a35f092cf7eb4a67452cafadf0d25cc6d11b3937236cf163"
+            ]
+          ]
+        }
+      },
+      "clause": "§14: navigate lazily; resolve-root.",
+      "note": "The same corrupt store, path empty: the child is listed in the answer by its digest but never fetched, so its octets are never checked. A navigator that verifies ahead fails this case.",
+      "pins": [
+        "| open / navigate lazily | no materialization; per-chunk verification against the referencing hash |",
+        "| **resolve-root** | the CALLER, from outside the closure | that this closure is the value that was asked for |"
+      ]
+    },
+    {
+      "name": "v2-navigate/root-against-the-requested-address",
+      "root": {
+        "space": "dxl2",
+        "digest": "038a411f936d20a4a35f092cf7eb4a67452cafadf0d25cc6d11b3937236cf163"
+      },
+      "root_chunk": "v2-chunk/childless-empty",
+      "store": [
+        [
+          "038a411f936d20a4a35f092cf7eb4a67452cafadf0d25cc6d11b3937236cf163",
+          "v2-chunk/childless-empty"
+        ]
+      ],
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "path": [],
+      "expect": {
+        "class": "store",
+        "code": "hash_mismatch",
+        "digest": "038a411f936d20a4a35f092cf7eb4a67452cafadf0d25cc6d11b3937236cf163"
+      },
+      "clause": "§14: the root against the address that was requested.",
+      "note": "The caller asks for the address of v2-chunk/childless-01 and the store files the empty leaf's octets under it. resolve-root is the only place the caller's hash is used, and it fails there.",
+      "pins": [
+        "| **resolve-root** | the CALLER, from outside the closure | that this closure is the value that was asked for |"
+      ]
+    },
+    {
+      "name": "v2-navigate/codec-mismatch-at-the-child",
+      "root": {
+        "space": "dxl2",
+        "digest": "cd929c0bef41bd2742f908c6d65d447fd050f0cebd12e502a62d81f6dce9d7fa"
+      },
+      "root_chunk": "v2-bad-chunk/parent-of-a-fixture-chunk",
+      "store": [
+        [
+          "cd929c0bef41bd2742f908c6d65d447fd050f0cebd12e502a62d81f6dce9d7fa",
+          "v2-bad-chunk/parent-of-a-fixture-chunk"
+        ],
+        [
+          "20d9df0b20c6ba8ccd6f0945ea3ec52717a851eb37d1c21f0c08f5bcdfce1ad1",
+          "v2-chunk/fixture-childless-a"
+        ]
+      ],
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "path": [
+        "61"
+      ],
+      "expect": {
+        "class": "invalid",
+        "code": "slot_codec_mismatch"
+      },
+      "clause": "§10 (child chunk); §14: resolve-child.",
+      "note": "The root is identity-bytes; the chunk under a is a canonical fixture-setoid chunk. Both ids are held, so the only fault is the child's id differing from its parent's.",
+      "pins": [
+        "| **resolve-child** | a links header in an ALREADY-VERIFIED parent | that this chunk is the one that parent references |"
+      ]
+    },
+    {
+      "name": "v2-navigate/codec-mismatch-not-fetched",
+      "root": {
+        "space": "dxl2",
+        "digest": "cd929c0bef41bd2742f908c6d65d447fd050f0cebd12e502a62d81f6dce9d7fa"
+      },
+      "root_chunk": "v2-bad-chunk/parent-of-a-fixture-chunk",
+      "store": [
+        [
+          "cd929c0bef41bd2742f908c6d65d447fd050f0cebd12e502a62d81f6dce9d7fa",
+          "v2-bad-chunk/parent-of-a-fixture-chunk"
+        ],
+        [
+          "20d9df0b20c6ba8ccd6f0945ea3ec52717a851eb37d1c21f0c08f5bcdfce1ad1",
+          "v2-chunk/fixture-childless-a"
+        ]
+      ],
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "path": [],
+      "expect": {
+        "node": {
+          "own": "",
+          "children": [
+            [
+              "61",
+              "20d9df0b20c6ba8ccd6f0945ea3ec52717a851eb37d1c21f0c08f5bcdfce1ad1"
+            ]
+          ]
+        }
+      },
+      "clause": "§14: navigate lazily.",
+      "note": "The same closure, path empty: the mismatched child is never fetched, so the root answers.",
+      "pins": [
+        "| open / navigate lazily | no materialization; per-chunk verification against the referencing hash |"
+      ]
+    },
+    {
+      "name": "v2-navigate/sharing-bomb-root",
+      "root": {
+        "space": "dxl2",
+        "digest": "f98a24080530183bd501c1c2aa5cd39c9193fa8d733dc15a3ab2796a40db6166"
+      },
+      "root_chunk": "v2-bomb/root",
+      "store_chunks": [
+        "v2-bomb/root",
+        "v2-bomb/level-63",
+        "v2-bomb/level-62",
+        "v2-bomb/level-61",
+        "v2-bomb/level-60",
+        "v2-bomb/level-59",
+        "v2-bomb/level-58",
+        "v2-bomb/level-57",
+        "v2-bomb/level-56",
+        "v2-bomb/level-55",
+        "v2-bomb/level-54",
+        "v2-bomb/level-53",
+        "v2-bomb/level-52",
+        "v2-bomb/level-51",
+        "v2-bomb/level-50",
+        "v2-bomb/level-49",
+        "v2-bomb/level-48",
+        "v2-bomb/level-47",
+        "v2-bomb/level-46",
+        "v2-bomb/level-45",
+        "v2-bomb/level-44",
+        "v2-bomb/level-43",
+        "v2-bomb/level-42",
+        "v2-bomb/level-41",
+        "v2-bomb/level-40",
+        "v2-bomb/level-39",
+        "v2-bomb/level-38",
+        "v2-bomb/level-37",
+        "v2-bomb/level-36",
+        "v2-bomb/level-35",
+        "v2-bomb/level-34",
+        "v2-bomb/level-33",
+        "v2-bomb/level-32",
+        "v2-bomb/level-31",
+        "v2-bomb/level-30",
+        "v2-bomb/level-29",
+        "v2-bomb/level-28",
+        "v2-bomb/level-27",
+        "v2-bomb/level-26",
+        "v2-bomb/level-25",
+        "v2-bomb/level-24",
+        "v2-bomb/level-23",
+        "v2-bomb/level-22",
+        "v2-bomb/level-21",
+        "v2-bomb/level-20",
+        "v2-bomb/level-19",
+        "v2-bomb/level-18",
+        "v2-bomb/level-17",
+        "v2-bomb/level-16",
+        "v2-bomb/level-15",
+        "v2-bomb/level-14",
+        "v2-bomb/level-13",
+        "v2-bomb/level-12",
+        "v2-bomb/level-11",
+        "v2-bomb/level-10",
+        "v2-bomb/level-09",
+        "v2-bomb/level-08",
+        "v2-bomb/level-07",
+        "v2-bomb/level-06",
+        "v2-bomb/level-05",
+        "v2-bomb/level-04",
+        "v2-bomb/level-03",
+        "v2-bomb/level-02",
+        "v2-bomb/level-01",
+        "v2-chunk/childless-empty"
+      ],
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "path": [],
+      "bounded": true,
+      "expect": {
+        "node": {
+          "own": "",
+          "children": [
+            [
+              "61",
+              "89a391581ea7168f71016171fb82b33b3428634b2df605726eef05433a93a458"
+            ]
+          ]
+        }
+      },
+      "clause": "§14: navigate lazily; §12.",
+      "note": "The closure v2-envelope/sharing-bomb-saturates refuses to resolve at every floor. Navigation materializes nothing, carries no budget, and must answer the root within the wall-clock bound.",
+      "pins": [
+        "| open / navigate lazily | no materialization; per-chunk verification against the referencing hash |"
+      ]
+    },
+    {
+      "name": "v2-navigate/sharing-bomb-one-hop",
+      "root": {
+        "space": "dxl2",
+        "digest": "f98a24080530183bd501c1c2aa5cd39c9193fa8d733dc15a3ab2796a40db6166"
+      },
+      "root_chunk": "v2-bomb/root",
+      "store_chunks": [
+        "v2-bomb/root",
+        "v2-bomb/level-63",
+        "v2-bomb/level-62",
+        "v2-bomb/level-61",
+        "v2-bomb/level-60",
+        "v2-bomb/level-59",
+        "v2-bomb/level-58",
+        "v2-bomb/level-57",
+        "v2-bomb/level-56",
+        "v2-bomb/level-55",
+        "v2-bomb/level-54",
+        "v2-bomb/level-53",
+        "v2-bomb/level-52",
+        "v2-bomb/level-51",
+        "v2-bomb/level-50",
+        "v2-bomb/level-49",
+        "v2-bomb/level-48",
+        "v2-bomb/level-47",
+        "v2-bomb/level-46",
+        "v2-bomb/level-45",
+        "v2-bomb/level-44",
+        "v2-bomb/level-43",
+        "v2-bomb/level-42",
+        "v2-bomb/level-41",
+        "v2-bomb/level-40",
+        "v2-bomb/level-39",
+        "v2-bomb/level-38",
+        "v2-bomb/level-37",
+        "v2-bomb/level-36",
+        "v2-bomb/level-35",
+        "v2-bomb/level-34",
+        "v2-bomb/level-33",
+        "v2-bomb/level-32",
+        "v2-bomb/level-31",
+        "v2-bomb/level-30",
+        "v2-bomb/level-29",
+        "v2-bomb/level-28",
+        "v2-bomb/level-27",
+        "v2-bomb/level-26",
+        "v2-bomb/level-25",
+        "v2-bomb/level-24",
+        "v2-bomb/level-23",
+        "v2-bomb/level-22",
+        "v2-bomb/level-21",
+        "v2-bomb/level-20",
+        "v2-bomb/level-19",
+        "v2-bomb/level-18",
+        "v2-bomb/level-17",
+        "v2-bomb/level-16",
+        "v2-bomb/level-15",
+        "v2-bomb/level-14",
+        "v2-bomb/level-13",
+        "v2-bomb/level-12",
+        "v2-bomb/level-11",
+        "v2-bomb/level-10",
+        "v2-bomb/level-09",
+        "v2-bomb/level-08",
+        "v2-bomb/level-07",
+        "v2-bomb/level-06",
+        "v2-bomb/level-05",
+        "v2-bomb/level-04",
+        "v2-bomb/level-03",
+        "v2-bomb/level-02",
+        "v2-bomb/level-01",
+        "v2-chunk/childless-empty"
+      ],
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "path": [
+        "61"
+      ],
+      "bounded": true,
+      "expect": {
+        "node": {
+          "own": "",
+          "children": [
+            [
+              "61",
+              "b99d5d773f9656b5a004bd2e66511e33e4ddab327be91459caa44c25f59b0126"
+            ],
+            [
+              "62",
+              "b99d5d773f9656b5a004bd2e66511e33e4ddab327be91459caa44c25f59b0126"
+            ]
+          ]
+        }
+      },
+      "clause": "§14: navigate lazily; resolve-child.",
+      "note": "One hop into the bomb reaches v2-bomb/level-63. Every level has two keys linking to one child, so the value doubles per level; the hop needs two chunks.",
+      "pins": [
+        "| open / navigate lazily | no materialization; per-chunk verification against the referencing hash |",
+        "| **resolve-child** | a links header in an ALREADY-VERIFIED parent | that this chunk is the one that parent references |"
+      ]
+    },
+    {
+      "name": "v2-navigate/answering-chunk-unsorted-keys",
+      "root": {
+        "space": "dxl2",
+        "digest": "73fac80901859c43e7b6dffc9054b66e03ec840ec619f0ce00f91c18238df428"
+      },
+      "root_chunk": "v2-bad-chunk/unsorted-keys",
+      "store": [
+        [
+          "73fac80901859c43e7b6dffc9054b66e03ec840ec619f0ce00f91c18238df428",
+          "v2-bad-chunk/unsorted-keys"
+        ],
+        [
+          "a9677a54bc70bd0072953ec21471ff76b5e357c6b8bd25ee89db2d045b268009",
+          "v2-chunk/childless-empty"
+        ]
+      ],
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "path": [],
+      "expect": {
+        "class": "invalid",
+        "code": "unsorted_keys"
+      },
+      "clause": "§5 rule 4; §6 rule 7.",
+      "note": "The root's own entries carry the fault. Answering with the root means listing its entries, and any profile that reads entries reports both ordering faults and never repairs them.",
+      "pins": [
+        "`unsorted_keys`. **Any profile that reads entries** MUST NOT sort on read and MUST NOT"
+      ]
+    },
+    {
+      "name": "v2-navigate/answering-chunk-duplicate-key",
+      "root": {
+        "space": "dxl2",
+        "digest": "c3567a6b53879d6ad8504601d057df1b5dc7cb900f25531c6843a767a354145a"
+      },
+      "root_chunk": "v2-bad-chunk/duplicate-key",
+      "store": [
+        [
+          "c3567a6b53879d6ad8504601d057df1b5dc7cb900f25531c6843a767a354145a",
+          "v2-bad-chunk/duplicate-key"
+        ],
+        [
+          "a9677a54bc70bd0072953ec21471ff76b5e357c6b8bd25ee89db2d045b268009",
+          "v2-chunk/childless-empty"
+        ]
+      ],
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "path": [],
+      "expect": {
+        "class": "invalid",
+        "code": "duplicate_key"
+      },
+      "clause": "§5 rule 4; §6 rule 7.",
+      "note": "The root's own entries carry the fault. Answering with the root means listing its entries, and any profile that reads entries reports both ordering faults and never repairs them.",
+      "pins": [
+        "`unsorted_keys`. **Any profile that reads entries** MUST NOT sort on read and MUST NOT"
+      ]
+    },
+    {
+      "name": "v2-navigate/passed-through-payload-not-judged",
+      "root": {
+        "space": "dxl2",
+        "digest": "606006b2be901d3012a67f826efb8bccf5d4d3b6599a0c6e7508658659f1b3ff"
+      },
+      "root_chunk": "v2-bad-chunk/fixture-payload-ff-parent-of-a",
+      "store": [
+        [
+          "606006b2be901d3012a67f826efb8bccf5d4d3b6599a0c6e7508658659f1b3ff",
+          "v2-bad-chunk/fixture-payload-ff-parent-of-a"
+        ],
+        [
+          "20d9df0b20c6ba8ccd6f0945ea3ec52717a851eb37d1c21f0c08f5bcdfce1ad1",
+          "v2-chunk/fixture-childless-a"
+        ]
+      ],
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "path": [
+        "61"
+      ],
+      "slot_codec": "01fb44faaf3a9db590cbc4cb1abfdadb0201",
+      "expect": {
+        "node": {
+          "own": {
+            "class": "a"
+          },
+          "children": []
+        }
+      },
+      "clause": "§14 rule 2.",
+      "note": "The root's own payload ff is not UTF-8, but the path passes through the root to its child under a, so the root's payload is never decoded. The answer is the child: class a, no entries.",
+      "pins": [
+        "order. The payload of a chunk it passes through is never decoded and never judged."
+      ]
+    },
+    {
+      "name": "v2-navigate/answering-payload-judged",
+      "root": {
+        "space": "dxl2",
+        "digest": "606006b2be901d3012a67f826efb8bccf5d4d3b6599a0c6e7508658659f1b3ff"
+      },
+      "root_chunk": "v2-bad-chunk/fixture-payload-ff-parent-of-a",
+      "store": [
+        [
+          "606006b2be901d3012a67f826efb8bccf5d4d3b6599a0c6e7508658659f1b3ff",
+          "v2-bad-chunk/fixture-payload-ff-parent-of-a"
+        ],
+        [
+          "20d9df0b20c6ba8ccd6f0945ea3ec52717a851eb37d1c21f0c08f5bcdfce1ad1",
+          "v2-chunk/fixture-childless-a"
+        ]
+      ],
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "path": [],
+      "expect": {
+        "class": "invalid",
+        "code": "non_canonical_payload"
+      },
+      "clause": "§14 rule 2; §5 rule 5.",
+      "note": "The same closure, path empty: the root is the answering chunk, so its payload ff is judged and refused.",
+      "pins": [
+        "2. **The slot codec only at the chunk it answers with.** That chunk's capability",
+        "(`unsupported_slot_codec`) and then its payload (§5 rule 5) are judged last, in §11's"
+      ]
+    },
+    {
+      "name": "v2-navigate/answering-child-payload-judged",
+      "root": {
+        "space": "dxl2",
+        "digest": "8c8931e5c7b1dc52b5b30e80d9a9575fedf4681330cd2d2bde136d3a88c50dad"
+      },
+      "root_chunk": "v2-bad-chunk/fixture-parent-of-payload-ff",
+      "store": [
+        [
+          "8c8931e5c7b1dc52b5b30e80d9a9575fedf4681330cd2d2bde136d3a88c50dad",
+          "v2-bad-chunk/fixture-parent-of-payload-ff"
+        ],
+        [
+          "b93926906df388d59bb24cf244429607d7780dffd5be3d9bd6fdbd0c69147b85",
+          "v2-bad-chunk/fixture-payload-ff"
+        ]
+      ],
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "path": [
+        "6b"
+      ],
+      "expect": {
+        "class": "invalid",
+        "code": "non_canonical_payload"
+      },
+      "clause": "§14 rule 2; §5 rule 5.",
+      "note": "The root's payload p is fine; one hop under k answers with the child, whose payload ff is refused.",
+      "pins": [
+        "2. **The slot codec only at the chunk it answers with.** That chunk's capability",
+        "(`unsupported_slot_codec`) and then its payload (§5 rule 5) are judged last, in §11's"
+      ]
+    },
+    {
+      "name": "v2-navigate/capability-before-payload",
+      "root": {
+        "space": "dxl2",
+        "digest": "606006b2be901d3012a67f826efb8bccf5d4d3b6599a0c6e7508658659f1b3ff"
+      },
+      "root_chunk": "v2-bad-chunk/fixture-payload-ff-parent-of-a",
+      "store": [
+        [
+          "606006b2be901d3012a67f826efb8bccf5d4d3b6599a0c6e7508658659f1b3ff",
+          "v2-bad-chunk/fixture-payload-ff-parent-of-a"
+        ],
+        [
+          "20d9df0b20c6ba8ccd6f0945ea3ec52717a851eb37d1c21f0c08f5bcdfce1ad1",
+          "v2-chunk/fixture-childless-a"
+        ]
+      ],
+      "holding": [
+        "0001"
+      ],
+      "path": [],
+      "expect": {
+        "class": "unsupported",
+        "code": "unsupported_slot_codec"
+      },
+      "clause": "§14 rule 2; §11.",
+      "note": "The answering chunk's payload would be refused, but the fixture setoid is not held here, so its capability, judged first, answers: unsupported, not non_canonical_payload.",
+      "pins": [
+        "2. **The slot codec only at the chunk it answers with.** That chunk's capability",
+        "(`unsupported_slot_codec`) and then its payload (§5 rule 5) are judged last, in §11's"
+      ]
+    },
+    {
+      "name": "v2-navigate/unheld-codec-answers-unsupported",
+      "root": {
+        "space": "dxl2",
+        "digest": "72dd1cc52793d740f8bee03fe2b9d06abe2d58a5d73939b5ff0f07009cb2e5e3"
+      },
+      "root_chunk": "v2-chunk/root-keys-7f-80",
+      "store": [
+        [
+          "72dd1cc52793d740f8bee03fe2b9d06abe2d58a5d73939b5ff0f07009cb2e5e3",
+          "v2-chunk/root-keys-7f-80"
+        ],
+        [
+          "a9677a54bc70bd0072953ec21471ff76b5e357c6b8bd25ee89db2d045b268009",
+          "v2-chunk/childless-empty"
+        ]
+      ],
+      "holding": [
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "path": [],
+      "expect": {
+        "class": "unsupported",
+        "code": "unsupported_slot_codec"
+      },
+      "clause": "§14 rule 2.",
+      "note": "Identity-bytes is not held. The root's framing is canonical, and the answer needs its own value, so the capability is refused.",
+      "pins": [
+        "2. **The slot codec only at the chunk it answers with.** That chunk's capability",
+        "(`unsupported_slot_codec`) and then its payload (§5 rule 5) are judged last, in §11's"
+      ]
+    },
+    {
+      "name": "v2-navigate/unheld-codec-not-judged-before-the-answer",
+      "root": {
+        "space": "dxl2",
+        "digest": "72dd1cc52793d740f8bee03fe2b9d06abe2d58a5d73939b5ff0f07009cb2e5e3"
+      },
+      "root_chunk": "v2-chunk/root-keys-7f-80",
+      "store": [
+        [
+          "72dd1cc52793d740f8bee03fe2b9d06abe2d58a5d73939b5ff0f07009cb2e5e3",
+          "v2-chunk/root-keys-7f-80"
+        ]
+      ],
+      "holding": [
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "path": [
+        "7f"
+      ],
+      "expect": {
+        "class": "store",
+        "code": "missing_chunk",
+        "digest": "a9677a54bc70bd0072953ec21471ff76b5e357c6b8bd25ee89db2d045b268009"
+      },
+      "clause": "§14 rules 2 and 3.",
+      "note": "Identity-bytes is not held and the child under 7f is missing from the store. Retrievals take no codec, so the walk reaches the missing child before any answer needs the codec: a store fault, not unsupported.",
+      "pins": [
+        "2. **The slot codec only at the chunk it answers with.** That chunk's capability",
+        "(`unsupported_slot_codec`) and then its payload (§5 rule 5) are judged last, in §11's",
+        "3. **Faults are met in fetch order.** Chunk *i+1*'s hash is known only once chunk *i*",
+        "reports, whether a verdict or a store fault (§9 keeps the two apart). Law 4"
+      ]
+    },
+    {
+      "name": "v2-navigate/framing-before-capability",
+      "root": {
+        "space": "dxl2",
+        "digest": "73fac80901859c43e7b6dffc9054b66e03ec840ec619f0ce00f91c18238df428"
+      },
+      "root_chunk": "v2-bad-chunk/unsorted-keys",
+      "store": [
+        [
+          "73fac80901859c43e7b6dffc9054b66e03ec840ec619f0ce00f91c18238df428",
+          "v2-bad-chunk/unsorted-keys"
+        ],
+        [
+          "a9677a54bc70bd0072953ec21471ff76b5e357c6b8bd25ee89db2d045b268009",
+          "v2-chunk/childless-empty"
+        ]
+      ],
+      "holding": [
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "path": [],
+      "expect": {
+        "class": "invalid",
+        "code": "unsorted_keys"
+      },
+      "clause": "§14 rules 1 and 2.",
+      "note": "Identity-bytes is not held, and the root's keys are b before a. Framing is judged before the chunk is used, and the codec only at the answer, so the framing fault wins.",
+      "pins": [
+        "1. **Every fetched chunk's whole framing, before the chunk is used.** The chunk's size",
+        "at fetch (§12), then the hash it was reached by, then its complete §6 framing, every",
+        "2. **The slot codec only at the chunk it answers with.** That chunk's capability",
+        "(`unsupported_slot_codec`) and then its payload (§5 rule 5) are judged last, in §11's"
+      ]
+    },
+    {
+      "name": "v2-navigate/fault-later-in-the-chunk",
+      "root": {
+        "space": "dxl2",
+        "digest": "73fac80901859c43e7b6dffc9054b66e03ec840ec619f0ce00f91c18238df428"
+      },
+      "root_chunk": "v2-bad-chunk/unsorted-keys",
+      "store": [
+        [
+          "73fac80901859c43e7b6dffc9054b66e03ec840ec619f0ce00f91c18238df428",
+          "v2-bad-chunk/unsorted-keys"
+        ],
+        [
+          "a9677a54bc70bd0072953ec21471ff76b5e357c6b8bd25ee89db2d045b268009",
+          "v2-chunk/childless-empty"
+        ]
+      ],
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "path": [
+        "62"
+      ],
+      "expect": {
+        "class": "invalid",
+        "code": "unsorted_keys"
+      },
+      "clause": "§14 rule 1.",
+      "note": "The key b is the root's first entry, found before the fault; the fault is at the second entry, a. The whole chunk is judged before it is used, so the lookup never proceeds.",
+      "pins": [
+        "entry included. The lookup reads that structure, and a key found early does not"
+      ]
+    },
+    {
+      "name": "v2-navigate/hash-before-framing",
+      "root": {
+        "space": "dxl2",
+        "digest": "a59bbd548d8a6c3f4cb6fa23d97403fdc245689d2ea72d2ea6818cc5830692b4"
+      },
+      "root_chunk": "v2-chunk/parent-aa-child-01",
+      "store": [
+        [
+          "a59bbd548d8a6c3f4cb6fa23d97403fdc245689d2ea72d2ea6818cc5830692b4",
+          "v2-chunk/parent-aa-child-01"
+        ],
+        [
+          "038a411f936d20a4a35f092cf7eb4a67452cafadf0d25cc6d11b3937236cf163",
+          "v2-bad-chunk/unsorted-keys"
+        ]
+      ],
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "path": [
+        "61"
+      ],
+      "expect": {
+        "class": "store",
+        "code": "hash_mismatch",
+        "digest": "038a411f936d20a4a35f092cf7eb4a67452cafadf0d25cc6d11b3937236cf163"
+      },
+      "clause": "§14 rule 1.",
+      "note": "The store files a chunk with a key-order fault under the child's digest. The hash it was reached by is checked before its framing, so the answer is the store fault.",
+      "pins": [
+        "1. **Every fetched chunk's whole framing, before the chunk is used.** The chunk's size",
+        "at fetch (§12), then the hash it was reached by, then its complete §6 framing, every"
+      ]
+    },
+    {
+      "name": "v2-navigate/child-framing-before-mismatch",
+      "root": {
+        "space": "dxl2",
+        "digest": "8998c3cdd9441fe0cc42fd28e7f3b5fd80c2a1db1f34adec1a928812221ab100"
+      },
+      "root_chunk": "v2-bad-chunk/parent-of-non-shortest-fixture-child",
+      "store": [
+        [
+          "8998c3cdd9441fe0cc42fd28e7f3b5fd80c2a1db1f34adec1a928812221ab100",
+          "v2-bad-chunk/parent-of-non-shortest-fixture-child"
+        ],
+        [
+          "519ef0a66737be8d9dbb084d51a34101515c6e557ccc23bc44e853b330cbf664",
+          "v2-bad-chunk/fixture-child-with-non-shortest-length"
+        ]
+      ],
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "path": [
+        "61"
+      ],
+      "expect": {
+        "class": "invalid",
+        "code": "non_shortest_uvarint"
+      },
+      "clause": "§14 rule 1; §10.",
+      "note": "The child under a is a fixture-setoid chunk under an identity-bytes parent, and its payload length is spelled 81 00. Its own framing is judged before the id comparison, so the framing fault wins over slot_codec_mismatch.",
+      "pins": [
+        "is `slot_codec_mismatch`, judged after the child's own framing."
+      ]
+    },
+    {
+      "name": "v2-navigate/lookup-01-7f-80-ff-01",
+      "root": {
+        "space": "dxl2",
+        "digest": "8f34402517803fd6ce0eef6321aa0971992e885397782392c481dcbf87ef8904"
+      },
+      "root_chunk": "v2-chunk/root-keys-01-7f-80-ff",
+      "store": [
+        [
+          "8f34402517803fd6ce0eef6321aa0971992e885397782392c481dcbf87ef8904",
+          "v2-chunk/root-keys-01-7f-80-ff"
+        ],
+        [
+          "a9677a54bc70bd0072953ec21471ff76b5e357c6b8bd25ee89db2d045b268009",
+          "v2-chunk/childless-empty"
+        ]
+      ],
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "path": [
+        "01"
+      ],
+      "expect": {
+        "node": {
+          "own": "",
+          "children": []
+        }
+      },
+      "clause": "§14: resolve-child; §2's order.",
+      "note": "Four keys, two below the top bit and two above. Every one of them must be found; a search that orders them under signed octets puts 80 and ff before 01 and misses at least one of the four.",
+      "pins": [
+        "as unsigned values at each position; at the first difference the smaller octet"
+      ]
+    },
+    {
+      "name": "v2-navigate/lookup-01-7f-80-ff-7f",
+      "root": {
+        "space": "dxl2",
+        "digest": "8f34402517803fd6ce0eef6321aa0971992e885397782392c481dcbf87ef8904"
+      },
+      "root_chunk": "v2-chunk/root-keys-01-7f-80-ff",
+      "store": [
+        [
+          "8f34402517803fd6ce0eef6321aa0971992e885397782392c481dcbf87ef8904",
+          "v2-chunk/root-keys-01-7f-80-ff"
+        ],
+        [
+          "a9677a54bc70bd0072953ec21471ff76b5e357c6b8bd25ee89db2d045b268009",
+          "v2-chunk/childless-empty"
+        ]
+      ],
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "path": [
+        "7f"
+      ],
+      "expect": {
+        "node": {
+          "own": "",
+          "children": []
+        }
+      },
+      "clause": "§14: resolve-child; §2's order.",
+      "note": "Four keys, two below the top bit and two above. Every one of them must be found; a search that orders them under signed octets puts 80 and ff before 01 and misses at least one of the four.",
+      "pins": [
+        "as unsigned values at each position; at the first difference the smaller octet"
+      ]
+    },
+    {
+      "name": "v2-navigate/lookup-01-7f-80-ff-80",
+      "root": {
+        "space": "dxl2",
+        "digest": "8f34402517803fd6ce0eef6321aa0971992e885397782392c481dcbf87ef8904"
+      },
+      "root_chunk": "v2-chunk/root-keys-01-7f-80-ff",
+      "store": [
+        [
+          "8f34402517803fd6ce0eef6321aa0971992e885397782392c481dcbf87ef8904",
+          "v2-chunk/root-keys-01-7f-80-ff"
+        ],
+        [
+          "a9677a54bc70bd0072953ec21471ff76b5e357c6b8bd25ee89db2d045b268009",
+          "v2-chunk/childless-empty"
+        ]
+      ],
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "path": [
+        "80"
+      ],
+      "expect": {
+        "node": {
+          "own": "",
+          "children": []
+        }
+      },
+      "clause": "§14: resolve-child; §2's order.",
+      "note": "Four keys, two below the top bit and two above. Every one of them must be found; a search that orders them under signed octets puts 80 and ff before 01 and misses at least one of the four.",
+      "pins": [
+        "as unsigned values at each position; at the first difference the smaller octet"
+      ]
+    },
+    {
+      "name": "v2-navigate/lookup-01-7f-80-ff-ff",
+      "root": {
+        "space": "dxl2",
+        "digest": "8f34402517803fd6ce0eef6321aa0971992e885397782392c481dcbf87ef8904"
+      },
+      "root_chunk": "v2-chunk/root-keys-01-7f-80-ff",
+      "store": [
+        [
+          "8f34402517803fd6ce0eef6321aa0971992e885397782392c481dcbf87ef8904",
+          "v2-chunk/root-keys-01-7f-80-ff"
+        ],
+        [
+          "a9677a54bc70bd0072953ec21471ff76b5e357c6b8bd25ee89db2d045b268009",
+          "v2-chunk/childless-empty"
+        ]
+      ],
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "path": [
+        "ff"
+      ],
+      "expect": {
+        "node": {
+          "own": "",
+          "children": []
+        }
+      },
+      "clause": "§14: resolve-child; §2's order.",
+      "note": "Four keys, two below the top bit and two above. Every one of them must be found; a search that orders them under signed octets puts 80 and ff before 01 and misses at least one of the four.",
+      "pins": [
+        "as unsigned values at each position; at the first difference the smaller octet"
+      ]
+    },
+    {
+      "name": "v2-navigate/codec-mismatch-under-a-fixture-parent",
+      "root": {
+        "space": "dxl2",
+        "digest": "c6bd43860ccec054e3a0c5cc435b94fa9560f8bc7d9decde6c31c4e70b329d46"
+      },
+      "root_chunk": "v2-bad-chunk/fixture-parent-of-identity-leaf",
+      "store": [
+        [
+          "c6bd43860ccec054e3a0c5cc435b94fa9560f8bc7d9decde6c31c4e70b329d46",
+          "v2-bad-chunk/fixture-parent-of-identity-leaf"
+        ],
+        [
+          "a9677a54bc70bd0072953ec21471ff76b5e357c6b8bd25ee89db2d045b268009",
+          "v2-chunk/childless-empty"
+        ]
+      ],
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "path": [
+        "61"
+      ],
+      "expect": {
+        "class": "invalid",
+        "code": "slot_codec_mismatch"
+      },
+      "clause": "§10 (child chunk); §14 rule 1.",
+      "note": "The mirror of v2-navigate/codec-mismatch-at-the-child: here the parent is fixture-setoid and the child under a is identity-bytes. Both ids are held and both chunks are canonical, so the only fault is the differing id.",
+      "pins": [
+        "is `slot_codec_mismatch`, judged after the child's own framing."
+      ]
+    },
+    {
+      "name": "v2-navigate/earlier-framing-before-later-store",
+      "root": {
+        "space": "dxl2",
+        "digest": "73fac80901859c43e7b6dffc9054b66e03ec840ec619f0ce00f91c18238df428"
+      },
+      "root_chunk": "v2-bad-chunk/unsorted-keys",
+      "store": [
+        [
+          "73fac80901859c43e7b6dffc9054b66e03ec840ec619f0ce00f91c18238df428",
+          "v2-bad-chunk/unsorted-keys"
+        ]
+      ],
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "path": [
+        "61"
+      ],
+      "expect": {
+        "class": "invalid",
+        "code": "unsorted_keys"
+      },
+      "clause": "§14 rule 3.",
+      "note": "The root's keys are out of order, and the child under a is missing from the store. The root is judged before its child's hash is even known, so the root's fault is reported.",
+      "pins": [
+        "3. **Faults are met in fetch order.** Chunk *i+1*'s hash is known only once chunk *i*",
+        "reports, whether a verdict or a store fault (§9 keeps the two apart). Law 4"
+      ]
+    },
+    {
+      "name": "v2-navigate/passed-through-payload-then-later-framing",
+      "root": {
+        "space": "dxl2",
+        "digest": "a30edba6cf17b2030bf555cf2b183c86687156870bc4d62f6b2fab10093c8cd4"
+      },
+      "root_chunk": "v2-bad-chunk/fixture-payload-ff-parent-of-non-shortest",
+      "store": [
+        [
+          "a30edba6cf17b2030bf555cf2b183c86687156870bc4d62f6b2fab10093c8cd4",
+          "v2-bad-chunk/fixture-payload-ff-parent-of-non-shortest"
+        ],
+        [
+          "519ef0a66737be8d9dbb084d51a34101515c6e557ccc23bc44e853b330cbf664",
+          "v2-bad-chunk/fixture-child-with-non-shortest-length"
+        ]
+      ],
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "path": [
+        "61"
+      ],
+      "slot_codec": "01fb44faaf3a9db590cbc4cb1abfdadb0201",
+      "expect": {
+        "class": "invalid",
+        "code": "non_shortest_uvarint"
+      },
+      "clause": "§14 rules 2 and 3.",
+      "note": "The root's payload ff is refused only if the root answers; the path passes through it to a child whose framing is refused. Only the child's fault is ever judged.",
+      "pins": [
+        "order. The payload of a chunk it passes through is never decoded and never judged.",
+        "3. **Faults are met in fetch order.** Chunk *i+1*'s hash is known only once chunk *i*",
+        "reports, whether a verdict or a store fault (§9 keeps the two apart). Law 4"
+      ]
+    },
+    {
+      "name": "v2-navigate/lookup-seven-keys-01",
+      "root": {
+        "space": "dxl2",
+        "digest": "ff8dc4c8a4c368f573b0a6559279a9c69049b284e845c0998b6090e4652ef274"
+      },
+      "root_chunk": "v2-chunk/root-seven-keys",
+      "store": [
+        [
+          "ff8dc4c8a4c368f573b0a6559279a9c69049b284e845c0998b6090e4652ef274",
+          "v2-chunk/root-seven-keys"
+        ],
+        [
+          "a9677a54bc70bd0072953ec21471ff76b5e357c6b8bd25ee89db2d045b268009",
+          "v2-chunk/childless-empty"
+        ]
+      ],
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "path": [
+        "01"
+      ],
+      "expect": {
+        "node": {
+          "own": "",
+          "children": []
+        }
+      },
+      "clause": "§14: resolve-child; §2's order.",
+      "note": "Seven keys in unsigned octet order, every one asked. A lookup that orders them under signed octets, code points or UTF-16 code units misses at least one of them.",
+      "pins": [
+        "| **resolve-child** | a links header in an ALREADY-VERIFIED parent | that this chunk is the one that parent references |",
+        "as unsigned values at each position; at the first difference the smaller octet",
+        "4. Entry keys are in **strictly ascending lexicographic order** (§2). An entry key"
+      ]
+    },
+    {
+      "name": "v2-navigate/lookup-seven-keys-7f",
+      "root": {
+        "space": "dxl2",
+        "digest": "ff8dc4c8a4c368f573b0a6559279a9c69049b284e845c0998b6090e4652ef274"
+      },
+      "root_chunk": "v2-chunk/root-seven-keys",
+      "store": [
+        [
+          "ff8dc4c8a4c368f573b0a6559279a9c69049b284e845c0998b6090e4652ef274",
+          "v2-chunk/root-seven-keys"
+        ],
+        [
+          "a9677a54bc70bd0072953ec21471ff76b5e357c6b8bd25ee89db2d045b268009",
+          "v2-chunk/childless-empty"
+        ]
+      ],
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "path": [
+        "7f"
+      ],
+      "expect": {
+        "node": {
+          "own": "",
+          "children": []
+        }
+      },
+      "clause": "§14: resolve-child; §2's order.",
+      "note": "Seven keys in unsigned octet order, every one asked. A lookup that orders them under signed octets, code points or UTF-16 code units misses at least one of them.",
+      "pins": [
+        "| **resolve-child** | a links header in an ALREADY-VERIFIED parent | that this chunk is the one that parent references |",
+        "as unsigned values at each position; at the first difference the smaller octet",
+        "4. Entry keys are in **strictly ascending lexicographic order** (§2). An entry key"
+      ]
+    },
+    {
+      "name": "v2-navigate/lookup-seven-keys-80",
+      "root": {
+        "space": "dxl2",
+        "digest": "ff8dc4c8a4c368f573b0a6559279a9c69049b284e845c0998b6090e4652ef274"
+      },
+      "root_chunk": "v2-chunk/root-seven-keys",
+      "store": [
+        [
+          "ff8dc4c8a4c368f573b0a6559279a9c69049b284e845c0998b6090e4652ef274",
+          "v2-chunk/root-seven-keys"
+        ],
+        [
+          "a9677a54bc70bd0072953ec21471ff76b5e357c6b8bd25ee89db2d045b268009",
+          "v2-chunk/childless-empty"
+        ]
+      ],
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "path": [
+        "80"
+      ],
+      "expect": {
+        "node": {
+          "own": "",
+          "children": []
+        }
+      },
+      "clause": "§14: resolve-child; §2's order.",
+      "note": "Seven keys in unsigned octet order, every one asked. A lookup that orders them under signed octets, code points or UTF-16 code units misses at least one of them.",
+      "pins": [
+        "| **resolve-child** | a links header in an ALREADY-VERIFIED parent | that this chunk is the one that parent references |",
+        "as unsigned values at each position; at the first difference the smaller octet",
+        "4. Entry keys are in **strictly ascending lexicographic order** (§2). An entry key"
+      ]
+    },
+    {
+      "name": "v2-navigate/lookup-seven-keys-c3a9",
+      "root": {
+        "space": "dxl2",
+        "digest": "ff8dc4c8a4c368f573b0a6559279a9c69049b284e845c0998b6090e4652ef274"
+      },
+      "root_chunk": "v2-chunk/root-seven-keys",
+      "store": [
+        [
+          "ff8dc4c8a4c368f573b0a6559279a9c69049b284e845c0998b6090e4652ef274",
+          "v2-chunk/root-seven-keys"
+        ],
+        [
+          "a9677a54bc70bd0072953ec21471ff76b5e357c6b8bd25ee89db2d045b268009",
+          "v2-chunk/childless-empty"
+        ]
+      ],
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "path": [
+        "c3a9"
+      ],
+      "expect": {
+        "node": {
+          "own": "",
+          "children": []
+        }
+      },
+      "clause": "§14: resolve-child; §2's order.",
+      "note": "Seven keys in unsigned octet order, every one asked. A lookup that orders them under signed octets, code points or UTF-16 code units misses at least one of them.",
+      "pins": [
+        "| **resolve-child** | a links header in an ALREADY-VERIFIED parent | that this chunk is the one that parent references |",
+        "as unsigned values at each position; at the first difference the smaller octet",
+        "4. Entry keys are in **strictly ascending lexicographic order** (§2). An entry key"
+      ]
+    },
+    {
+      "name": "v2-navigate/lookup-seven-keys-ee8080",
+      "root": {
+        "space": "dxl2",
+        "digest": "ff8dc4c8a4c368f573b0a6559279a9c69049b284e845c0998b6090e4652ef274"
+      },
+      "root_chunk": "v2-chunk/root-seven-keys",
+      "store": [
+        [
+          "ff8dc4c8a4c368f573b0a6559279a9c69049b284e845c0998b6090e4652ef274",
+          "v2-chunk/root-seven-keys"
+        ],
+        [
+          "a9677a54bc70bd0072953ec21471ff76b5e357c6b8bd25ee89db2d045b268009",
+          "v2-chunk/childless-empty"
+        ]
+      ],
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "path": [
+        "ee8080"
+      ],
+      "expect": {
+        "node": {
+          "own": "",
+          "children": []
+        }
+      },
+      "clause": "§14: resolve-child; §2's order.",
+      "note": "Seven keys in unsigned octet order, every one asked. A lookup that orders them under signed octets, code points or UTF-16 code units misses at least one of them.",
+      "pins": [
+        "| **resolve-child** | a links header in an ALREADY-VERIFIED parent | that this chunk is the one that parent references |",
+        "as unsigned values at each position; at the first difference the smaller octet",
+        "4. Entry keys are in **strictly ascending lexicographic order** (§2). An entry key"
+      ]
+    },
+    {
+      "name": "v2-navigate/lookup-seven-keys-f0908080",
+      "root": {
+        "space": "dxl2",
+        "digest": "ff8dc4c8a4c368f573b0a6559279a9c69049b284e845c0998b6090e4652ef274"
+      },
+      "root_chunk": "v2-chunk/root-seven-keys",
+      "store": [
+        [
+          "ff8dc4c8a4c368f573b0a6559279a9c69049b284e845c0998b6090e4652ef274",
+          "v2-chunk/root-seven-keys"
+        ],
+        [
+          "a9677a54bc70bd0072953ec21471ff76b5e357c6b8bd25ee89db2d045b268009",
+          "v2-chunk/childless-empty"
+        ]
+      ],
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "path": [
+        "f0908080"
+      ],
+      "expect": {
+        "node": {
+          "own": "",
+          "children": []
+        }
+      },
+      "clause": "§14: resolve-child; §2's order.",
+      "note": "Seven keys in unsigned octet order, every one asked. A lookup that orders them under signed octets, code points or UTF-16 code units misses at least one of them.",
+      "pins": [
+        "| **resolve-child** | a links header in an ALREADY-VERIFIED parent | that this chunk is the one that parent references |",
+        "as unsigned values at each position; at the first difference the smaller octet",
+        "4. Entry keys are in **strictly ascending lexicographic order** (§2). An entry key"
+      ]
+    },
+    {
+      "name": "v2-navigate/lookup-seven-keys-ff",
+      "root": {
+        "space": "dxl2",
+        "digest": "ff8dc4c8a4c368f573b0a6559279a9c69049b284e845c0998b6090e4652ef274"
+      },
+      "root_chunk": "v2-chunk/root-seven-keys",
+      "store": [
+        [
+          "ff8dc4c8a4c368f573b0a6559279a9c69049b284e845c0998b6090e4652ef274",
+          "v2-chunk/root-seven-keys"
+        ],
+        [
+          "a9677a54bc70bd0072953ec21471ff76b5e357c6b8bd25ee89db2d045b268009",
+          "v2-chunk/childless-empty"
+        ]
+      ],
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "path": [
+        "ff"
+      ],
+      "expect": {
+        "node": {
+          "own": "",
+          "children": []
+        }
+      },
+      "clause": "§14: resolve-child; §2's order.",
+      "note": "Seven keys in unsigned octet order, every one asked. A lookup that orders them under signed octets, code points or UTF-16 code units misses at least one of them.",
+      "pins": [
+        "| **resolve-child** | a links header in an ALREADY-VERIFIED parent | that this chunk is the one that parent references |",
+        "as unsigned values at each position; at the first difference the smaller octet",
+        "4. Entry keys are in **strictly ascending lexicographic order** (§2). An entry key"
+      ]
+    },
+    {
+      "name": "v2-navigate/codec-mismatch-at-the-second-hop",
+      "root": {
+        "space": "dxl2",
+        "digest": "66e8829490c7e4371fea3a73443a112a5f01c7855ef5c4d7889ca03ec4ca7475"
+      },
+      "root_chunk": "v2-bad-chunk/identity-grandparent-of-a-fixture-chunk",
+      "store": [
+        [
+          "66e8829490c7e4371fea3a73443a112a5f01c7855ef5c4d7889ca03ec4ca7475",
+          "v2-bad-chunk/identity-grandparent-of-a-fixture-chunk"
+        ],
+        [
+          "cd929c0bef41bd2742f908c6d65d447fd050f0cebd12e502a62d81f6dce9d7fa",
+          "v2-bad-chunk/parent-of-a-fixture-chunk"
+        ],
+        [
+          "20d9df0b20c6ba8ccd6f0945ea3ec52717a851eb37d1c21f0c08f5bcdfce1ad1",
+          "v2-chunk/fixture-childless-a"
+        ]
+      ],
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "path": [
+        "61",
+        "61"
+      ],
+      "expect": {
+        "class": "invalid",
+        "code": "slot_codec_mismatch"
+      },
+      "clause": "§14 rule 1; §10.",
+      "note": "The first hop reaches an identity-bytes child and is fine; the second hop reaches a fixture-setoid grandchild.",
+      "pins": [
+        "| **resolve-child** | a links header in an ALREADY-VERIFIED parent | that this chunk is the one that parent references |",
+        "is `slot_codec_mismatch`, judged after the child's own framing."
+      ]
+    },
+    {
+      "name": "v2-navigate/answering-chunk-unused-link",
+      "root": {
+        "space": "dxl2",
+        "digest": "bbf1ab72fff8beea91c19a55c2d62b6b983e475197dbc00e5a5f21efd815e94d"
+      },
+      "root_chunk": "v2-bad-chunk/childless-listing-a-link",
+      "store": [
+        [
+          "bbf1ab72fff8beea91c19a55c2d62b6b983e475197dbc00e5a5f21efd815e94d",
+          "v2-bad-chunk/childless-listing-a-link"
+        ],
+        [
+          "a9677a54bc70bd0072953ec21471ff76b5e357c6b8bd25ee89db2d045b268009",
+          "v2-chunk/childless-empty"
+        ]
+      ],
+      "holding": [
+        "0001",
+        "01fb44faaf3a9db590cbc4cb1abfdadb0201"
+      ],
+      "path": [],
+      "expect": {
+        "class": "invalid",
+        "code": "unused_link"
+      },
+      "clause": "§14 rule 1; §6 rule 5.",
+      "note": "The root's links header lists a hash no entry uses. Answering with the root judges its whole framing.",
+      "pins": [
+        "5. Every listed hash MUST be referenced by at least one `lentry`: an unreferenced"
+      ]
+    }
+  ]
+}

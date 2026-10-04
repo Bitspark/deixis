@@ -1,0 +1,205 @@
+# Required CI: the four language jobs, each replaying the same hand-authored vectors,
+# the black-box conformance harness, the paper and the specification checks. Jobs
+# always report; there is no docs-only trigger filtering. Runners are GitHub-hosted
+# without exception: a fork's pull request runs only on GitHub's own machines.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  # Manual re-trigger for events dropped upstream (learned during the 2026-08-06
+  # Actions outage, which swallowed this workflow's first push event).
+  workflow_dispatch:
+
+jobs:
+  rust:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Toolchain
+        run: rustup update --no-self-update stable && rustup component add rustfmt clippy
+      - name: Format
+        run: cargo fmt --check
+      - name: Clippy
+        run: cargo clippy --locked --all-targets -- -D warnings
+      - name: Test
+        run: cargo test --locked
+
+  go:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Format
+        run: test -z "$(gofmt -l .)"
+      - name: Vet
+        run: go vet ./...
+      - name: Test
+        run: go test ./...
+
+  python:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Tooling (CI-time only, pinned — the implementations are stdlib-only)
+        run: pip install ruff==0.15.16 mypy==1.18.2
+      - name: Format
+        run: python -m ruff format --check core/py pos/py set/py conformance/py
+      - name: Lint
+        run: python -m ruff check core/py pos/py set/py conformance/py
+      - name: Types
+        run: MYPYPATH=core/py:pos/py:set/py python -m mypy --strict core/py/deixis_core.py core/py/deixis_codec.py pos/py/deixis_pos.py set/py/deixis_set.py conformance/py/main.py conformance/py/codec.py
+      - name: Test
+        run: |
+          python core/py/test_core.py
+          python core/py/test_codec.py
+          python conformance/py/test_cli.py
+          python pos/py/test_pos.py
+          python set/py/test_set.py
+
+  # Sequential, not a matrix: set/ts imports the sibling core's build.
+  ts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: core/ts
+        working-directory: core/ts
+        run: npm ci && npm test
+      - name: pos/ts
+        working-directory: pos/ts
+        run: npm ci && npm test
+      - name: set/ts
+        working-directory: set/ts
+        run: npm ci && npm test
+
+  # The black-box layer: every implementation judged against the same oracle it never
+  # reads, through the thin CLIs (tools/conformance/README.md).
+  conformance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Rust toolchain
+        run: rustup update --no-self-update stable
+      - name: Build the rs CLI
+        run: cargo build --locked -p deixis-conformance
+      - name: Build the ts packages
+        run: |
+          (cd core/ts && npm ci && npm run build)
+          (cd pos/ts && npm ci && npm run build)
+          (cd set/ts && npm ci && npm run build)
+      - name: Harness
+        run: node tools/conformance/harness.mjs
+      # Agreement across the four cores, not conformance (the corpus above is the oracle).
+      # Fixed seeds keep the gate deterministic; run it locally without --seed to explore.
+      # --fuzz adds malformed input: law 3's same code in every core, §14's split = whole.
+      - name: Interop (agreement, not conformance)
+        run: |
+          for seed in 1 2 3; do node tools/conformance/interop.mjs --seed=$seed --count=100 --fuzz=5; done
+
+  paper:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: TeX
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends texlive-latex-recommended \
+            texlive-latex-extra texlive-fonts-recommended
+      - name: Compile each standalone paper (three passes)
+        working-directory: docs/paper
+        run: |
+          for source in *.tex; do
+            pdflatex -interaction=nonstopmode -halt-on-error "$source"
+            pdflatex -interaction=nonstopmode -halt-on-error "$source"
+            pdflatex -interaction=nonstopmode -halt-on-error "$source"
+          done
+      - name: No undefined references or citations
+        working-directory: docs/paper
+        run: "! grep -E 'LaTeX Warning: (Reference|Citation).*undefined' ./*.log"
+      # The committed PDF is a snapshot of the source, regenerated whenever the source
+      # changes. Keeping CI's compile as an artifact lets a change be committed from a
+      # checkout with no TeX installation.
+      - name: Keep the compiled PDF
+        uses: actions/upload-artifact@v4
+        with:
+          name: paper-pdf
+          path: docs/paper/*.pdf
+
+  # The specification's own internal graph. Not a style check: it decides the things a
+  # machine can decide about CODEC.md — that every §N reference resolves, that every
+  # result code §9 declares is ordered somewhere and says where, and that no code is
+  # used without being declared. It found `non_canonical_payload` missing from §10's
+  # precedence discussion on its first run.
+  #
+  # What it deliberately does NOT decide is whether a stated scope is the intended one.
+  # Four of 0008's findings were right rulings stated more widely than they hold, and
+  # no document-level check can catch that — it prints those sentences as a worklist
+  # and never fails on them. The proofs (0008 step 2) are what close that half.
+  spec:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        # Full history: rotcheck dates each line with `git blame`, and a depth-1 clone
+        # blames every line to one commit. On 78feee1 CI listed all 33 relative dates
+        # against 17 locally, and nothing in the log said why.
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Spec consistency (stdlib only)
+        run: python tools/speccheck.py
+      # The prose counterpart of `paper`'s undefined-reference gate. Added after a
+      # citation naming a file that never existed shipped in the commit recording how
+      # carefully the specification had been reviewed.
+      - name: Every relative markdown link resolves
+        run: python tools/linkcheck.py
+      # The corpus and the specification agreed only by hand. Measured against a
+      # 20-mutation copy, 12 of them address-changing, every other gate stayed green:
+      # kill rate 0/20. This binds each case to the sentence its octets depend on.
+      - name: Vector pins still appear in the spec
+        run: python tools/pincheck.py
+      # Six stale claims were found across two ledgers on 2026-09-03 and NONE was in
+      # CODEC.md — the spec's claims were checked six ways and a ledger's none. This
+      # re-runs the measurement a ledger quotes. Its denominator is claims carrying a
+      # command, never claims: unmarked prose is unchecked here, not clean.
+      - name: Quoted measurements still hold
+        run: python tools/claimcheck.py
+      # Worklist, never a gate: it cannot tell a coverage fraction from a boundary value
+      # or a vote tally (3 false positives of 9 on its first run). Prints and returns 0.
+      - name: Worklist — claims that rot (fractions, relative dates)
+        run: python tools/rotcheck.py
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      # Bitspark's naming rule: a project is written exactly as its repository is named
+      # (Bitspark/.github NAMING.md). Reads Markdown and text prose; verbatim records are
+      # listed in .namingignore. It cannot see .tex, HTML or code comments, so those are
+      # reviewed by hand.
+      - name: Bitspark project names are spelled as their repositories
+        run: node scripts/naming.mjs

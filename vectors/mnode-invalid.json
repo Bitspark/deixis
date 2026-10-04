@@ -1,0 +1,106 @@
+{
+  "description": "deixis mandatory Node[T] construction vectors — which spellings construct a node. Every node has exactly one supplied T (ADR 0010 §1, §3), and keys are unique among siblings (§3). op \"construct\" takes a node spelling; its result is {\"defined\": <node>} when the spelling constructs, or {\"undefined\": {}} when it must not. A duplicate-key refusal is spelled as invalid.json spells it, {\"error\": \"duplicate_key\", \"key\": <hex>} at case level, so that it is specific. A missing value has no error class, because neither the spec nor the old corpus names one. A harness must never count a protocol error or an unsupported operation as a refusal (MNODE-PLAN). Every case declares its slot, as defined in vectors/MNODE-PLAN.md. Hand-authored from docs/design/0010-mandatory-node-values.md, docs/TREE.md and docs/PATH.md as merged in 1a9bb6d, and from nothing else. No implementation of the mandatory API existed when these were written. Items X3, X4 and X20; each note names the defect (W) it catches. 12 cases.",
+  "profile": "deixis-mnode-invalid",
+  "cases": [
+    {
+      "name": "m-construct-missing-own-at-root",
+      "slot": "fixture",
+      "op": "construct",
+      "node": {"children": []},
+      "result": {"undefined": {}},
+      "note": "X3. A node without a value is not a node of Node[T]: every existing node carries exactly one opaque T, and the generic core imposes no default value (ADR 0010 §1). Catches W2. Under this slot a conflating adapter, one that reads a missing own as null, also refuses, because null is not a fixture payload. So this case alone cannot tell the right refusal from the wrong one; m-construct-missing-own-under-the-json-slot can."
+    },
+    {
+      "name": "m-construct-missing-own-on-a-child",
+      "slot": "fixture",
+      "op": "construct",
+      "node": {"own": {"class": "r", "representation": "r"}, "children": [["61", {"children": []}]]},
+      "result": {"undefined": {}},
+      "note": "X3. The same at depth one: the child at [61] has no value, so the whole spelling does not construct. Catches W2."
+    },
+    {
+      "name": "m-construct-missing-own-under-the-option-slot",
+      "slot": "option",
+      "op": "construct",
+      "node": {"children": []},
+      "result": {"undefined": {}},
+      "note": "X3. The most pointed form of W2. Even when T = Option[fixture], a missing own is not read as none. none must be supplied explicitly (TREE: optionality is a slot choice; ADR 0010 §2: no hidden option around every T). An automatic option wrapper would construct Node(none, ∅) here."
+    },
+    {
+      "name": "m-construct-explicit-none-under-the-option-slot",
+      "slot": "option",
+      "op": "construct",
+      "node": {"own": {"none": {}}, "children": []},
+      "result": {"defined": {"own": {"none": {}}, "children": []}},
+      "note": "X3, X4. The control for the previous case: none supplied explicitly is a legal payload, so the node constructs."
+    },
+    {
+      "name": "m-construct-explicit-null-under-the-json-slot",
+      "slot": "json",
+      "op": "construct",
+      "node": {"own": null, "children": [["61", {"own": null, "children": []}]]},
+      "result": {"defined": {"own": null, "children": [["61", {"own": null, "children": []}]]}},
+      "note": "X4. The control for m-construct-missing-own-under-the-json-slot, in the same slot. An own field holding null supplies a value, and a missing own field supplies none. Both nodes exist. Catches an implementation that rejects null or treats it as absent (W3)."
+    },
+    {
+      "name": "m-construct-missing-own-under-the-json-slot",
+      "slot": "json",
+      "op": "construct",
+      "node": {"children": []},
+      "result": {"undefined": {}},
+      "note": "X3, X4. The discriminating form of W2. Under the json slot null is a legal payload, so an adapter that reads a missing own field as null (Python dict.get, serde Option<Value>, Go interface{}) would construct Node(null, ∅) and fail here. The spelling has no value, so it must not construct. The pair to m-construct-explicit-null-under-the-json-slot, in the same slot."
+    },
+    {
+      "name": "m-construct-missing-own-on-a-child-under-the-json-slot",
+      "slot": "json",
+      "op": "construct",
+      "node": {"own": "r", "children": [["61", {"children": []}]]},
+      "result": {"undefined": {}},
+      "note": "X3, X4. The same one level down: the child at [61] has no own field, and it is not read as null."
+    },
+    {
+      "name": "m-construct-missing-own-under-the-unit-slot",
+      "slot": "unit",
+      "op": "construct",
+      "node": {"children": []},
+      "result": {"undefined": {}},
+      "note": "X3. Under Node[Unit] there is exactly one value, and defaulting to it is the tempting convenience. ADR 0010 §1 imposes no default value and makes no exception for the unit, so a missing own does not construct here either."
+    },
+    {
+      "name": "m-construct-duplicate-key-adjacent",
+      "slot": "fixture",
+      "op": "construct",
+      "node": {"own": {"class": "r", "representation": "r"}, "children": [["6b", {"own": {"class": "1", "representation": "first"}, "children": []}], ["6b", {"own": {"class": "2", "representation": "second"}, "children": []}]]},
+      "error": "duplicate_key",
+      "key": "6b",
+      "note": "X20. Keys are unique among siblings (ADR 0010 §3); the same key twice, back to back."
+    },
+    {
+      "name": "m-construct-duplicate-key-nonadjacent",
+      "slot": "fixture",
+      "op": "construct",
+      "node": {"own": {"class": "r", "representation": "r"}, "children": [["6b", {"own": {"class": "1", "representation": "1"}, "children": []}], ["6a", {"own": {"class": "2", "representation": "2"}, "children": []}], ["6b", {"own": {"class": "3", "representation": "3"}, "children": []}]]},
+      "error": "duplicate_key",
+      "key": "6b",
+      "note": "X20. A distinct key sits between the two occurrences. A check that compares only neighbours misses it."
+    },
+    {
+      "name": "m-construct-duplicate-empty-key",
+      "slot": "unit",
+      "op": "construct",
+      "node": {"own": {}, "children": [["", {"own": {}, "children": []}], ["", {"own": {}, "children": []}]]},
+      "error": "duplicate_key",
+      "key": "",
+      "note": "X20, X19. The empty key is a key and occupies its slot exactly once. Under Node[Unit] the two subtrees are equal, and that still does not merge them."
+    },
+    {
+      "name": "m-construct-duplicate-with-equal-children-is-not-merged",
+      "slot": "fixture",
+      "op": "construct",
+      "node": {"own": {"class": "r", "representation": "r"}, "children": [["6b", {"own": {"class": "7", "representation": "seven"}, "children": []}], ["6b", {"own": {"class": "7", "representation": "SEVEN"}, "children": []}]]},
+      "error": "duplicate_key",
+      "key": "6b",
+      "note": "X20. The two subtrees are ≈ (same class). A construction that drops one of two equal entries instead of refusing fails here: a finite map has no second entry to merge."
+    }
+  ]
+}

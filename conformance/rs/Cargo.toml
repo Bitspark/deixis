@@ -1,0 +1,16 @@
+[package]
+name = "deixis-conformance"
+version = "0.0.0"
+description = "Thin black-box conformance CLI for the Rust implementation (tools/conformance/README.md). Unpublished."
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[[bin]]
+name = "deixis-conformance"
+path = "src/main.rs"
+
+[dependencies]
+bitspark-deixis-core = { path = "../../core/rs", version = "0.6.0" }
+bitspark-deixis-pos = { path = "../../pos/rs", version = "0.6.0" }
+bitspark-deixis-set = { path = "../../set/rs", version = "0.6.0" }

@@ -1,0 +1,34 @@
+{
+  "name": "@bitspark/deixis-pos",
+  "version": "0.6.0",
+  "description": "deixis-pos-v1: the spelling κ of positions into deixis keys — injective, prefix-free, order-preserving.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist/index.js",
+    "dist/index.d.ts"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "tsc && node --test dist/index.test.js"
+  },
+  "devDependencies": {
+    "@types/node": "^24.1.0",
+    "typescript": "^5.9.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Bitspark/deixis.git"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org"
+  }
+}
