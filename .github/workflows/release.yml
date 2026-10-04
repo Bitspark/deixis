@@ -52,7 +52,7 @@ jobs:
       TAG: ${{ github.event_name == 'push' && github.ref_name || inputs.tag }}
       REHEARSE: ${{ github.event_name == 'workflow_dispatch' && inputs.rehearse || 'false' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ github.event_name == 'push' && github.ref || inputs.tag }}
           fetch-depth: 0
@@ -84,15 +84,15 @@ jobs:
           done
           exit $fail
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.13"
       - name: Rust toolchain
         run: rustup update --no-self-update stable
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
           registry-url: https://registry.npmjs.org
