@@ -10,7 +10,8 @@ It **keeps [ADR 0012](0012-data-wire-tree-symmetry.md) in full**, its interactio
 interaction terminology superseded, following bitwire 0.4.0. That was an error. §6 restores the
 model, and [the correction](#correction-2026-10-05) records how it happened.
 [ADR 0014](0014-structural-identity-and-lifted-access.md), recorded the same day by a Codex
-session working at the owner's request, reached the same restoration independently.
+session, which records that it worked at the owner's request, reached the same restoration
+independently.
 
 ## Context
 
