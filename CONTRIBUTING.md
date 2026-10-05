@@ -3,6 +3,10 @@
 deixis is small on purpose, and most of what a contributor needs to know follows from
 that. Read this page before opening a pull request.
 
+Also read [CHARTER.md](CHARTER.md). Changes to meaning must identify the affected
+invariant IDs and follow its amendment discipline. A downstream implementation
+is evidence to assess, not authority to redefine the foundation.
+
 ## The rule that declines the most changes
 
 **deixis carries structure and never meaning.** A change belongs here only if it can be

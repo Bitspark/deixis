@@ -14,11 +14,10 @@ addressless byte reader and `Wire` an addressless sender. Both are legal opaque
 payloads with the same structural guarantees. A materialized `Node[Bytes]`
 snapshot can be encoded with identity-bytes; that does not serialize the reader
 or sender capabilities. Capability equality and portability remain the
-payload domain's responsibility. *(2026-10-05:
-[ADR 0013](design/0013-binding-views-and-the-service-line.md) supersedes the sender half. The
-principal interaction instance is a receiver-side tree of handlers. Portable names become
-capabilities only through a profile's two-stage binding (ADR 0013 §2), never through the
-codec.)*
+payload domain's responsibility. [ADR 0014](design/0014-structural-identity-and-lifted-access.md)
+reaffirms this symmetry. A receiver's handler tree is another instance, not a
+replacement for a sender tree. Portable names become capabilities through a
+declared binding profile (ADR 0013 §2), never through the codec alone.
 
 ## The rule
 

@@ -1,81 +1,64 @@
-# bitwire: the envelope Wire and receiver handler trees
+# bitwire: addressless interaction and lifted access
 
-**Current from 2026-10-05, after bitwire 0.4.0 (its decision 0014, 2026-10-04).** The interaction
-half of [ADR 0012](../design/0012-data-wire-tree-symmetry.md) is superseded by
-[ADR 0013](../design/0013-binding-views-and-the-service-line.md). bitwire's own contract is the
-source; this page records what bitwire takes from deixis and where the line falls.
+**Decision:** [ADR 0014](../design/0014-structural-identity-and-lifted-access.md),
+2026-10-05. The layered replacement is being implemented in bitwire and bitruntime;
+this mapping does not certify a release. Immutable bitwire 0.4.0 and bitruntime
+0.5.0 describe the previous duplex envelope contract.
 
 ```ts
-interface Envelope {
-  readonly source: Path;          // Path = readonly Atom[]: exact byte keys, scoped to the connection
-  readonly destination: Path;
-  readonly id: Atom;
-  readonly correlation?: Atom;
-  readonly payload: Value;        // an immutable ontos value
-}
-interface Wire {
-  send(envelope: Envelope): Promise<void>;                  // resolves on local admission only
-  receive(handler: (envelope: Envelope) => void): () => void;
-  readonly closed: Promise<Termination>;
-  close(): Promise<void>;
-}
+interface Wire { send(message: Value): Promise<void> }
+interface AddressedWire { send(path: Path, message: Value): Promise<void> }
+type WireTree = DeixisNode<Wire>;
 ```
 
-`Wire` is bitwire's one duplex connection endpoint. **A connection is not a tree.** There is no
-`WireTree` and no `AddressedWire`: bitwire's decision 0014 removed both, and its build rejects the
-names.
+`Value` is a ground Ontos value. `Path` retains exact byte keys and segment
+boundaries. An endpoint additionally owns receiving and closure; exposing a
+send-only Wire does not hand out those rights. Carriers implement addressless
+endpoints. The same addressing layer can be used over every carrier.
 
-## What it takes from the floor
+## The structural relationship
 
-- **The receiver's routing tree.** It is a complete `DeixisNode` whose own values are handlers.
-  bitruntime's `route(tree, envelope)` is `tree.at(envelope.destination)` followed by invoking the
-  selected own value, and it returns `false` for an absent path. That is selection followed by
-  invocation, not name binding (ADR 0013 §6). It never falls back to an ancestor.
-- **Keys** are exact byte strings, including empty and non-UTF-8 keys, in bitwire's own nominal
-  `Atom` type. Slash bytes are ordinary key bytes, and nothing is parsed or normalized.
-- **The complete structural contract.** `own()`, `children()`, `at(path)` and decomposition agree.
-  Missing selection is absent, and an existing handler that ignores an envelope is still present.
-  Construction rejects duplicate keys and cycles. bitwire declares the shape itself, because each
-  repository stays installable without the others. Its child order is presentation order, not key
-  identity.
-- **No equality or codec on handlers.** Structure alone chooses neither, as for any other payload
-  in [SLOTS.md](../SLOTS.md).
+A WireTree has own send capabilities, complete finite children, exact partial
+selection, and decomposition/reconstruction. Derived addressed sending is
+`select(tree,path).own().send(message)`. Missing selection invokes nothing;
+refusal by an existing sender remains a different outcome. Empty self and an
+empty-key child differ. No normalization, ancestor fallback or implicit mounting
+is performed.
 
-## What it adds above it
+A tree of receive handlers is another complete instance. Dispatch is selection
+followed by invocation. Neither its usefulness nor a runtime's choice to use it
+changes what a sender tree means. deixis implements neither dispatch nor send.
 
-- **Messages and delivery.** bitwire owns envelopes, admission, ordering per direction, receive
-  attachment, termination and limits. Success means local admission, not delivery or execution.
-  A rejected `send` means "not admitted locally". A synchronous handler exception fails the
-  endpoint, so refusal is not a thrown exception.
-- **Senders cannot see remote absence.** Across a connection a sender observes admission only. It
-  cannot tell a missing remote path from a present handler that ignores the envelope. Stronger
-  guarantees (existence, authorization, target identity, outcome) belong to an exchange protocol
-  above the wire.
-- **A send capability at a path** is an application adapter over `(connection, path)`, not a
-  primitive. Constructing it does not establish that the path exists remotely. A handler at a path
-  can be replaced within one participant's lifetime. So a reference that promises token identity
-  needs a stable target ID, a pinned routing revision, or no reassignment; otherwise it is a
-  mutable route alias (ADR 0013 §6).
-- **Designation is not authority.** Source and correlation do not authenticate a sender. A portable
-  end reference carries a declared authority model.
+An opaque addressed facade supplies no complete child map and proves no remote
+membership. Prefix binding such a facade returns access in a narrower relative
+path scope; it is not structural selection. Discovery needs a protocol that
+actually supplies membership, enumeration and any promised snapshot coherence.
 
-deixis implements neither transport nor dispatch. Binding portable names to send adapters
-follows ADR 0013 §2: a pure preparation, then a per-request resolution whose refusal is not a
-`Wire.send` rejection.
+## Agreements owned above deixis
 
-## History
+bitwire defines message admission, ordering, ownership, failure, resource bounds
+and canonical carrier/addressed formats. bitruntime implements those contracts.
+Application protocols supply IDs, correlation, reply routes, invocation and
+authorization. Designation alone never supplies authority.
 
-- **26 September 2026.** bitwire's decision 0012
-  ([v0.3.0](https://github.com/Bitspark/bitwire/tree/v0.3.0/docs/decisions)) chose an addressless
-  `Wire.send(message)`, a `WireTree = DeixisNode<Wire>`, and an `AddressedWire` carrier bridge.
-- **Earlier.** Decision 0006 described an origin plus named, possibly opaque addressed access,
-  with Unicode-string keys whose image excluded arbitrary binary keys.
-- **4 October 2026.** bitwire 0.4.0 replaced all of it. Published releases remain immutable
-  history, not supported profiles.
-- **Implementation ownership** is unchanged: bitwire holds the contract and its independent cases,
-  and bitruntime implements them. Historical results do not certify the replaced implementation.
+Sending successfully means local admission, not remote existence, execution or
+response. Binding a path does not pin a participant: stable target IDs, routing
+revisions or a no-reassignment rule are additional profile choices. Existing
+connection-bound capabilities never migrate silently to new connections.
 
-The proposed generic structural service (deixis-svc) must not treat a relay or a connection as a
-complete tree. A relay-backed structural interface needs an application protocol that supplies
-discovery and snapshots (ADR 0013 §8). Nothing on this page certifies a sibling repository from
-deixis.
+Portable names and scoped binding follow ADR 0013's preparation/resolution
+distinction. Encoding names does not encode live capabilities. Complete tree
+construction and reconstruction preserve borrowed capabilities without acquiring
+or releasing their resources. Cross-path ordering and shared state remain
+operational obligations, not consequences of path associativity.
+
+## Decision history
+
+- September's ADR 0012 established Data/DataTree and Wire/WireTree symmetry.
+- bitwire 0.4.0 removed the addressless/addressed distinction with the RPC cleanup.
+- ADR 0013 adopted that consumer change as its interaction baseline.
+- ADR 0014 restores the separation on its merits while retaining exact byte paths,
+  Ontos values, explicit lifecycle laws and the removal of RPC compatibility.
+
+Current implementation evidence must be recorded by the owning repositories.
+The structural corpus proves neither remote discovery nor relay transparency.
