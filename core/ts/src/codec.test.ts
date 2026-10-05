@@ -1132,3 +1132,32 @@ test("I5: the build budget guards the build, not the judgments — an over-budge
   const huge = bomb(70, IDENTITY, EMPTY);
   expectCode(decodeLinked(addressOf(huge.root), storeOf(huge.chunks), BLIND), "unsupported/unsupported_slot_codec");
 });
+
+// ADR 0013 §10: an asynchronous store needs no new verification interface. It fetches first,
+// then hands the synchronous constructors a Fetch over the bytes it already holds, which keeps
+// resolve-root (anchored by the caller) and resolve-child (anchored by a verified parent) apart.
+test("an asynchronous store verifies through the synchronous constructors over pre-fetched bytes", async () => {
+  const tree = Node.compose(Uint8Array.of(1), [[Uint8Array.of(7), Node.compose(Uint8Array.of(2), [])]]);
+  const closure = encodeLinked(tree, identityBytes);
+  const remote = async (where: Parameters<Fetch>[0]): Promise<Uint8Array | undefined> => {
+    await Promise.resolve(); // an asynchronous round trip
+    return closure.chunks.get(addressKey(where));
+  };
+  const overPrefetched = (held: Map<string, Uint8Array>): Fetch => (where) => held.get(addressKey(where));
+
+  const held = new Map<string, Uint8Array>();
+  held.set(addressKey(closure.root), (await remote(closure.root))!);
+  const root = LinkedChunk.resolveRoot(closure.root, overPrefetched(held));
+  assert.ok(root instanceof LinkedChunk);
+  const [, childAddress] = root.children().find(([key]) => key.length === 1 && key[0] === 7)!;
+  held.set(addressKey(childAddress), (await remote(childAddress))!);
+  const child = root.resolveChild(Uint8Array.of(7), overPrefetched(held));
+  assert.ok(child instanceof LinkedChunk);
+  assert.deepEqual(child.payload, Uint8Array.of(2));
+
+  // Pre-fetching changes nothing about what is judged: wrong bytes are still a store fault.
+  const lying = new Map([[addressKey(closure.root), Uint8Array.of(0, 1, 2)]]);
+  const refused = LinkedChunk.resolveRoot(closure.root, overPrefetched(lying));
+  assert.ok(!(refused instanceof LinkedChunk));
+  assert.equal(refused.code, "hash_mismatch");
+});

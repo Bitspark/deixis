@@ -1,7 +1,19 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { compose, DuplicateKeyError, Node, type DeixisNode, type Option, some } from "./index.js";
+import {
+  compose,
+  CycleError,
+  DuplicateKeyError,
+  Node,
+  NonconformingTreeError,
+  toNative,
+  TreeLimitError,
+  type DeixisNode,
+  type Option,
+  some,
+} from "./index.js";
+import { encodeFlat, identityBytes } from "./codec.js";
 
 test("direct opaque payloads survive parts and attachment without option wrappers", () => {
   const child = Node.compose(() => 7, []);
@@ -226,7 +238,7 @@ test("the slot carries no bounds", () => {
   assert.equal(handlers.own()(), 7);
 });
 
-test("DataTree and WireTree share selection and complete structure", async () => {
+test("DataTree and a local sender tree share selection and complete structure", async () => {
   interface Data { read(): Promise<Uint8Array> }
   interface Wire { send(message: string): void }
   const messages: string[] = [];
@@ -273,4 +285,91 @@ test("generic structural selection does not recurse through a deep valid tree", 
   const depth = 12_000;
   for (let i = 0; i < depth; i++) root = compose("parent", [[key, root]]);
   assert.equal(root.at(Array.from({ length: depth }, () => key)), leaf);
+});
+
+// A foreign tree: any object implementing DeixisNode, here with a configurable at().
+function foreign<T>(
+  own: T,
+  children: () => ReadonlyArray<readonly [Uint8Array, DeixisNode<T>]>,
+  at?: (node: DeixisNode<T>, path: readonly Uint8Array[]) => DeixisNode<T> | undefined,
+): DeixisNode<T> {
+  const node: DeixisNode<T> = {
+    own: () => own,
+    children,
+    at: (path) => (at ? at(node, path) : compose(own, children()).at(path) === undefined ? undefined : walk(node, path)),
+    decompose: () => ({ own, children: children() }),
+  };
+  return node;
+}
+function walk<T>(node: DeixisNode<T>, path: readonly Uint8Array[]): DeixisNode<T> | undefined {
+  let current: DeixisNode<T> | undefined = node;
+  for (const key of path) {
+    current = current.children().find(([k]) => k.length === key.length && k.every((b, i) => b === key[i]))?.[1];
+    if (current === undefined) return undefined;
+  }
+  return current;
+}
+
+test("toNative converts a lawful foreign tree into the native node the codec encodes", () => {
+  const leaf = compose(bytes(3), []);
+  const generic = compose(bytes(1), [[bytes(255, 0), compose(bytes(2), [[bytes(), leaf]])]]);
+  const native = toNative(generic);
+  assert.ok(native instanceof Node);
+  const expected = Node.compose(bytes(1), [[bytes(255, 0), Node.compose(bytes(2), [[bytes(), Node.compose(bytes(3), [])]])]]);
+  assert.ok(native.equalBy(expected, (a, b) => a.length === b.length && a.every((x, i) => x === b[i])));
+  assert.deepEqual(encodeFlat(native, identityBytes), encodeFlat(expected, identityBytes));
+});
+
+test("toNative keeps own-value objects and invokes nothing", () => {
+  const untouchable = () => { throw new Error("an own value was invoked"); };
+  const other = () => { throw new Error("an own value was invoked"); };
+  const generic = compose(untouchable, [[bytes(7), compose(other, [])]]);
+  const native = toNative(generic);
+  assert.equal(native.own(), untouchable);
+  assert.equal(native.at([bytes(7)])!.own(), other);
+  const already = Node.compose(untouchable, []);
+  assert.equal(toNative(already), already, "a native node is returned as it is");
+});
+
+test("toNative accepts a shared acyclic subtree and refuses a cycle", () => {
+  const shared = compose("shared", []);
+  const dag = compose("root", [[bytes(1), shared], [bytes(2), shared]]);
+  const native = toNative(dag);
+  assert.equal(native.at([bytes(1)])!.own(), "shared");
+  assert.equal(native.at([bytes(2)])!.own(), "shared");
+
+  let selfRef: DeixisNode<string>;
+  selfRef = foreign("loop", () => [[bytes(9), selfRef]]);
+  assert.throws(() => toNative(selfRef), (e: unknown) => e instanceof CycleError && e.code === "cycle");
+});
+
+test("toNative refuses duplicate keys and a child its own at() cannot select", () => {
+  const child = compose("c", []);
+  const dup = foreign("d", () => [[bytes(5), child], [bytes(5), child]]);
+  assert.throws(() => toNative(dup), DuplicateKeyError);
+
+  // children() lists key 6, but at([6]) says it is absent: a nonconforming foreign tree.
+  // deixis's generic selection walks children() in TypeScript and delegates to the child's At in Go,
+  // so such a tree can answer differently in the two languages; neither answer is sanctioned.
+  const liar = foreign("l", () => [[bytes(6), child]], (node, path) => (path.length === 0 ? node : undefined));
+  assert.throws(
+    () => toNative(liar),
+    (e: unknown) => e instanceof NonconformingTreeError && e.code === "nonconforming_child",
+  );
+});
+
+test("toNative exposes its limits instead of repairing", () => {
+  let chain: DeixisNode<number> = compose(0, []);
+  for (let i = 1; i <= 5; i++) chain = compose(i, [[bytes(0), chain]]);
+  assert.throws(() => toNative(chain, { depth: 3 }), (e: unknown) => e instanceof TreeLimitError && e.limit === "depth");
+  assert.throws(() => toNative(chain, { nodes: 4 }), (e: unknown) => e instanceof TreeLimitError && e.limit === "nodes");
+  assert.equal(toNative(chain, { depth: 5, nodes: 6 }).own(), 5);
+});
+
+test("toNative converts a deep foreign tree without recursion", () => {
+  let deep: DeixisNode<number> = compose(0, []);
+  for (let i = 1; i <= 12_000; i++) deep = compose(i, [[bytes(1), deep]]);
+  const native = toNative(deep);
+  assert.equal(native.own(), 12_000);
+  assert.equal(native.at(Array.from({ length: 12_000 }, () => bytes(1)))!.own(), 0);
 });
