@@ -11,7 +11,7 @@ interface AddressedWire { send(path: Path, message: Value): Promise<void> }
 type WireTree = DeixisNode<Wire>;
 ```
 
-`Value` is a ground Ontos value. `Path` retains exact byte keys and segment
+`Value` is a ground ontos value. `Path` retains exact byte keys and segment
 boundaries. An endpoint additionally owns receiving and closure; exposing a
 send-only Wire does not hand out those rights. Carriers implement addressless
 endpoints. The same addressing layer can be used over every carrier.
@@ -58,7 +58,7 @@ operational obligations, not consequences of path associativity.
 - bitwire 0.4.0 removed the addressless/addressed distinction with the RPC cleanup.
 - ADR 0013 adopted that consumer change as its interaction baseline.
 - ADR 0014 restores the separation on its merits while retaining exact byte paths,
-  Ontos values, explicit lifecycle laws and the removal of RPC compatibility.
+  ontos values, explicit lifecycle laws and the removal of RPC compatibility.
 
 Current implementation evidence must be recorded by the owning repositories.
 The structural corpus proves neither remote discovery nor relay transparency.

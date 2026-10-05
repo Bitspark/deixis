@@ -50,7 +50,7 @@ For an operation on an own value:
 
 ```text
 lift_m(N,p,args) = select(N,p).own().m(args)
-lift_m(select(N,p),q,args) ≈ lift_m(N,p++q,args)
+lift_m(select(N,p),q,args) â‰ˆ lift_m(N,p++q,args)
 ```
 
 Both sides first perform the same partial selection. A missing path invokes no
@@ -97,7 +97,7 @@ addresses, service errors and authentication policy.
 These are different abstraction levels, not alternative generic protocols or
 compatibility APIs. Each level has one current contract. Live-wire conveyance and
 multiplexing, if added, require an explicit runtime allocation/lifetime protocol;
-an endpoint object cannot appear inside a ground Ontos value.
+an endpoint object cannot appear inside a ground ontos value.
 
 ## Evidence and future review
 
