@@ -1,0 +1,25 @@
+# deixis's identity: each invariant's statement pinned to the ADR that last set it.
+# Format: ID<n> <sha256 of the whitespace-normalized statement> <ADR number>.
+# Change one only by IDENTITY.md's change rule. tools/identity_check.py explains.
+
+ID1 b8ef6b3052a159b8afca79c526ca064fdcc1eaae56129e623ae4304c422422fd 0015
+ID2 9cf35be4d871d6124e2d7b9d8a75126aaa7f79cbfbaf57842fa690a24d2a9d6c 0015
+ID3 224c9046df6d438cacf95065704050cab87c037a63e92f4d7936edcb461a6f83 0015
+ID4 8e913bf066a81604260dbb502ceb41de5d9332588fe39d7a621b16e30f1174c2 0015
+ID5 bb73dbbc3c2d59ee169042519e2d67d29640bfd230de1a8b1aea1fb6e4aeeade 0015
+ID6 b89e3943d8a2b99448dc6c38acbceab890367bd24b517dbf429e9a7fd1693b3f 0015
+ID7 154474d364854e44d5ea4924345d83f74d89533ee5eb1d6cd4a8d3c7ad1ab1a7 0015
+ID8 311d5eaa63b893736774e7ad3dc7e11b69d8eda58891848286a229abe34eda94 0015
+ID9 a196fa4a2176953c04c696b0bd8667e2a153aecba775bc6d68dc22874e8b219d 0015
+ID10 d77e10ed582b503b59d50ca1d0dad2a23cd4be3e46669c45762af6707727d036 0015
+ID11 64a06be087a718619c3d84fb10187aadfcce7438d369ec5db57006b1a740ffed 0015
+ID12 6d44f876b525d51e2be550ab3735cefa9399b135ab0fe49571a6aa379a0b6612 0015
+
+# Lines that predate the check and declare a supersession touching a source of an
+# invariant. All four record ADR 0010 superseding ADR 0009's optional node values, on the
+# owner's decision of 2026-09-23 ("Let's use mandatory T."), which ID1 rests on.
+# Format: allow <file> <sha256 of the whitespace-normalized line>.
+allow docs/TREE.md fad35a0133994d0293d06e99b9d03dbd62103b130767eecaad3661c78e4dca69
+allow docs/design/0008-proof-obligations.md 4c0a96824a434329db32f723e005314eb3d1b12aeef9374dfeda2ab565f43637
+allow docs/design/0010-mandatory-node-values.md 3276c6399e4f83b613d1d22b23c7a1c374ac0b0be9c32a38c8998e8b5b2f5232
+allow docs/design/0010-mandatory-node-values.md b35fab093a88d40b9d5aa6ea8f36926e5571836d2436bc212bf9b3edc9528ea9

@@ -1,8 +1,9 @@
 # Working on deixis
 
-Read [CHARTER.md](CHARTER.md) and [CONTRIBUTING.md](CONTRIBUTING.md). The charter
-defines this project's identity and the boundary between pure structure and
-consumer interpretations. Account for its invariant IDs before changing meaning.
+Read [IDENTITY.md](IDENTITY.md) and [CONTRIBUTING.md](CONTRIBUTING.md). IDENTITY.md
+defines this project's identity: its invariants (`ID1` to `ID12`), their reasons, and the
+only way one changes. Account for its invariant IDs before changing meaning; a change to one
+needs an ADR with an `Identity: breaks ID<n>` line.
 
 Work in a fresh task worktree and branch; use a PR and all required green checks
 before integration. Preserve historical research and accepted decision records;

@@ -177,8 +177,8 @@ certified by a battery when one exists. The law is spec and battery jointly,
 the same shape as the vectors doctrine — and until routing vectors and the
 two-nodes-one-process rig exist, it is a stated law, not an invariant.
 
-*(Amended 2026-10-05; the law above stands. These precisions come from Bitspark/deixis#19 and
-research 0002's advice.)*
+*(Amended 2026-10-05; the law above stands, and is [IDENTITY.md](../IDENTITY.md)'s ID11. These
+precisions come from Bitspark/deixis#19 and research 0002's advice.)*
 - **What `/` is.** `/` is the floor's resolution only where `connect(a)` yields a complete
   structural view. Through an opaque addressed facade it is prefix binding, and the law then says
   only that prefixes compose. It claims nothing about whether a path exists or what lies below
@@ -216,6 +216,10 @@ the candidate to beat, with linearity stated honestly: a name's bytes copy
 freely, so one-shot is authority-enforced single **redemption** at the binder —
 affine, not strict (external advice, research 0002; minimum laws in its
 integration ledger).
+*(Closed 2026-10-05, [ADR 0015](design/0015-deixis-identity.md) §4, an agents' decision:
+research 0002's integration ledger adopted affine one-shot endpoint transitions as normative
+and persistent or multiplexed transports as permitted refinements. ADR 0012's
+`send(message): void` on a persistent wire is such a refinement.)*
 
 ## 6. Realization sketch — non-normative
 

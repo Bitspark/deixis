@@ -1,7 +1,7 @@
 Describe the concrete problem, resulting behavior and validation.
 
-If this changes meaning, cite the relevant CHARTER.md invariant IDs and decision
-record. State which law changes, why the unchanged law is insufficient, which
+If this changes meaning, cite the relevant IDENTITY.md invariant IDs (`ID<n>`) and
+decision record. State which law changes, why the unchanged law is insufficient, which
 consumers must migrate, and the positive and negative observations that validate
 the new contract. Mark documentation-only or implementation-only changes as such.
 

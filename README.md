@@ -13,9 +13,9 @@
 
 **deixis is the structure of a tree, and nothing about what a tree holds.**
 
-The [project charter](CHARTER.md) records the invariants, their falsifiers and the
-boundary between structure, lifted access, binding and transport. Trees of
-readers, senders and receivers share that structure; no consumer defines it.
+**[IDENTITY.md](IDENTITY.md) records what deixis is:** its invariants, their reasons and
+falsifiers, and the only way they change. Trees of readers, senders and receivers share that
+structure; no consumer defines it, and no consumer's release or downstream record supersedes it.
 
 ```
 Node(.) = (.) × (Key ⇀ Node(.))
@@ -82,6 +82,8 @@ each language.
 
 ## The specification
 
+- [IDENTITY.md](IDENTITY.md): deixis's identity: its twelve invariants, their reasons, and the
+  rule by which one may change.
 - [TREE.md](docs/TREE.md): the definition, and identity.
 - [PATH.md](docs/PATH.md): paths, resolution, and why they do not flatten.
 - [SLOTS.md](docs/SLOTS.md): what can go in the slot, and what each choice buys.
