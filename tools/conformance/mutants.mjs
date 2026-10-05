@@ -1059,7 +1059,7 @@ try {
           const own = r.failures.filter((f) => f.startsWith(`${klass.family}.`));
           const names = own.map((f) => f.split(" ")[1].replace(/:$/, ""));
           r.familyKilled = names;
-          console.log(`    ${klass.family}: ${names.length ? `${names.length} cases red: ${names.join(", ")}` : "no case of the family went red"}`);
+          console.log(`    ${klass.family}: ${names.length ? `${names.length} case${names.length === 1 ? "" : "s"} red: ${names.join(", ")}` : "no case of the family went red"}`);
           if (why) for (const f of own) console.log(`      ${f.length > 400 ? `${f.slice(0, 400)}…` : f}`);
         }
       }

@@ -133,6 +133,39 @@ as an ordered list. Both sides of the law are judged against the one expected re
 CLI that computes only one side fails. The file's description states its case count, and
 the harness refuses the run (exit 2) when the file holds a different number.
 
+## Projection protocol (`deixis-projection-scripted`)
+
+[`projection.mjs`](projection.mjs) replays
+[`projection-scripted.json`](../../vectors/projection-scripted.json): the projection of
+[IDENTITY.md](../../IDENTITY.md) ID9, its composition inside one tree (ID10), and the rows of
+ID2 and ID4 it rests on. Projection is not a deixis API (ID8). Each CLI answers these
+operations from a scripted harness over its core's native node, which it builds and reads
+through compose, decompose and at only. A node's own value is a capability id, spelled as hex.
+A fixture is initialised from `node` and `world`: one live capability object per distinct id,
+used as the own value wherever that id occurs, and a fresh log. `world` is
+`[[hex id, behaviour], …]`, a behaviour being `{"ok": s}`, `{"refused": r}`, `{"fault": c}` or
+`{"count": {}}` (it answers `{"ok": "<n>"}`, n the number of invocations that object has
+received). An id the world does not list faults as `unscripted`. Every invocation appends
+`[hex id, hex args]` to the log; the argument bytes reach the capability unchanged.
+`lift(N, p, args)` answers `{"missing-path": {}}` without invoking anything when `at(N, p)` is
+absent, and otherwise invokes the selected node's own capability exactly once.
+
+| op | request fields | response |
+| --- | --- | --- |
+| `projection.lift` | `node`, `world`, `path`, `args` | a result: `{"outcome": o, "invocations": [[hex id, hex args], …]}` |
+| `projection.lift-cut` | `node`, `world`, `prefix`, `suffix`, `args` | a result: `{"select-then-lift": r, "lift-concat": r}`, each `r` an `{outcome, invocations}` pair from its own fixture |
+| `projection.lift-sequence` | `node`, `world`, `steps` (`[[path, hex args], …]`), `reconstruct` | a result: `{"outcomes": [o, …], "invocations": […]}` from one fixture, rebuilt through decompose and compose first when `reconstruct` is true |
+| `projection.keys-after-mutation` | `node` (plain hex own values), `probes` | a result: `{"found": [bool, …]}`, after every key buffer the harness handed to compose was XORed with `ff` |
+
+An outcome is `{"ok": s}`, `{"refused": r}`, `{"fault": c}` or `{"missing-path": {}}`, and
+compares exactly. A log compares as an ordered list. Both sides of `lift-cut` are judged
+against the one expected pair, so a CLI that computes only one side, or both on one fixture,
+fails. `keys-after-mutation` hands compose buffers the harness can still write: a `bytearray`
+in Python, a `[]byte` in Go, a `Uint8Array` in TypeScript, and a `Vec<u8>` by reference in
+Rust, whose `Node` keeps owned keys and so copies by construction; there the two cases pass
+trivially. The file's description states its case count, and the harness refuses the run
+(exit 2) when the file holds a different number.
+
 ## Codec protocol (`deixis-codec-v2`)
 
 **Specified 2026-09-23; replayed on every run since all four CLIs serve it.** The harness
@@ -246,12 +279,14 @@ control run at 209/209 in each implementation.
 `node-*.json` files exercise its explicit optional specialization.
 `identity.json` and `set.json` are replayed through E on
 `embedded` requests, under the laws that pin them. `positional.json` spells keys and is
-replayed as it is. `binding-scripted.json` is replayed through `binding.mjs`. The four
-`codec-v2-*.json` files are replayed through `codec.mjs`.
+replayed as it is. `binding-scripted.json` is replayed through `binding.mjs`, and
+`projection-scripted.json` through `projection.mjs`. The four `codec-v2-*.json` files are
+replayed through `codec.mjs`.
 Indexed and not replayed, and said on every run: the four v1 codec files, because
 `deixis-codec-v1` is withdrawn and never had an implementation, and `invalid.json`, the previous
 model's construction refusals, because no law re-reads it in the optional specialization. Replaying
 it through E anyway would check an expectation that no fixture states; `node-invalid.json`
-pins duplicate-key refusals in that specialization. The current total is 3220
-requests per implementation over 23 replayed files, 2833 of them the v2 codec's and 19 the
-binding family's, and the envelope drive adds 13 checks: 3233 per implementation.
+pins duplicate-key refusals in that specialization. The current total is 3248
+requests per implementation over 24 replayed files, 2833 of them the v2 codec's, 19 the
+binding family's and 28 the projection family's, and the envelope drive adds 13 checks: 3261
+per implementation.

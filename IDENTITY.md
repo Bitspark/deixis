@@ -108,7 +108,9 @@ equality; a caller's key buffer mutated after binding that changes what was boun
   whose status reads "decided" and names no decider.
 - **Evidence:** stated: [TREE.md](docs/TREE.md), [PATH.md](docs/PATH.md), and the paper's
   `rem:prefixfree` on why paths do not flatten.
-- **Coverage:** `mnode-navigation` (`m-nav-empty-key-path`, `m-nav-non-utf8-key-exact`).
+- **Coverage:** `mnode-navigation` (`m-nav-empty-key-path`, `m-nav-non-utf8-key-exact`);
+  `projection-scripted`'s two `keys-after-mutation` cases, in which the caller's key buffers
+  are overwritten after compose and the tree keeps the keys it was given.
 
 ### ID3. Selection
 
@@ -159,7 +161,9 @@ as a complete node.
   "An addressed-only access facade is not a `WireTree` or `DataTree`: it omits the complete
   structure."
 - **Evidence:** proved: `prop:parts`. stated: [TREE.md](docs/TREE.md), § Growth.
-- **Coverage:** `mnode-parts`, `mnode-attach`.
+- **Coverage:** `mnode-parts`, `mnode-attach`; `projection-scripted`'s reconstruction cases
+  (`proj-seq-aliasing-survives-reconstruction` and its pair), in which a tree of live
+  capabilities rebuilt through decompose and compose keeps each handle and its aliasing.
 
 ### ID5. Slot independence
 
@@ -286,8 +290,12 @@ operation's refusal as absence.
   `send(tree, path, message) = select(tree, path).own().send(message)`, "derivations, not
   alternate routing laws".
 - **Evidence:** derived from ID3. stated: [WIRES.md](docs/WIRES.md).
-- **Coverage:** not yet. A projection family is planned (ADR 0015 §7): zero invocations on
-  absence, exactly one on presence, unchanged argument and handle identity, at every cut.
+- **Coverage:** [`projection-scripted`](vectors/projection-scripted.json), replayed by all four
+  cores: zero invocations on absence, exactly one on presence, unchanged argument and handle
+  identity, refusal and fault kept apart from absence, at every cut. Projection is not a
+  deixis API, so each conformance CLI answers it from a scripted harness over its core's
+  compose, decompose and at: the family checks the cores under the projection, not a
+  projection library.
 
 ### ID10. Composition inside one tree
 
@@ -310,7 +318,9 @@ between corresponding fixtures.
 - **Contract status:** accepted, ADR 0015.
 - **Authority:** derived construction.
 - **Evidence:** derived from ID3 and ID9.
-- **Coverage:** not yet; with ID9's family, plus an effects-and-aliases family.
+- **Coverage:** `projection-scripted`, under the observation model its description declares:
+  `lift-cut` judges both sides of the law, each on a separately initialised fixture, at every
+  cut of a three-key path; `lift-sequence` checks effects and aliases within one fixture.
 
 ### ID11. Prefix composition across a boundary
 
