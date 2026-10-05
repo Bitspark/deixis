@@ -20,7 +20,11 @@
 //   - Every planted file is restored byte for byte, and the run refuses to start on a
 //     core with uncommitted changes, so a crashed run can never leave a defect behind.
 //
-// Usage: node tools/conformance/mutants.mjs [--only=py,ts,go,rs] [--class=<substring>]
+// Usage: node tools/conformance/mutants.mjs [--only=py,ts,go,rs] [--class=<substring>[,<substring>…]] [--why]
+//
+// A class written with one vector family names it (`family`): each of its kills then lists
+// which of that family's cases went red, and --why prints their failures, so a plant the
+// family catches is told apart from one that only another family notices.
 
 import { spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -32,7 +36,8 @@ const path = (file) => new URL(file, ROOT);
 const arg = (name) =>
   process.argv.find((a) => a.startsWith(`--${name}=`))?.slice(name.length + 3);
 const only = arg("only")?.split(",");
-const classFilter = arg("class");
+const classFilters = arg("class")?.split(",");
+const why = process.argv.includes("--why");
 
 // --- the cores ------------------------------------------------------------------------------
 
@@ -222,6 +227,18 @@ const keyOrderSites = (name, as) => [
     edits: [{ file: "core/py/deixis_codec.py", old: "key=lambda e: e[0]", new: `key=lambda e: ${as("e[0]")}` }],
   },
 ].map((m) => ({ ...m, class: name }));
+
+// The projection family's classes report which of its cases each plant turned red.
+const PROJECTION = "projection";
+// TypeScript's structural compose() is the binding for foreign trees (ADR 0013 §10). The
+// conformance CLIs build native Nodes, so no corpus request reaches it; core/ts's unit tests do.
+const STRUCTURAL = "compose() is the structural binding for foreign trees, which no conformance CLI builds through";
+// A defensive shallow copy of an own value, keeping its prototype, so the copy still works and
+// only its state diverges. Typed arrays and arrays are copied as what they are.
+const TS_COPY = (x) =>
+  "((v: T): T => { if (typeof v !== \"object\" || v === null) return v; const o: object = v; " +
+  "return (ArrayBuffer.isView(o) ? (o as Uint8Array).slice() : Array.isArray(o) ? [...o] : " +
+  `Object.assign(Object.create(Object.getPrototypeOf(o)), o)) as T; })(${x})`;
 
 const CLASSES = [
   {
@@ -430,6 +447,122 @@ const CLASSES = [
       },
     ].map((m) => ({ ...m, class: "unused-link acceptance" })),
   },
+  // --- the projection family's defects (vectors/projection-scripted.json, IDENTITY.md ID2, ID3,
+  // ID4). Its harnesses build trees of live capability objects through compose and read them
+  // through at, so each of these core defects is observable there as an invocation, a count or
+  // a key. Go's and Rust's sites are in their catalogues below.
+  {
+    name: "selection fallback on a miss",
+    family: PROJECTION,
+    where: {
+      py: /return self\._entries\[index\]\[1\]\n\s*return None|node = node\.get\(key\)/g,
+      ts: /return undefined;\n  \}\n\n  \/\*\*\n   \* Children in|node = node\.get\(key\);|if \(child === undefined\) return undefined;/g,
+    },
+    mutants: [
+      {
+        core: "py",
+        site: "node model: child lookup (get)",
+        // A missing child defaults to the parent itself.
+        edits: [{ file: "core/py/deixis_core.py", old: "            return self._entries[index][1]\n        return None\n", new: "            return self._entries[index][1]\n        return self\n" }],
+      },
+      {
+        core: "py",
+        site: "node model: path selection (at)",
+        // A miss stays at the ancestor reached, and selection goes on from there.
+        edits: [{ file: "core/py/deixis_core.py", old: "            node = node.get(key)\n", new: "            node = node.get(key) or node\n" }],
+      },
+      {
+        core: "ts",
+        site: "node model: child lookup (get)",
+        edits: [{ file: "core/ts/src/index.ts", old: "    return undefined;\n  }\n\n  /**\n   * Children in", new: "    return this;\n  }\n\n  /**\n   * Children in" }],
+      },
+      {
+        core: "ts",
+        site: "node model: path selection (at)",
+        edits: [{
+          file: "core/ts/src/index.ts",
+          old: "      node = node.get(key);\n      if (node === undefined) return undefined;\n",
+          new: "      const child: Node<T> | undefined = node!.get(key);\n      if (child === undefined) return node!;\n      node = child;\n",
+        }],
+      },
+      {
+        core: "ts",
+        site: "structural binding compose(): at",
+        outside: STRUCTURAL,
+        edits: [{ file: "core/ts/src/index.ts", old: "        if (child === undefined) return undefined;\n", new: "        if (child === undefined) return current;\n" }],
+      },
+    ].map((m) => ({ ...m, class: "selection fallback on a miss" })),
+  },
+  {
+    name: "own value copied by compose or decompose",
+    family: PROJECTION,
+    where: {
+      py: /return cls\(own, tuple\(owned\)\)|return self\._own, list\(self\._entries\)/g,
+      ts: /new Node<T>\(own, owned\)|own: this\.#own, children|own: \(\) => own|\(\{ own, children: node\.children\(\) \}\)/g,
+    },
+    mutants: [
+      {
+        core: "py",
+        site: "node model: construction (compose)",
+        edits: [{ file: "core/py/deixis_core.py", old: "        return cls(own, tuple(owned))\n", new: '        return cls(__import__("copy").copy(own), tuple(owned))\n' }],
+      },
+      {
+        core: "py",
+        site: "node model: parts (decompose)",
+        edits: [{ file: "core/py/deixis_core.py", old: "        return self._own, list(self._entries)\n", new: '        return __import__("copy").copy(self._own), list(self._entries)\n' }],
+      },
+      {
+        core: "ts",
+        site: "node model: construction (Node.compose)",
+        edits: [{ file: "core/ts/src/index.ts", old: "    return new Node<T>(own, owned);\n", new: `    return new Node<T>(${TS_COPY("own")}, owned);\n` }],
+      },
+      {
+        core: "ts",
+        site: "node model: parts (decompose)",
+        edits: [{ file: "core/ts/src/index.ts", old: "    return { own: this.#own, children: this.entries() };\n", new: `    return { own: ${TS_COPY("this.#own")}, children: this.entries() };\n` }],
+      },
+      {
+        core: "ts",
+        site: "structural binding compose(): own and decompose",
+        outside: STRUCTURAL,
+        edits: [
+          { file: "core/ts/src/index.ts", old: "    own: () => own,\n", new: `    own: () => ${TS_COPY("own")},\n` },
+          { file: "core/ts/src/index.ts", old: "    decompose: () => ({ own, children: node.children() }),\n", new: `    decompose: () => ({ own: ${TS_COPY("own")}, children: node.children() }),\n` },
+        ],
+        probeAt: { file: "core/ts/src/index.ts", old: "  const node: DeixisNode<T> = {\n" },
+      },
+    ].map((m) => ({ ...m, class: "own value copied by compose or decompose" })),
+  },
+  {
+    name: "caller key buffer kept by compose",
+    family: PROJECTION,
+    where: {
+      py: /\(bytes\(key\), node\)/g,
+      ts: /owned\.push\(\[Uint8Array\.from\(key\), node\]\)|Array\.from\(children, \(\[key, child\]\) => \[Uint8Array\.from\(key\), child\] as const\)/g,
+    },
+    mutants: [
+      {
+        core: "py",
+        site: "node model: construction (compose)",
+        edits: [{ file: "core/py/deixis_core.py", old: "            ((bytes(key), node) for key, node in children),\n", new: "            ((key, node) for key, node in children),\n" }],
+      },
+      {
+        core: "ts",
+        site: "node model: construction (Node.compose)",
+        edits: [{ file: "core/ts/src/index.ts", old: "      owned.push([Uint8Array.from(key), node]);\n", new: "      owned.push([key, node]);\n" }],
+      },
+      {
+        core: "ts",
+        site: "structural binding compose(): construction",
+        outside: STRUCTURAL,
+        edits: [{
+          file: "core/ts/src/index.ts",
+          old: "  const entries = Array.from(children, ([key, child]) => [Uint8Array.from(key), child] as const);\n",
+          new: "  const entries = Array.from(children, ([key, child]) => [key, child] as const);\n",
+        }],
+      },
+    ].map((m) => ({ ...m, class: "caller key buffer kept by compose" })),
+  },
 ];
 
 // Go's catalogue, by class. Go differs from the others in ways the plants must respect: its
@@ -440,6 +573,11 @@ const GO_SIGNED =
   "func(x, y []byte) int { for i := 0; i < min(len(x), len(y)); i++ { if d := int(int8(x[i])) - int(int8(y[i])); d != 0 { return d } }; return len(x) - len(y) }";
 const GO_SORT = (entries) =>
   `\t\tfor a := 1; a < len(${entries}); a++ { for b := a; b > 0 && bytes.Compare(${entries}[b-1].Key, ${entries}[b].Key) > 0; b-- { ${entries}[b-1], ${entries}[b] = ${entries}[b], ${entries}[b-1] } }\n`;
+// A shallow copy of a pointer own value through reflection: the copy works, and only its state
+// diverges. Other own values are left alone. The import goes in with the plant that uses it.
+const GO_COPY = (x) =>
+  `func(v T) T { r := reflect.ValueOf(&v).Elem(); if r.Kind() == reflect.Pointer && !r.IsNil() { c := reflect.New(r.Elem().Type()); c.Elem().Set(r.Elem()); r.Set(c) }; return v }(${x})`;
+const GO_REFLECT = { file: "core/go/deixis.go", old: '\t"fmt"\n\t"slices"\n)\n', new: '\t"fmt"\n\t"reflect"\n\t"slices"\n)\n' };
 const GO = {
   "signed-byte key comparison": {
     where: /bytes\.Compare\b/g,
@@ -573,6 +711,41 @@ const GO = {
       site: "linked chunk parse: link use check",
       edits: [{ file: "core/go/codec_linked.go", old: "\tif used < nlinks {\n", new: "\tif false {\n" }],
       covers: [{ file: "core/go/codec_linked.go", old: "\tif used < nlinks {\n\t\treturn nil, invalid(CodeUnusedLink)\n" }],
+    }],
+  },
+  "selection fallback on a miss": {
+    where: /return Node\[T\]\{\}, false/g,
+    sites: [
+      {
+        site: "node model: child lookup (Get)",
+        // A missing child defaults to the parent itself.
+        edits: [{ file: "core/go/deixis.go", old: "\tif !found {\n\t\treturn Node[T]{}, false\n\t}\n", new: "\tif !found {\n\t\treturn n, true\n\t}\n" }],
+      },
+      {
+        site: "node model: path selection (At)",
+        // A miss answers the ancestor reached.
+        edits: [{ file: "core/go/deixis.go", old: "\t\tif !ok {\n\t\t\treturn Node[T]{}, false\n\t\t}\n", new: "\t\tif !ok {\n\t\t\treturn node, true\n\t\t}\n" }],
+      },
+    ],
+  },
+  "own value copied by compose or decompose": {
+    where: /own: own, entries: owned|return n\.own, n\.Entries\(\)/g,
+    sites: [
+      {
+        site: "node model: construction (Compose)",
+        edits: [{ file: "core/go/deixis.go", old: "\treturn Node[T]{own: own, entries: owned}, nil\n", new: `\treturn Node[T]{own: ${GO_COPY("own")}, entries: owned}, nil\n` }, GO_REFLECT],
+      },
+      {
+        site: "node model: parts (Decompose)",
+        edits: [{ file: "core/go/deixis.go", old: "\treturn n.own, n.Entries()\n", new: `\treturn ${GO_COPY("n.own")}, n.Entries()\n` }, GO_REFLECT],
+      },
+    ],
+  },
+  "caller key buffer kept by compose": {
+    where: /Key: bytes\.Clone\(child\.Key\)/g,
+    sites: [{
+      site: "node model: construction (Compose)",
+      edits: [{ file: "core/go/deixis.go", old: "\t\towned[i] = Entry[T]{Key: bytes.Clone(child.Key), Node: child.Node}\n", new: "\t\towned[i] = Entry[T]{Key: child.Key, Node: child.Node}\n" }],
     }],
   },
 };
@@ -714,6 +887,35 @@ const RS = {
       covers: [{ file: "core/rs/src/codec/linked.rs", old: "    if unused < nlinks {\n        return Err(Fault::UnusedLink.into());\n" }],
     }],
   },
+  "selection fallback on a miss": {
+    where: /\.ok\(\)\n\s*\.map\(\|i\| &self\.entries\[i\]\.1\)|node = node\.get\(key\.as_ref\(\)\)\?;/g,
+    sites: [
+      {
+        site: "node model: child lookup (Children::get)",
+        // Children::get cannot reach its parent, so a miss defaults to the first child.
+        edits: [{
+          file: "core/rs/src/lib.rs",
+          old: "        self.entries\n            .binary_search_by(|(k, _)| k.as_ref().cmp(key))\n            .ok()\n            .map(|i| &self.entries[i].1)\n",
+          new: "        self.entries\n            .binary_search_by(|(k, _)| k.as_ref().cmp(key))\n            .map_or(self.entries.first(), |i| self.entries.get(i))\n            .map(|(_, node)| node)\n",
+        }],
+      },
+      {
+        site: "node model: path selection (Node::at)",
+        // A miss answers the ancestor reached.
+        edits: [{
+          file: "core/rs/src/lib.rs",
+          old: "            node = node.get(key.as_ref())?;\n",
+          new: "            node = match node.get(key.as_ref()) {\n                Some(child) => child,\n                None => return Some(node),\n            };\n",
+        }],
+      },
+    ],
+  },
+  "own value copied by compose or decompose": {
+    inexpressible: "compose and decompose take T with no Clone bound, and the crate forbids unsafe code, so the core cannot copy an own value; it can only move it",
+  },
+  "caller key buffer kept by compose": {
+    inexpressible: "Node keeps owned keys (Box<[u8]>) and has no lifetime parameter, so compose must copy each key out of the caller's AsRef<[u8]>; it cannot retain the buffer",
+  },
 };
 
 for (const [core, catalogue] of [["go", GO], ["rs", RS]]) {
@@ -722,6 +924,7 @@ for (const [core, catalogue] of [["go", GO], ["rs", RS]]) {
     if (!entry) continue;
     if (entry.where) klass.where[core] = entry.where;
     if (entry.equivalent) (klass.equivalent ??= {})[core] = entry.equivalent;
+    if (entry.inexpressible) (klass.inexpressible ??= {})[core] = entry.inexpressible;
     klass.mutants.push(...(entry.sites ?? []).map((m) => ({ ...m, core, class: klass.name })));
   }
 }
@@ -784,7 +987,7 @@ function uncovered(klass, core) {
 
 // The harness against one core: a kill is a failed check, anything else is not.
 function judge(core) {
-  const r = run("node", ["tools/conformance/harness.mjs", `--only=${core}`]);
+  const r = run("node", ["tools/conformance/harness.mjs", `--only=${core}`, "--all-failures"]);
   const line = r.out.split(/\r?\n/).find((l) => l.startsWith(`✔ ${core}:`) || l.startsWith(`✖ ${core}:`));
   const tally = line?.match(/: (\d+)\/(\d+)$/);
   if (r.status === 0 && tally) return { outcome: "survived", passed: Number(tally[1]), total: Number(tally[2]) };
@@ -798,7 +1001,7 @@ function judge(core) {
 // --- main ------------------------------------------------------------------------------------
 
 const cores = Object.keys(CORES).filter((c) => !only || only.includes(c));
-const classes = CLASSES.filter((k) => !classFilter || k.name.includes(classFilter));
+const classes = CLASSES.filter((k) => !classFilters || classFilters.some((f) => k.name.includes(f)));
 
 for (const core of cores) {
   const dirty = run("git", ["status", "--porcelain", "--", ...CORES[core].files]).out.trim();
@@ -851,6 +1054,14 @@ try {
           : r.outcome === "survived" ? `SURVIVED: no corpus check failed (site ${r.reach} by the corpus)`
           : `no verdict: ${r.detail}`;
         console.log(`  ${mutant.class} @ ${mutant.site}: ${said}`);
+        if (klass.family && r.outcome === "killed") {
+          // A failure line is "<op> <case name>: <reason>"; case names hold no spaces.
+          const own = r.failures.filter((f) => f.startsWith(`${klass.family}.`));
+          const names = own.map((f) => f.split(" ")[1].replace(/:$/, ""));
+          r.familyKilled = names;
+          console.log(`    ${klass.family}: ${names.length ? `${names.length} case${names.length === 1 ? "" : "s"} red: ${names.join(", ")}` : "no case of the family went red"}`);
+          if (why) for (const f of own) console.log(`      ${f.length > 400 ? `${f.slice(0, 400)}…` : f}`);
+        }
       }
     }
   }
@@ -897,8 +1108,10 @@ for (const s of survived) console.log(`  survivor: ${s.core} ${s.class} @ ${s.si
 for (const t of thin) console.log(`  thin: ${t.core} ${t.class} @ ${t.site}, killed by ${t.failed} of ${t.total} checks`);
 for (const core of cores) {
   for (const klass of classes) {
-    const why = klass.equivalent?.[core];
-    if (why) console.log(`  not planted: ${core} ${klass.name}, an equivalent mutant (${why})`);
+    const equivalent = klass.equivalent?.[core];
+    if (equivalent) console.log(`  not planted: ${core} ${klass.name}, an equivalent mutant (${equivalent})`);
+    const inexpressible = klass.inexpressible?.[core];
+    if (inexpressible) console.log(`  not planted: ${core} ${klass.name}, inexpressible in that core (${inexpressible})`);
   }
 }
 process.exit(survived.length || unjudged.length ? 1 : 0);

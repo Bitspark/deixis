@@ -784,6 +784,8 @@ func main() {
 			response, err = handleMandatory(line)
 		} else if strings.HasPrefix(envelope.Op, "binding.") {
 			response, err = handleBinding(line)
+		} else if strings.HasPrefix(envelope.Op, "projection.") {
+			response, err = handleProjection(line)
 		} else if strings.HasPrefix(envelope.Op, "codec.") {
 			response, err = handleCodec(line)
 		} else {

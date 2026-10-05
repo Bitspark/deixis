@@ -1,0 +1,290 @@
+{
+  "description": "deixis scripted projection vectors — the projection of IDENTITY.md ID9 and its composition inside one tree, ID10, with the rows of ID2 (a caller's key buffer) and ID4 (reconstruction keeps handles and aliasing) that the projection rests on, run on each core's native Node[T]. Projection is not a deixis API (ID8: invocation adds zero interface to deixis): each conformance CLI carries a scripted harness that builds and reads every tree through the core's own compose, decompose and at. A node is {\"own\": …, \"children\": [[<hex key>, <node>], …]}, the spelling of vectors/MNODE-PLAN.md; paths are arrays of hex keys, and [] is ε. In every op but keys-after-mutation an own value is a capability id, a byte string spelled as hex. A fixture is initialised from node and world: the harness creates one live capability object per distinct id in node and builds the tree with those objects as own values, so two positions holding one id hold one object. world is a script, [[<hex id>, <behaviour>], …]. A behaviour is {\"ok\": <string>}, {\"refused\": <reason>}, {\"fault\": <cause>}, or {\"count\": {}}, which answers {\"ok\": \"<n>\"}, n being the number of invocations that object has received in this fixture, counted from 1, in decimal. An id that world does not list behaves as {\"fault\": \"unscripted\"}. args is a byte string spelled as hex and reaches the capability unchanged. Every invocation appends [<the invoked object's id>, <the argument bytes it received>] to the fixture's log, both as hex. lift(N, p, args) answers {\"missing-path\": {}} and invokes nothing when at(N, p) is absent; otherwise it invokes the own capability of the selected node exactly once with args and answers that invocation's outcome. The observation model O that ID10's ≃_O compares under: observed are each lift's outcome and the fixture's log, which capability object by id, with which arguments, in which order; not observed are timing, the identity of a result object, and the harness's internals. op lift initialises a fixture, lifts path with args and answers {\"outcome\": …, \"invocations\": <the log>}. op lift-cut answers both sides of ID10, {\"select-then-lift\": r, \"lift-concat\": r}, each on its own separately initialised fixture, with fresh capability objects and a fresh log. select-then-lift answers {\"missing-path\": {}} and invokes nothing when at(N, prefix) is absent, and is otherwise lift(at(N, prefix), suffix, args); lift-concat is lift(N, prefix ++ suffix, args). Each side must equal result, one {\"outcome\", \"invocations\"} pair, so a CLI that computes only one side fails. op lift-sequence initialises one fixture and runs steps, [[<path>, <args>], …], in order. When reconstruct is true it first rebuilds the whole tree, every node recursively, through the core's decompose and then compose. It answers {\"outcomes\": [one outcome per step], \"invocations\": <the log>}. op keys-after-mutation has plain hex own values and no capabilities. The harness builds node from key buffers that it owns and can mutate (bytearray, []byte, Vec<u8> or Uint8Array, whichever the core's compose accepts), then overwrites every one of those buffers in place, each byte XORed with ff, and answers {\"found\": [whether at(N, probe) is present, one per probe]}. Hand-authored from IDENTITY.md as merged in 9f13b50 (ID2, ID3, ID4, ID6, ID9, ID10), with vectors/MNODE-PLAN.md for spelling, and from nothing else. No implementation of these operations existed when they were written. pins are fragments of IDENTITY.md that each judgment rests on, checked by tools/pincheck.py. Each note names the defect it catches. 28 cases.",
+  "profile": "deixis-projection-scripted",
+  "spec": "IDENTITY.md",
+  "cases": [
+    {
+      "name": "proj-lift-root-at-epsilon",
+      "op": "lift",
+      "node": { "own": "726f6f74", "children": [["61", { "own": "6d6964", "children": [["6a", { "own": "6c656166", "children": [] }]] }], ["", { "own": "656d707479", "children": [] }], ["612f62", { "own": "736c617368", "children": [] }], ["72", { "own": "6e6f", "children": [["6b", { "own": "64656570", "children": [] }]] }], ["66", { "own": "6f6f7073", "children": [] }]] },
+      "world": [["726f6f74", { "ok": "root" }], ["6d6964", { "ok": "mid" }], ["6c656166", { "ok": "leaf" }], ["656d707479", { "ok": "empty" }], ["736c617368", { "ok": "slash" }], ["6e6f", { "refused": "not-permitted" }], ["64656570", { "ok": "deep" }], ["6f6f7073", { "fault": "broken" }]],
+      "path": [], "args": "",
+      "result": { "outcome": { "ok": "root" }, "invocations": [["726f6f74", ""]] },
+      "pins": ["`at(N, ε) = N`.", "otherwise `m(t, x)` with `t` the own value of the selected node."],
+      "note": "ID3, ID9: ε selects the root itself, so the root's own capability is invoked, once, with the empty argument string. Catches ε treated as a miss, as the empty key or as a first child, and an empty argument read as no invocation."
+    },
+    {
+      "name": "proj-lift-interior-node-invokes-its-own-capability",
+      "op": "lift",
+      "node": { "own": "726f6f74", "children": [["61", { "own": "6d6964", "children": [["6a", { "own": "6c656166", "children": [] }]] }], ["", { "own": "656d707479", "children": [] }], ["612f62", { "own": "736c617368", "children": [] }], ["72", { "own": "6e6f", "children": [["6b", { "own": "64656570", "children": [] }]] }], ["66", { "own": "6f6f7073", "children": [] }]] },
+      "world": [["726f6f74", { "ok": "root" }], ["6d6964", { "ok": "mid" }], ["6c656166", { "ok": "leaf" }], ["656d707479", { "ok": "empty" }], ["736c617368", { "ok": "slash" }], ["6e6f", { "refused": "not-permitted" }], ["64656570", { "ok": "deep" }], ["6f6f7073", { "fault": "broken" }]],
+      "path": ["61"], "args": "6869",
+      "result": { "outcome": { "ok": "mid" }, "invocations": [["6d6964", "6869"]] },
+      "pins": ["otherwise `m(t, x)` with `t` the own value of the selected node.", "Otherwise it initiates exactly one invocation of the selected operation"],
+      "note": "ID9: [61] holds its own capability mid and has the child leaf at [61, 6a]. lift invokes the selected node's own value and nothing else. Catches invoking a child's capability (descending to a leaf), the root's, or every capability in the selected subtree."
+    },
+    {
+      "name": "proj-lift-missing-child-is-missing-path",
+      "op": "lift",
+      "node": { "own": "726f6f74", "children": [["61", { "own": "6d6964", "children": [["6a", { "own": "6c656166", "children": [] }]] }], ["", { "own": "656d707479", "children": [] }], ["612f62", { "own": "736c617368", "children": [] }], ["72", { "own": "6e6f", "children": [["6b", { "own": "64656570", "children": [] }]] }], ["66", { "own": "6f6f7073", "children": [] }]] },
+      "world": [["726f6f74", { "ok": "root" }], ["6d6964", { "ok": "mid" }], ["6c656166", { "ok": "leaf" }], ["656d707479", { "ok": "empty" }], ["736c617368", { "ok": "slash" }], ["6e6f", { "refused": "not-permitted" }], ["64656570", { "ok": "deep" }], ["6f6f7073", { "fault": "broken" }]],
+      "path": ["62"], "args": "01",
+      "result": { "outcome": { "missing-path": {} }, "invocations": [] },
+      "pins": ["`lift_m(N, p, x)` is `MissingPath` when `at(N, p)` is absent", "On absence it invokes no slot"],
+      "note": "ID9: the root has no child 62, so the answer is MissingPath and the log stays empty. Catches a fallback to the root or to a default capability (root ran, or any other outcome), and an invocation made before or instead of resolving the path."
+    },
+    {
+      "name": "proj-lift-below-a-childless-node-is-missing-path",
+      "op": "lift",
+      "node": { "own": "726f6f74", "children": [["61", { "own": "6d6964", "children": [["6a", { "own": "6c656166", "children": [] }]] }], ["", { "own": "656d707479", "children": [] }], ["612f62", { "own": "736c617368", "children": [] }], ["72", { "own": "6e6f", "children": [["6b", { "own": "64656570", "children": [] }]] }], ["66", { "own": "6f6f7073", "children": [] }]] },
+      "world": [["726f6f74", { "ok": "root" }], ["6d6964", { "ok": "mid" }], ["6c656166", { "ok": "leaf" }], ["656d707479", { "ok": "empty" }], ["736c617368", { "ok": "slash" }], ["6e6f", { "refused": "not-permitted" }], ["64656570", { "ok": "deep" }], ["6f6f7073", { "fault": "broken" }]],
+      "path": ["612f62", "00"], "args": "01",
+      "result": { "outcome": { "missing-path": {} }, "invocations": [] },
+      "pins": ["a fallback to an ancestor or a default", "On absence it invokes no slot"],
+      "note": "ID3, ID9: selection reaches [612f62], which has no children, and misses one key below it. Catches a fallback to the deepest node reached, which would invoke slash and answer ok, and a child invented below a childless node."
+    },
+    {
+      "name": "proj-lift-empty-key-is-not-epsilon",
+      "op": "lift",
+      "node": { "own": "726f6f74", "children": [["61", { "own": "6d6964", "children": [["6a", { "own": "6c656166", "children": [] }]] }], ["", { "own": "656d707479", "children": [] }], ["612f62", { "own": "736c617368", "children": [] }], ["72", { "own": "6e6f", "children": [["6b", { "own": "64656570", "children": [] }]] }], ["66", { "own": "6f6f7073", "children": [] }]] },
+      "world": [["726f6f74", { "ok": "root" }], ["6d6964", { "ok": "mid" }], ["6c656166", { "ok": "leaf" }], ["656d707479", { "ok": "empty" }], ["736c617368", { "ok": "slash" }], ["6e6f", { "refused": "not-permitted" }], ["64656570", { "ok": "deep" }], ["6f6f7073", { "fault": "broken" }]],
+      "path": [""], "args": "01",
+      "result": { "outcome": { "ok": "empty" }, "invocations": [["656d707479", "01"]] },
+      "pins": ["from a one-element path containing the empty key."],
+      "note": "ID2: the path of one empty key selects the root's child at the empty key, not the root. The pair to proj-lift-root-at-epsilon. Catches [\"\"] read as ε (root ran) and the empty key treated as no key at all (missing-path)."
+    },
+    {
+      "name": "proj-lift-slash-key-is-one-key",
+      "op": "lift",
+      "node": { "own": "726f6f74", "children": [["61", { "own": "6d6964", "children": [["6a", { "own": "6c656166", "children": [] }]] }], ["", { "own": "656d707479", "children": [] }], ["612f62", { "own": "736c617368", "children": [] }], ["72", { "own": "6e6f", "children": [["6b", { "own": "64656570", "children": [] }]] }], ["66", { "own": "6f6f7073", "children": [] }]] },
+      "world": [["726f6f74", { "ok": "root" }], ["6d6964", { "ok": "mid" }], ["6c656166", { "ok": "leaf" }], ["656d707479", { "ok": "empty" }], ["736c617368", { "ok": "slash" }], ["6e6f", { "refused": "not-permitted" }], ["64656570", { "ok": "deep" }], ["6f6f7073", { "fault": "broken" }]],
+      "path": ["612f62"], "args": "01",
+      "result": { "outcome": { "ok": "slash" }, "invocations": [["736c617368", "01"]] },
+      "pins": ["a key containing a separator read as two keys"],
+      "note": "ID2: 612f62 is a/b, one key holding a slash byte, and the path has length one. Catches the key split at its 2f byte into [61, 62], which misses (missing-path), and a path kept as a slash-joined string."
+    },
+    {
+      "name": "proj-lift-two-keys-are-not-the-slash-key",
+      "op": "lift",
+      "node": { "own": "726f6f74", "children": [["61", { "own": "6d6964", "children": [["6a", { "own": "6c656166", "children": [] }]] }], ["", { "own": "656d707479", "children": [] }], ["612f62", { "own": "736c617368", "children": [] }], ["72", { "own": "6e6f", "children": [["6b", { "own": "64656570", "children": [] }]] }], ["66", { "own": "6f6f7073", "children": [] }]] },
+      "world": [["726f6f74", { "ok": "root" }], ["6d6964", { "ok": "mid" }], ["6c656166", { "ok": "leaf" }], ["656d707479", { "ok": "empty" }], ["736c617368", { "ok": "slash" }], ["6e6f", { "refused": "not-permitted" }], ["64656570", { "ok": "deep" }], ["6f6f7073", { "fault": "broken" }]],
+      "path": ["61", "62"], "args": "01",
+      "result": { "outcome": { "missing-path": {} }, "invocations": [] },
+      "pins": ["Paths are sequences of keys", "a key containing a separator read as two keys"],
+      "note": "ID2, ID3: [61] exists and has the one child 6a, so [61, 62] is missing, although the root holds the single key 612f62. The pair to proj-lift-slash-key-is-one-key. Catches a path joined with a slash byte and looked up as one key (slash ran), and a fallback to [61] (mid ran)."
+    },
+    {
+      "name": "proj-lift-refusal-is-not-absence",
+      "op": "lift",
+      "node": { "own": "726f6f74", "children": [["61", { "own": "6d6964", "children": [["6a", { "own": "6c656166", "children": [] }]] }], ["", { "own": "656d707479", "children": [] }], ["612f62", { "own": "736c617368", "children": [] }], ["72", { "own": "6e6f", "children": [["6b", { "own": "64656570", "children": [] }]] }], ["66", { "own": "6f6f7073", "children": [] }]] },
+      "world": [["726f6f74", { "ok": "root" }], ["6d6964", { "ok": "mid" }], ["6c656166", { "ok": "leaf" }], ["656d707479", { "ok": "empty" }], ["736c617368", { "ok": "slash" }], ["6e6f", { "refused": "not-permitted" }], ["64656570", { "ok": "deep" }], ["6f6f7073", { "fault": "broken" }]],
+      "path": ["72"], "args": "02",
+      "result": { "outcome": { "refused": "not-permitted" }, "invocations": [["6e6f", "02"]] },
+      "pins": ["distinct from every own value, including one that fails or refuses.", "operation's refusal as absence.", "Selection determines whether dispatch is available, not whether execution succeeds."],
+      "note": "ID3, ID9: [72] exists and its capability no refuses. The refusal is that one invocation's outcome. Catches a refusal reported as missing-path, and a projection that decides availability by asking the slot first and so invokes it twice or not at all."
+    },
+    {
+      "name": "proj-lift-fault-is-neither-absence-nor-refusal",
+      "op": "lift",
+      "node": { "own": "726f6f74", "children": [["61", { "own": "6d6964", "children": [["6a", { "own": "6c656166", "children": [] }]] }], ["", { "own": "656d707479", "children": [] }], ["612f62", { "own": "736c617368", "children": [] }], ["72", { "own": "6e6f", "children": [["6b", { "own": "64656570", "children": [] }]] }], ["66", { "own": "6f6f7073", "children": [] }]] },
+      "world": [["726f6f74", { "ok": "root" }], ["6d6964", { "ok": "mid" }], ["6c656166", { "ok": "leaf" }], ["656d707479", { "ok": "empty" }], ["736c617368", { "ok": "slash" }], ["6e6f", { "refused": "not-permitted" }], ["64656570", { "ok": "deep" }], ["6f6f7073", { "fault": "broken" }]],
+      "path": ["66"], "args": "03",
+      "result": { "outcome": { "fault": "broken" }, "invocations": [["6f6f7073", "03"]] },
+      "pins": ["distinct from every own value, including one that fails or refuses.", "and preserves that operation's"],
+      "note": "ID3, ID9: the capability at [66] faults, and the projection preserves that outcome. Catches a fault reported as missing-path or folded into a refusal, and a retry after the fault (two invocations in the log)."
+    },
+    {
+      "name": "proj-lift-through-a-refusing-node",
+      "op": "lift",
+      "node": { "own": "726f6f74", "children": [["61", { "own": "6d6964", "children": [["6a", { "own": "6c656166", "children": [] }]] }], ["", { "own": "656d707479", "children": [] }], ["612f62", { "own": "736c617368", "children": [] }], ["72", { "own": "6e6f", "children": [["6b", { "own": "64656570", "children": [] }]] }], ["66", { "own": "6f6f7073", "children": [] }]] },
+      "world": [["726f6f74", { "ok": "root" }], ["6d6964", { "ok": "mid" }], ["6c656166", { "ok": "leaf" }], ["656d707479", { "ok": "empty" }], ["736c617368", { "ok": "slash" }], ["6e6f", { "refused": "not-permitted" }], ["64656570", { "ok": "deep" }], ["6f6f7073", { "fault": "broken" }]],
+      "path": ["72", "6b"], "args": "04",
+      "result": { "outcome": { "ok": "deep" }, "invocations": [["64656570", "04"]] },
+      "pins": ["Selection performs no slot operation", "invoking before the path is resolved"],
+      "note": "ID3, ID9: [72] refuses, and selection walks through it to [72, 6b] without invoking it. Catches selection that invokes or consults each own value on the way (no or root in the log, or the refusal propagated), and a refusing node whose subtree reads as absent."
+    },
+    {
+      "name": "proj-lift-arguments-pass-unchanged",
+      "op": "lift",
+      "node": { "own": "726f6f74", "children": [["61", { "own": "6d6964", "children": [["6a", { "own": "6c656166", "children": [] }]] }], ["", { "own": "656d707479", "children": [] }], ["612f62", { "own": "736c617368", "children": [] }], ["72", { "own": "6e6f", "children": [["6b", { "own": "64656570", "children": [] }]] }], ["66", { "own": "6f6f7073", "children": [] }]] },
+      "world": [["726f6f74", { "ok": "root" }], ["6d6964", { "ok": "mid" }], ["6c656166", { "ok": "leaf" }], ["656d707479", { "ok": "empty" }], ["736c617368", { "ok": "slash" }], ["6e6f", { "refused": "not-permitted" }], ["64656570", { "ok": "deep" }], ["6f6f7073", { "fault": "broken" }]],
+      "path": ["61", "6a"], "args": "00ff80c0fe2f",
+      "result": { "outcome": { "ok": "leaf" }, "invocations": [["6c656166", "00ff80c0fe2f"]] },
+      "pins": ["with unchanged arguments and receiver binding", "adding or reinterpreting a routing argument without a declared contract"],
+      "note": "ID9: the argument bytes hold a NUL, ff, a lone continuation byte, an overlong lead byte c0, fe and a slash, so they are not UTF-8, and the capability receives exactly them. Catches arguments decoded and re-encoded as text (replacement characters), truncated at the NUL, and the path or its keys added to the arguments as a routing argument."
+    },
+    {
+      "name": "proj-lift-invokes-exactly-once",
+      "op": "lift",
+      "node": { "own": "726f6f74", "children": [["61", { "own": "6d6964", "children": [["6a", { "own": "6c656166", "children": [] }]] }], ["", { "own": "656d707479", "children": [] }], ["612f62", { "own": "736c617368", "children": [] }], ["72", { "own": "6e6f", "children": [["6b", { "own": "64656570", "children": [] }]] }], ["66", { "own": "6f6f7073", "children": [] }]] },
+      "world": [["726f6f74", { "ok": "root" }], ["6d6964", { "ok": "mid" }], ["6c656166", { "count": {} }], ["656d707479", { "ok": "empty" }], ["736c617368", { "ok": "slash" }], ["6e6f", { "refused": "not-permitted" }], ["64656570", { "ok": "deep" }], ["6f6f7073", { "fault": "broken" }]],
+      "path": ["61", "6a"], "args": "05",
+      "result": { "outcome": { "ok": "1" }, "invocations": [["6c656166", "05"]] },
+      "pins": ["Otherwise it initiates exactly one invocation of the selected operation", "invoking on absence; invoking twice;"],
+      "note": "ID9: leaf is a count capability in a fresh fixture, so the one invocation of the lift answers 1. Catches a projection that invokes twice, for instance once to test availability and once to run (2, two log entries), and a capability whose state survives from an earlier request."
+    },
+    {
+      "name": "proj-lift-unscripted-capability-is-not-absence",
+      "op": "lift",
+      "node": { "own": "726f6f74", "children": [["61", { "own": "6d6964", "children": [["6a", { "own": "6c656166", "children": [] }]] }], ["", { "own": "656d707479", "children": [] }], ["612f62", { "own": "736c617368", "children": [] }], ["72", { "own": "6e6f", "children": [["6b", { "own": "64656570", "children": [] }]] }], ["66", { "own": "6f6f7073", "children": [] }]] },
+      "world": [["726f6f74", { "ok": "root" }], ["6c656166", { "ok": "leaf" }]],
+      "path": ["61"], "args": "06",
+      "result": { "outcome": { "fault": "unscripted" }, "invocations": [["6d6964", "06"]] },
+      "pins": ["distinct from every own value, including one that fails or refuses."],
+      "note": "ID3, and the harness's declared default: world does not list mid, so its capability faults as unscripted, and it is still invoked, because [61] exists. Catches an unlisted capability treated as an absent node (missing-path, no invocation), and a harness whose default outcome differs between languages."
+    },
+    {
+      "name": "proj-cut-at-0",
+      "op": "lift-cut",
+      "node": { "own": "726f6f74", "children": [["61", { "own": "61", "children": [["62", { "own": "6162", "children": [["63", { "own": "616263", "children": [] }]] }], ["63", { "own": "6163", "children": [] }]] }], ["63", { "own": "63", "children": [] }]] },
+      "world": [["726f6f74", { "ok": "root" }], ["61", { "ok": "a" }], ["6162", { "ok": "ab" }], ["616263", { "ok": "abc" }], ["6163", { "refused": "sealed" }], ["63", { "ok": "c" }]],
+      "prefix": [], "suffix": ["61", "62", "63"], "args": "10",
+      "result": { "outcome": { "ok": "abc" }, "invocations": [["616263", "10"]] },
+      "pins": ["`lift_m(at(A, p), q, x) ≃_O lift_m(A, p ++ q, x)`", "`at(N, ε) = N`."],
+      "note": "ID10 at the cut of length 0: select-then-lift selects ε, the root itself, and lifts the whole path from there. Catches an empty prefix treated as a miss, and a select-then-lift side that is not computed (each side is judged)."
+    },
+    {
+      "name": "proj-cut-at-1",
+      "op": "lift-cut",
+      "node": { "own": "726f6f74", "children": [["61", { "own": "61", "children": [["62", { "own": "6162", "children": [["63", { "own": "616263", "children": [] }]] }], ["63", { "own": "6163", "children": [] }]] }], ["63", { "own": "63", "children": [] }]] },
+      "world": [["726f6f74", { "ok": "root" }], ["61", { "ok": "a" }], ["6162", { "ok": "ab" }], ["616263", { "ok": "abc" }], ["6163", { "refused": "sealed" }], ["63", { "ok": "c" }]],
+      "prefix": ["61"], "suffix": ["62", "63"], "args": "11",
+      "result": { "outcome": { "ok": "abc" }, "invocations": [["616263", "11"]] },
+      "pins": ["`lift_m(at(A, p), q, x) ≃_O lift_m(A, p ++ q, x)`", "a cut of the path that changes which node is selected, or whether one is."],
+      "note": "ID10 at the cut of length 1. Catches a select-then-lift side that lifts the suffix from the original root instead of the selected subtree: the root has no [62, 63], so that side answers missing-path while the other calls."
+    },
+    {
+      "name": "proj-cut-at-2",
+      "op": "lift-cut",
+      "node": { "own": "726f6f74", "children": [["61", { "own": "61", "children": [["62", { "own": "6162", "children": [["63", { "own": "616263", "children": [] }]] }], ["63", { "own": "6163", "children": [] }]] }], ["63", { "own": "63", "children": [] }]] },
+      "world": [["726f6f74", { "ok": "root" }], ["61", { "ok": "a" }], ["6162", { "ok": "ab" }], ["616263", { "ok": "abc" }], ["6163", { "refused": "sealed" }], ["63", { "ok": "c" }]],
+      "prefix": ["61", "62"], "suffix": ["63"], "args": "12",
+      "result": { "outcome": { "ok": "abc" }, "invocations": [["616263", "12"]] },
+      "pins": ["`lift_m(at(A, p), q, x) ≃_O lift_m(A, p ++ q, x)`", "a sender bound at `p1` that reaches a different target for `p` than the root"],
+      "note": "ID10 at the cut of length 2. Here the suffix [63] also exists at the root and at [61], so lifting it from the wrong node reaches a different capability (c, or the refusing 6163) instead of failing: a sender bound at [61, 62] reaching a different target than the root does for [61, 62, 63]."
+    },
+    {
+      "name": "proj-cut-at-3",
+      "op": "lift-cut",
+      "node": { "own": "726f6f74", "children": [["61", { "own": "61", "children": [["62", { "own": "6162", "children": [["63", { "own": "616263", "children": [] }]] }], ["63", { "own": "6163", "children": [] }]] }], ["63", { "own": "63", "children": [] }]] },
+      "world": [["726f6f74", { "ok": "root" }], ["61", { "ok": "a" }], ["6162", { "ok": "ab" }], ["616263", { "ok": "abc" }], ["6163", { "refused": "sealed" }], ["63", { "ok": "c" }]],
+      "prefix": ["61", "62", "63"], "suffix": [], "args": "13",
+      "result": { "outcome": { "ok": "abc" }, "invocations": [["616263", "13"]] },
+      "pins": ["`lift_m(at(A, p), q, x) ≃_O lift_m(A, p ++ q, x)`", "`at(N, ε) = N`."],
+      "note": "ID10 at the full cut: select-then-lift selects the leaf and lifts ε on it. Catches an empty suffix treated as a miss, or resolved against the original root (root ran)."
+    },
+    {
+      "name": "proj-cut-prefix-missing",
+      "op": "lift-cut",
+      "node": { "own": "726f6f74", "children": [["61", { "own": "61", "children": [["62", { "own": "6162", "children": [["63", { "own": "616263", "children": [] }]] }], ["63", { "own": "6163", "children": [] }]] }], ["63", { "own": "63", "children": [] }]] },
+      "world": [["726f6f74", { "ok": "root" }], ["61", { "ok": "a" }], ["6162", { "ok": "ab" }], ["616263", { "ok": "abc" }], ["6163", { "refused": "sealed" }], ["63", { "ok": "c" }]],
+      "prefix": ["62"], "suffix": ["63"], "args": "14",
+      "result": { "outcome": { "missing-path": {} }, "invocations": [] },
+      "pins": ["left side propagates `MissingPath` if the first selection misses.", "absence on one side and a call on the other"],
+      "note": "ID10: the root has no child 62, so the first selection misses and the left side propagates MissingPath with no invocation; [62, 63] misses on the right side as well. The root does have [63]. Catches a select-then-lift side that falls back to the root when the prefix misses and lifts the suffix there (c ran), which is absence on one side and a call on the other."
+    },
+    {
+      "name": "proj-cut-suffix-missing-below-a-refusing-node",
+      "op": "lift-cut",
+      "node": { "own": "726f6f74", "children": [["61", { "own": "61", "children": [["62", { "own": "6162", "children": [["63", { "own": "616263", "children": [] }]] }], ["63", { "own": "6163", "children": [] }]] }], ["63", { "own": "63", "children": [] }]] },
+      "world": [["726f6f74", { "ok": "root" }], ["61", { "ok": "a" }], ["6162", { "ok": "ab" }], ["616263", { "ok": "abc" }], ["6163", { "refused": "sealed" }], ["63", { "ok": "c" }]],
+      "prefix": ["61", "63"], "suffix": ["00"], "args": "15",
+      "result": { "outcome": { "missing-path": {} }, "invocations": [] },
+      "pins": ["`lift_m(N, p, x)` is `MissingPath` when `at(N, p)` is absent", "operation's refusal as absence."],
+      "note": "ID9, ID10: the prefix selects [61, 63], a childless node whose capability refuses, and the suffix misses below it. Both sides answer MissingPath and invoke nothing. Catches a side that falls back to the node the prefix selected, which would answer refused with one invocation: a refusal standing in for absence."
+    },
+    {
+      "name": "proj-cut-refusal-is-preserved-across-the-cut",
+      "op": "lift-cut",
+      "node": { "own": "726f6f74", "children": [["61", { "own": "61", "children": [["62", { "own": "6162", "children": [["63", { "own": "616263", "children": [] }]] }], ["63", { "own": "6163", "children": [] }]] }], ["63", { "own": "63", "children": [] }]] },
+      "world": [["726f6f74", { "ok": "root" }], ["61", { "ok": "a" }], ["6162", { "ok": "ab" }], ["616263", { "ok": "abc" }], ["6163", { "refused": "sealed" }], ["63", { "ok": "c" }]],
+      "prefix": ["61"], "suffix": ["63"], "args": "16",
+      "result": { "outcome": { "refused": "sealed" }, "invocations": [["6163", "16"]] },
+      "pins": ["Selection determines whether dispatch is available, not whether execution succeeds.", "operation's refusal as absence."],
+      "note": "ID9, ID10: both sides reach [61, 63] and invoke its refusing capability once. Catches a side that reports the refusal as missing-path, and a side that lifts [63] from the root instead (c ran)."
+    },
+    {
+      "name": "proj-cut-count-is-one-on-each-side",
+      "op": "lift-cut",
+      "node": { "own": "726f6f74", "children": [["61", { "own": "61", "children": [["62", { "own": "6162", "children": [["63", { "own": "616263", "children": [] }]] }], ["63", { "own": "6163", "children": [] }]] }], ["63", { "own": "63", "children": [] }]] },
+      "world": [["726f6f74", { "ok": "root" }], ["61", { "ok": "a" }], ["6162", { "count": {} }], ["616263", { "ok": "abc" }], ["6163", { "refused": "sealed" }], ["63", { "ok": "c" }]],
+      "prefix": ["61"], "suffix": ["62"], "args": "17",
+      "result": { "outcome": { "ok": "1" }, "invocations": [["6162", "17"]] },
+      "pins": ["separately initialised fixtures with the", "It is not a claim that two successive executions of one fixture agree."],
+      "note": "ID10's ≃_O compares corresponding executions on separately initialised fixtures, so the count capability at [61, 62], an interior node, has received one invocation on each side. Catches a harness or core that carries capability state or the log from one side to the other (the second side answers 2, or logs two invocations), which is the claim about two successive executions that ID10 does not make."
+    },
+    {
+      "name": "proj-seq-one-id-at-three-positions-is-one-object",
+      "op": "lift-sequence",
+      "node": { "own": "aa", "children": [["61", { "own": "aa", "children": [] }], ["62", { "own": "bb", "children": [["00", { "own": "aa", "children": [] }]] }], ["63", { "own": "cc", "children": [] }]] },
+      "world": [["aa", { "count": {} }], ["bb", { "count": {} }], ["cc", { "ok": "c" }]],
+      "reconstruct": false,
+      "steps": [[["61"], "01"], [["62", "00"], "02"], [[], "03"]],
+      "result": { "outcomes": [{ "ok": "1" }, { "ok": "2" }, { "ok": "3" }], "invocations": [["aa", "01"], ["aa", "02"], ["aa", "03"]] },
+      "pins": ["change slot identity or aliasing observable under the slot contract.", "with unchanged arguments and receiver binding"],
+      "note": "ID6, ID9: the fixture holds one capability object for aa, at the root, at [61] and at [62, 00]. Three lifts reach that one object, so its count goes 1, 2, 3. Catches a compose that copies an own value (each position its own object: 1, 1, 1), and a lift that invokes a copy of the selected slot rather than the slot."
+    },
+    {
+      "name": "proj-seq-aliasing-survives-reconstruction",
+      "op": "lift-sequence",
+      "node": { "own": "aa", "children": [["61", { "own": "aa", "children": [] }], ["62", { "own": "bb", "children": [["00", { "own": "aa", "children": [] }]] }], ["63", { "own": "cc", "children": [] }]] },
+      "world": [["aa", { "count": {} }], ["bb", { "count": {} }], ["cc", { "ok": "c" }]],
+      "reconstruct": true,
+      "steps": [[["61"], "01"], [["62", "00"], "02"], [[], "03"]],
+      "result": { "outcomes": [{ "ok": "1" }, { "ok": "2" }, { "ok": "3" }], "invocations": [["aa", "01"], ["aa", "02"], ["aa", "03"]] },
+      "pins": ["Reconstruction preserves slot handles and their aliasing.", "a changed own handle or a cloned live"],
+      "note": "ID4: proj-seq-one-id-at-three-positions-is-one-object after the whole tree is rebuilt through decompose and compose. The three positions still hold the one object. Catches decompose or compose cloning own values (1, 1, 1 after reconstruction), and a reconstruction that drops or replaces the root's own value."
+    },
+    {
+      "name": "proj-seq-distinct-ids-are-independent",
+      "op": "lift-sequence",
+      "node": { "own": "aa", "children": [["61", { "own": "aa", "children": [] }], ["62", { "own": "bb", "children": [["00", { "own": "aa", "children": [] }]] }], ["63", { "own": "cc", "children": [] }]] },
+      "world": [["aa", { "count": {} }], ["bb", { "count": {} }], ["cc", { "ok": "c" }]],
+      "reconstruct": false,
+      "steps": [[["61"], "01"], [["62"], "02"]],
+      "result": { "outcomes": [{ "ok": "1" }, { "ok": "1" }], "invocations": [["aa", "01"], ["bb", "02"]] },
+      "pins": ["two initially equal mutable values merged", "change slot identity or aliasing observable under the slot contract."],
+      "note": "ID6: aa and bb are distinct objects with the same behaviour and the same initial state, so each answers 1. The pair to proj-seq-one-id-at-three-positions-is-one-object. Catches sharing that merges two initially equal live values into one (bb would answer 2), and a harness that keys capability state by behaviour instead of by object."
+    },
+    {
+      "name": "proj-seq-distinct-ids-stay-independent-after-reconstruction",
+      "op": "lift-sequence",
+      "node": { "own": "aa", "children": [["61", { "own": "aa", "children": [] }], ["62", { "own": "bb", "children": [["00", { "own": "aa", "children": [] }]] }], ["63", { "own": "cc", "children": [] }]] },
+      "world": [["aa", { "count": {} }], ["bb", { "count": {} }], ["cc", { "ok": "c" }]],
+      "reconstruct": true,
+      "steps": [[["61"], "01"], [["62"], "02"]],
+      "result": { "outcomes": [{ "ok": "1" }, { "ok": "1" }], "invocations": [["aa", "01"], ["bb", "02"]] },
+      "pins": ["two initially equal mutable values merged", "Reconstruction preserves slot handles and their aliasing."],
+      "note": "ID4, ID6: proj-seq-distinct-ids-are-independent after reconstruction. Catches a reconstruction that interns equal-looking own values into one object, and one that moves own values between positions (the step at [62] would reach aa and answer 2)."
+    },
+    {
+      "name": "proj-seq-missing-step-invokes-nothing",
+      "op": "lift-sequence",
+      "node": { "own": "aa", "children": [["61", { "own": "aa", "children": [] }], ["62", { "own": "bb", "children": [["00", { "own": "aa", "children": [] }]] }], ["63", { "own": "cc", "children": [] }]] },
+      "world": [["aa", { "count": {} }], ["bb", { "count": {} }], ["cc", { "ok": "c" }]],
+      "reconstruct": false,
+      "steps": [[["61"], "01"], [["64"], "02"], [["63", "00"], "03"], [["62", "00"], "04"]],
+      "result": { "outcomes": [{ "ok": "1" }, { "missing-path": {} }, { "missing-path": {} }, { "ok": "2" }], "invocations": [["aa", "01"], ["aa", "04"]] },
+      "pins": ["On absence it invokes no slot", "a fallback to an ancestor or a default"],
+      "note": "ID3, ID9: [64] is missing at the root and [63, 00] below the childless [63]. Neither invokes anything, so aa's count goes from 1 straight to 2 at [62, 00]. Catches a miss that falls back to the root (aa counts at the miss, and the last step answers 3) or to the deepest node reached (c ran), and any invocation on absence."
+    },
+    {
+      "name": "proj-keys-top-level-buffers-mutated-after-compose",
+      "op": "keys-after-mutation",
+      "node": { "own": "726f6f74", "children": [["61", { "own": "61", "children": [] }], ["", { "own": "", "children": [] }], ["ff00", { "own": "ff00", "children": [] }]] },
+      "probes": [[], ["61"], [""], ["ff00"], ["9e"], ["00ff"]],
+      "result": { "found": [true, true, true, true, false, false] },
+      "pins": ["Keys have immutable byte-string meaning.", "a caller's key buffer mutated after binding that changes what was bound."],
+      "note": "ID2: after compose, the harness XORs every key buffer it handed in with ff, so 61 becomes 9e, ff00 becomes 00ff and the empty key stays empty. The tree keeps the keys it was given. Catches compose keeping the caller's buffers by reference: 9e or 00ff found, 61 or ff00 lost. The empty buffer has no byte to change, so [\"\"] stays found even under that defect, as ε does: the empty key is a real child, and the ε probe is not a probe of it."
+    },
+    {
+      "name": "proj-keys-nested-buffers-mutated-after-compose",
+      "op": "keys-after-mutation",
+      "node": { "own": "", "children": [["61", { "own": "", "children": [["6a", { "own": "", "children": [] }]] }]] },
+      "probes": [["61", "6a"], ["61"], ["9e", "95"], ["61", "95"], ["9e"]],
+      "result": { "found": [true, true, false, false, false] },
+      "pins": ["Keys have immutable byte-string meaning.", "a caller's key buffer mutated after binding that changes what was bound."],
+      "note": "ID2: the child at [61] is composed first, with its own key buffer 6a, then the root with 61, and both buffers are mutated after the whole tree is built (61 to 9e, 6a to 95). Catches a compose that keeps an inner buffer by reference ([61, 95] found, [61, 6a] lost) as well as an outer one ([9e] found, [61] lost)."
+    }
+  ]
+}

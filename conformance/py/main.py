@@ -30,6 +30,7 @@ from deixis_pos import is_key as pos_is_key  # noqa: E402
 from deixis_pos import key as pos_key  # noqa: E402
 from deixis_set import contains, is_set, recognize, set_of  # noqa: E402
 from mandatory import handle as handle_mandatory  # noqa: E402
+from projection import handle as handle_projection  # noqa: E402
 
 Fixture = tuple[str, str]  # (class, representation); ≈ compares the first component
 Path_ = list[bytes]
@@ -410,6 +411,8 @@ def handle(request: dict[str, Any]) -> dict[str, Any]:
         return handle_mandatory(request, replace, attach)
     if str(request.get("op", "")).startswith("binding."):
         return handle_binding(request)
+    if str(request.get("op", "")).startswith("projection."):
+        return handle_projection(request)
     if str(request.get("op", "")).startswith("required."):
         return handle_required(request)
     op = request.get("op")

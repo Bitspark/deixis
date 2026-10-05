@@ -191,6 +191,35 @@ corpus — the constraint binds the harness, and this is where its reader arrive
   four cores, one request each, and the harness refuses the run when the description's
   stated count differs from the file's.
   <!-- claim holds: `python -c "import json; print(len(json.load(open('vectors/binding-scripted.json',encoding='utf-8'))['cases']))"` == 19 -->
+- **The scripted projection family** ([IDENTITY.md](../IDENTITY.md) ID9 and ID10, research
+  0006's R25a, [ADR 0015](../docs/design/0015-deixis-identity.md) §7):
+  [`projection-scripted.json`](projection-scripted.json), `deixis-projection-scripted`. Its 28
+  cases cover the projection `lift(N, p, args)`, its composition inside one tree at every cut,
+  and the rows of ID2 (a caller's key buffer) and ID4 (reconstruction keeps handles and
+  aliasing) it rests on. Projection is not a deixis API either, so each conformance CLI
+  answers its four operations, `lift`, `lift-cut`, `lift-sequence` and `keys-after-mutation`,
+  from a scripted harness over its core's native node, and the file's description defines
+  them. Own values are capability ids, spelled as hex. Each fixture makes one live
+  capability object per distinct id, so two positions holding one id hold one object, and a
+  world script gives each capability an `ok`, `refused`, `fault` or `count` behaviour.
+  Every invocation is logged as `[id, args]`.
+
+  **The observation model O** that ID10's `≃_O` compares under is declared in the
+  description. Observed: each lift's outcome, and the fixture's log, which capability object
+  by id, with which argument bytes, in which order. Not observed: timing, the identity of a
+  result object, and the harness's internals. The two sides of a `lift-cut` case run on
+  separately initialised fixtures, with fresh capability objects and a fresh log, so a
+  `count` capability answers 1 on each side.
+
+  `keys-after-mutation` builds the tree from key buffers the harness owns, then XORs every
+  one of them with `ff` and probes. Python hands `compose` a `bytearray`, Go a `[]byte`,
+  TypeScript a `Uint8Array`. Rust hands it each `Vec<u8>` by reference, but `Node` keeps
+  owned keys with no lifetime, so it copies by construction and the Rust core passes these
+  two cases trivially. The file's `spec` field cites IDENTITY.md, and `tools/pincheck.py`
+  checks each case's `pins` against it. All 28 cases run in the shared harness against all
+  four cores, one request each, and the harness refuses the run when the description's
+  stated count differs from the file's.
+  <!-- claim holds: `python -c "import json; print(len(json.load(open('vectors/projection-scripted.json',encoding='utf-8'))['cases']))"` == 28 -->
 - [`identity.json`](identity.json) — `deixis-core-identity`. Cases
   `{ name, left, right, equal, note }`: build both nodes, judge them with the fixture
   equality, expect exactly `equal`. Equality is symmetric; replayers should assert both

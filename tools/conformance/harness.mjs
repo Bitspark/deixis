@@ -11,6 +11,7 @@ import { readFileSync } from "node:fs";
 import { createInterface } from "node:readline";
 import { MANDATORY_FILES, mandatoryRequests } from "./mandatory.mjs";
 import { BINDING_FILES, bindingRequests } from "./binding.mjs";
+import { PROJECTION_FILES, projectionRequests } from "./projection.mjs";
 import { ENVELOPE_TIMEOUT_MS, codecRequests } from "./codec.mjs";
 
 const ROOT = new URL("../../", import.meta.url);
@@ -84,6 +85,9 @@ const REPLAYED_FILES = [
   // ADR 0013's scripted binding laws: each CLI answers them from a scripted harness over
   // its core's native Node, since binding is not a deixis API (binding.mjs).
   ...BINDING_FILES,
+  // IDENTITY.md's projection (ID9, ID10): each CLI answers it from a scripted harness over
+  // its core's native Node, since projection is not a deixis API either (projection.mjs).
+  ...PROJECTION_FILES,
 ];
 const INDEXED_CODEC = [
   "codec-flat.json",
@@ -381,6 +385,7 @@ function plan() {
 
   mandatoryRequests(vectors, send);
   bindingRequests(vectors, send);
+  projectionRequests(vectors, send);
 
   // Direct T payloads: these cases have no structural option wrapper.
   for (const c of vectors("required-node.json").cases) {
@@ -731,8 +736,11 @@ for (const implementation of selected) {
   } else {
     anyFailure = true;
     console.error(`✖ ${implementation.name}: ${passed}/${total}`);
-    for (const failure of failures.slice(0, 20)) console.error(`    ${failure}`);
-    if (failures.length > 20) console.error(`    … ${failures.length - 20} more`);
+    // --all-failures lists every failure: the mutation runner reads which cases a plant
+    // turned red, and a cut-off list would hide them.
+    const shown = process.argv.includes("--all-failures") ? failures.length : 20;
+    for (const failure of failures.slice(0, shown)) console.error(`    ${failure}`);
+    if (failures.length > shown) console.error(`    … ${failures.length - shown} more`);
   }
 }
 
