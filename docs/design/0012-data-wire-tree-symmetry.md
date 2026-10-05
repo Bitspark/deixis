@@ -5,6 +5,14 @@
 everywhere and do the renaming." The operator accepted breaking renames before
 more services depend on the previous names.
 
+*(Amended 2026-10-05: [ADR 0013](0013-binding-views-and-the-service-line.md) supersedes this
+record's interaction terminology, after bitwire 0.4.0 (its decision 0014) replaced the
+addressless sender with a duplex envelope `Wire`. `Wire` as an addressless sender,
+`WireTree = DeixisNode<Wire>` and the `AddressedWire` bridge are no longer family names. The
+principal interaction instance is a receiver-side tree of handlers. This record's complete
+structural contract, its `Data` naming and its snapshot rules stand. ADR 0013 §7 also defines the
+"separate consumer operation" below as bitstore's `restoreSnapshot`.)*
+
 ## Decision
 
 The primitive names are `Data` and `Wire`. They grant addressless operations:

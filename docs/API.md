@@ -5,7 +5,11 @@
 [ADR 0012](design/0012-data-wire-tree-symmetry.md) fixes the family names:
 `Data.read()` and `Wire.send(message)` are addressless primitives;
 `DataTree = DeixisNode<Data>` and `WireTree = DeixisNode<Wire>` have identical
-structure. The TypeScript core exports this binding:
+structure. *(2026-10-05: [ADR 0013](design/0013-binding-views-and-the-service-line.md)
+supersedes the interaction half of this: bitwire 0.4.0's `Wire` is a duplex envelope
+connection, the principal interaction instance is a receiver-side tree of handlers, and
+`WireTree` is no longer a family name. Binding portable names to capabilities is ADR 0013 §2. The
+structural contract below is unchanged.)* The TypeScript core exports this binding:
 
 ```ts
 type Key = Uint8Array;

@@ -31,6 +31,9 @@ interface `DeixisNode<T>`. `DataTree = DeixisNode<Data>` and
 payloads provide addressless reading and sending, respectively. A byte snapshot
 `Node[Bytes]` and a reader tree `Node[Data]` are different instantiations. An
 addressed operation alone, without the complete parts below, is not this tree.
+*(2026-10-05: [ADR 0013](design/0013-binding-views-and-the-service-line.md) supersedes the
+`WireTree` name. The principal interaction instance is now a receiver-side tree of handlers, and
+bitwire's `Wire` is a duplex connection, which is not a tree.)*
 
 ## Reading the definition
 

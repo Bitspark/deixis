@@ -20,15 +20,17 @@ seriously proposed.
 | --- | --- | --- |
 | ontos | existing; bridge pins v0.2.0 | ontos values are a recognized subset of `Node(Option(Bytes))` with keys spelling positions — the founding instance |
 | bittree | existing; contract, no package | a bittree node is `Node[Label]` under a declared profile, with keys spelling ordinal and field |
-| [`BITWIRE.md`](BITWIRE.md) | accepted breaking contract; consumer migration | addressless `Wire.send(message)`; full `WireTree = DeixisNode[Wire]` |
+| [`BITWIRE.md`](BITWIRE.md) | bitwire 0.4.0; ADR 0013 | duplex envelope `Wire` (a connection, not a tree); the receiver routes into a complete `DeixisNode` of handlers |
 | [`BITSTORE.md`](BITSTORE.md) | existing library; accepted breaking contract | addressless `Data.read()`; full `DataTree = DeixisNode[Data]`; materialized byte snapshots stay distinct |
-| topos | proposed | the place layer — named cells binding immutable trees; location, state, and time over the floor |
-| deixis-svc | proposed service; accepted structural contract | one service artifact applies the same full structural contract to Wire and Data capabilities |
+| topos | not founded (ADR 0013 §9) | its minimal cells (version CAS) and retention coordination become a named module of deixis-svc |
+| deixis-svc | proposed service; ADR 0013 | a structural module (complete trees, explicit discovery views) and a cell module (named roots, CAS, retention) |
 
 The common naming and complete structure are recorded in
 [ADR 0012](../design/0012-data-wire-tree-symmetry.md). `DataTree` and `WireTree`
 are the same generic construction with different own-value types. An
 addressed-only read or send handle is not the full structural interface.
+*(2026-10-05: [ADR 0013](../design/0013-binding-views-and-the-service-line.md) supersedes the
+`WireTree` name and records binding, views that are not yet trees, and the service line.)*
 Accepted design and consumer implementation/release status remain separate.
 
 The two kinds of *existing* are different claims. A **package pin** can be checked in

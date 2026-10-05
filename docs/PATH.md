@@ -8,7 +8,10 @@ The pointing. [TREE.md](TREE.md) says what a tree *is*; this says how to point i
 this same partial selection contract. Addressless reading/sending occurs on
 the own value after successful selection; it cannot erase a missing-versus-present
 distinction. `at` selects structure, so selecting a Wire that refuses a message
-still succeeds.
+still succeeds. *(2026-10-05: [ADR 0013](design/0013-binding-views-and-the-service-line.md)
+supersedes the `WireTree` name. The same holds for a receiver's handler tree: selecting a handler
+that ignores an envelope still succeeds, and bitruntime's `route` reports only an absent path as
+`false`.)*
 
 ```
 Path = Key*

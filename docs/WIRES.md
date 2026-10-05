@@ -12,6 +12,13 @@ tier discipline). Vocabulary: *wire* here names what earlier notes called a
 *channel* — the conduit; an *end* is what a party holds; a *name* is what
 travels. Nothing in this document adds an operation to the floor.
 
+*(2026-10-05: [ADR 0013](design/0013-binding-views-and-the-service-line.md) supersedes the
+clarification below. bitwire 0.4.0's `Wire` is a duplex envelope connection whose destination
+paths are scoped to the connection. The receiver routes them into a complete tree of handlers.
+Names bind to capabilities through a profile's two-stage binding (ADR 0013 §2). Mounts are
+opened explicitly and never followed by `at` (ADR 0013 §8). This document's name/end doctrine
+is the reading ADR 0013 adopts.)*
+
 **API clarification, accepted 2026-09-26:**
 [ADR 0012](design/0012-data-wire-tree-symmetry.md) uses `Wire` for the
 addressless `send(message)` capability and `WireTree = DeixisNode[Wire]` for
