@@ -4,8 +4,10 @@
 about deixis as a whole. It is not [docs/IDENTITY-SURFACE.md](docs/IDENTITY-SURFACE.md), which
 lists the parts of the codec that decide octets and content addresses.
 
-**Status: accepted** by [ADR 0015](docs/design/0015-deixis-identity.md), after an openly framed
-expert consultation (research 0006). An entry here changes only through
+**Status:** the structural contract and the derived constructions are **accepted** by
+[ADR 0015](docs/design/0015-deixis-identity.md), after an openly framed expert consultation
+(research 0006). The family policy is **proposed** there, and adopted by its own record with
+every affected component's acceptance. An entry here changes only through
 [a supersession record](#how-a-contract-changes). Consumers cannot amend a depended-on contract
 by implication. This page does not freeze the codec: `deixis-codec-v2` stays a candidate on its
 own freeze track ([CODEC.md](docs/CODEC.md), [issue #1](https://github.com/Bitspark/deixis/issues/1)).
@@ -372,8 +374,9 @@ composition, scope, ownership and transport-seam contracts.
 raw message; path rules implemented differently per transport against one contract; an opaque
 addressed facade presented as a complete tree.
 
-- **Contract status:** accepted, ADR 0015, which records its adoption as a supersession of
-  bitwire decision 0014's collapsed sending surface (ADR 0015 §4).
+- **Contract status:** proposed, ADR 0015. It is adopted by ADR 0017, its supersession record of
+  bitwire decision 0014's collapsed sending surface, once bitwire and bitruntime have accepted
+  it (ADR 0015 §4).
 - **Authority:** family policy: deixis, bitwire and bitruntime together. Provenance: owner:
   [ADR 0012](docs/design/0012-data-wire-tree-symmetry.md) (2026-09-26), "Use Data / DataTree and
   Wire / WireTree", whose primitives are addressless. owner: the first version of bitwire#42,
@@ -421,7 +424,7 @@ accepted ([WIRES.md](docs/WIRES.md) §4).
 under a cut; a profile whose relation cannot tell a wrong target from the right one; liveness
 claimed for a chain without its assumptions.
 
-- **Contract status:** accepted, ADR 0015.
+- **Contract status:** proposed, ADR 0015; adopted with ID12 by ADR 0017.
 - **Authority:** family policy: deixis, bitwire and bitruntime together. Provenance: owner:
   [WIRES.md](docs/WIRES.md) §4, 2026-08-08: "The conveyance criterion and the routing law are
   DECIDED (operator)."
@@ -530,7 +533,6 @@ process failure ([ADR 0015](docs/design/0015-deixis-identity.md), "What happened
 
 ## Change log
 
-- **ID1 to ID13 adopted**, [ADR 0015](docs/design/0015-deixis-identity.md), after research 0006.
-  The charter of ADR 0014 (`D1` to `D8`) is folded in; ADR 0015 §2a has the mapping. ID12
-  supersedes bitwire decision 0014's collapsed sending surface; ADR 0015 §4 is the supersession
-  record.
+- **ID1 to ID11 adopted, ID12 and ID13 proposed**, [ADR 0015](docs/design/0015-deixis-identity.md),
+  after research 0006. The charter of ADR 0014 (`D1` to `D8`) is folded in; ADR 0015 §2a has the
+  mapping.

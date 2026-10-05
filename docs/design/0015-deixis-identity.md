@@ -2,15 +2,18 @@
 
 **Status:** accepted, 2026-10-05, by this repository's agents, seat caa (jlqyu6o5gy) and
 deixis-fable, after an openly framed expert consultation: research 0006, framed on
-deixis-internal#80, evaluated by deixis-fable and graded there by seat caa. As a family-policy
-record (§4), it merges once bitwire#76 and bitruntime#36 have merged, which is those components'
-acceptance.
+deixis-internal#80, evaluated by deixis-fable and graded there by seat caa. It adopts the structural contract
+and the derived constructions, which deixis's agents change. It proposes the family policy,
+which a separate record adopts with every affected component's acceptance (§4), so that a
+family-policy matter does not hold the tree's identity.
 
-Identity: adopts ID1 to ID13
+Identity: adopts ID1 to ID11
 
-Supersedes: bitwire decision 0014's collapsed sending surface, released in bitwire 0.4.0 and bitruntime 0.5.0, for family policy ID12 (§4)
+Identity: proposes ID12, ID13
 
 Updates: ADR 0014, whose charter folds into IDENTITY.md (§2a)
+
+**Peer read:** deixis-fable, on Bitspark/deixis#20, at each revision.
 
 It adopts [IDENTITY.md](../../IDENTITY.md): deixis's identity in three separately governed
 parts (a structural contract, derived constructions and family policy), thirteen entries with
@@ -205,7 +208,9 @@ change-detection and provenance aid, not a decision procedure (R7). It checks th
   `Identity:` line;
 - every quotation in an entry's attributes is verbatim.
 
-Its self-test plants each defect and requires it to turn red for that defect.
+Its self-test plants each defect and requires it to turn red for that defect. Rule 8 reads only
+this repository's files, so a quotation of another repository is checked by hand. ID12's
+quotation of bitwire#76 was checked at bitwire `8a73a2be`.
 
 One adaptation is named. R7 makes the English-keyword rule a warning. The check keeps it an
 error in one case: prose that supersedes a record the contracts rest on, without the structured
@@ -213,66 +218,20 @@ lines. That was the October defect exactly, and a warning in a CI log would not 
 it. Prose that supersedes anything else only warns, and adding the structured lines satisfies
 the rule, so the structured links are the primary check.
 
-### 4. ID12's adoption supersedes released B
+### 4. ID12 and ID13 are proposed here, and adopted by their own record
 
-The owner approved B on 4 October, so adopting A now is a supersession of a released design,
-not a finding that B was never approved (R8). This is its record.
+The owner approved the envelope design (B) on 4 October, so adopting A's layering now
+supersedes a released design. It is not a finding that B was never approved (R8). A family
+policy changes only with every affected component's acceptance (§3). This record therefore
+proposes ID12 and ID13 and does not adopt them. They are adopted by
+ADR 0017, on the pull request stacked on Bitspark/deixis#20, which is ID12's
+supersession record of bitwire decision 0014's collapsed sending surface. It carries every
+field of the change rule and the acceptance of deixis, bitwire and bitruntime, and it merges
+once bitwire#76 and bitruntime#36 have merged.
 
-- **Affected contract:** family policy, ID12 (interaction layering), and with it ID13. It
-  touches no structural entry.
-- **Supersedes:** bitwire decision 0014's collapsed sending surface, released in bitwire 0.4.0,
-  and its realization in bitruntime 0.5.0. Its counterparts are bitwire decision 0015, in
-  bitwire#76, which "supersedes decision 0014's collapsed sending surface", and bitruntime#36.
-- **Old rationale and present tradeoff:** B's rationale, in the owner's words of 4 October 2026:
-  "I would prefer there to be a clean cut. no historic profiles, no legacy baggage. also, no
-  adapters if they are not required for good reasons if we could as well consolidate to one
-  interface". The plan the owner approved replaced the `Wire`, `AddressedWire` and `Endpoint`
-  sending surfaces with one envelope contract, with "no adapter translating one generic wire
-  interface into another". Those reasons remain sound: one conveyance contract, no compatibility
-  exports, no second sending interface bridged to the first. The present tradeoff is the one
-  research 0006 states symmetrically (R2):
-  - A keeps one conveyance contract too. Addressing can be functions over the raw endpoint, so
-    a named addressed interface is an ergonomic choice, not a necessity.
-  - B's self-describing messages remain available to A as an envelope profile, but only for
-    that profile's messages.
-  - A shared transport seam and queue implementation are compatible with both, and deleting the
-    seam was a separate implementation choice.
-  - A carries prefix laws directly. B can add them without changing its envelope, though a
-    handler that sees the whole envelope needs a routing cursor for prefix transparency (R15).
-  - What tips the balance is that A separates three independently meaningful contracts
-    (conveyance, addressing, exchange). A message can then be conveyed without interpreting a
-    destination, and a complete tree can exist without a connection (R1).
-- **Authority and delegation:** the owner's standing ruling of 4 October 2026, which delegates
-  the decision to the affected components' agents. Provenance: the owner's direction of
-  25 September, verbatim in the first version of bitwire#42; ADR 0012, "accepted … by the
-  operator's explicit instruction"; and the owner's approval of B on 4 October, superseded
-  here. On 5 October the owner recalled the September direction and asked for a re-derivation.
-  That was not a new ruling between A and B.
-- **Alternatives and consequences:**
-  - keep B unchanged;
-  - keep B and add prefix laws and a bound send;
-  - adopt A with B's envelope as an optional profile, which is chosen.
-
-  The costs are a real layer boundary, profile-specific validation, and more API concepts; it
-  does not promise less code (R1). Old JSON and RPC profiles, return-address machinery and
-  compatibility exports do not return. bitwire's and bitruntime's consumers migrate with
-  bitwire#76 and bitruntime#36.
-- **Evidence and obligations:** research 0006's advice (R1 to R4, R13 to R15) is an expert's
-  weighing, not a proof. Outstanding:
-  - the exchange contract's seven problems (R3), requested on bitwire#76;
-  - the crossing, exchange and relay families (R25b), owed by bitwire's and bitruntime's
-    agents once bitwire#76 merges;
-  - the affine-versus-persistent question (R26, §5).
-- **Approved revision:** IDENTITY.md's ID12 and ID13 as pinned in
-  [tools/identity.lock](../../tools/identity.lock) at this record's merge.
-- **Derivations:**
-  - seat caa's and deixis-fable's sealed stances, compared in §2;
-  - the Codex session's Bitspark/deixis#19, as a third;
-  - research 0006 (deixis-internal#80), whose advice weighed B against A with both designs'
-    authority. That is the explicit attempt to defeat the favoured design.
-- **Peer read:** deixis-fable, on Bitspark/deixis#20, at each revision.
-- **Accepted-by:** deixis, by this record; bitwire, by its decision 0015 in bitwire#76;
-  bitruntime, by bitruntime#36. This record merges after both have merged.
+Keeping the two apart applies R5 to this record itself. The structural contract and the
+derived constructions are deixis's agents' to change, and their adoption does not wait on
+another repository's release.
 
 ### 5. WIRES.md
 

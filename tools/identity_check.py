@@ -16,7 +16,8 @@ WHAT IT DECIDES.
   2. Each entry's statement, reason and authority match their pin in tools/identity.lock, and so
      does every pinned section (`<!-- identity:pin NAME -->` ... `<!-- identity:end -->`). A pin
      names the record that last set it.
-  3. That record exists, carries an `Identity:` line that adopts, updates or breaks the entry, and
+  3. That record exists, carries an `Identity:` line that adopts, proposes, updates or breaks the
+     entry, and
      IDENTITY.md's change log names it.
   4. A supersession record (a structured `Supersedes:` line, or `Identity: breaks|retires`)
      carries the seven fields of IDENTITY.md's change rule, a `Derivations:` field citing at
@@ -69,7 +70,7 @@ HEADING = re.compile(r"^### (ID(\d+))\. ")
 ATTR = re.compile(r"^- \*\*(Contract status|Authority|Evidence|Coverage):\*\*")
 ATTRS = ("Contract status", "Authority", "Evidence", "Coverage")
 PARTS = ("structural contract", "derived construction", "family policy")
-IDENTITY_LINE = re.compile(r"^\s*(?:\*\*)?Identity:(?:\*\*)?\s*(adopts|updates|breaks|retires)\s+(.+)$", re.M)
+IDENTITY_LINE = re.compile(r"^\s*(?:\*\*)?Identity:(?:\*\*)?\s*(adopts|proposes|updates|breaks|retires)\s+(.+)$", re.M)
 STRUCT = re.compile(r"^\s*(?:\*\*)?(Supersedes|Updates):(?:\*\*)?\s*(.+)$", re.M)
 FIELD = lambda name: re.compile(r"^\s*(?:-\s*)?\*\*" + re.escape(name) + r":\*\*\s*\S", re.M | re.I)
 R6_FIELDS = ("Affected contract", "Old rationale and present tradeoff", "Authority and delegation",
@@ -253,7 +254,8 @@ def record_errors(r: str, text: str, entries_by_num: dict[int, dict]) -> list[st
     if (supersedes or updates) and len(REF.findall(field_text(text, "Peer read"))) < 1:
         errors.append(f"{r}: a {'supersession' if supersedes else 'update'} needs a "
                       f"`Peer read:` field citing the read")
-    touched = set().union(*idl.values()) if idl else set()
+    # Proposing a family-policy entry needs no acceptance; adopting or changing one does.
+    touched = set().union(*(v for k, v in idl.items() if k != "proposes")) if idl else set()
     accepted = field_text(text, "Accepted-by").lower()
     for num in sorted(touched):
         e = entries_by_num.get(num)
@@ -553,6 +555,11 @@ def self_test(root: str) -> list[str]:
         edit(os.path.join(t, fname), lambda s: s.replace(f"<!-- identity:pin {name} -->",
                                                          f"<!-- identity:pin {name} -->\nPlanted.", 1))
     arm("a pinned section edited", section, "pinned section")
+
+    def proposed(t):
+        write(os.path.join(t, "docs", "design", "0999-planted.md"),
+              f"# Planted\n\nIdentity: proposes {fam['id']}\n")
+    arm("proposing a family-policy entry needs no acceptance", proposed, None)
 
     arm("prose supersession of an unprotected record only warns",
         lambda t: write(os.path.join(t, "docs", "design", "0999-planted.md"),
