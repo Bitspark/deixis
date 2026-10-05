@@ -10,6 +10,7 @@ import { execFileSync, spawn } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { createInterface } from "node:readline";
 import { MANDATORY_FILES, mandatoryRequests } from "./mandatory.mjs";
+import { BINDING_FILES, bindingRequests } from "./binding.mjs";
 import { ENVELOPE_TIMEOUT_MS, codecRequests } from "./codec.mjs";
 
 const ROOT = new URL("../../", import.meta.url);
@@ -80,6 +81,9 @@ const REPLAYED_FILES = [
   "node-embedding.json",
   "node-invalid.json",
   "node-set.json",
+  // ADR 0013's scripted binding laws: each CLI answers them from a scripted harness over
+  // its core's native Node, since binding is not a deixis API (binding.mjs).
+  ...BINDING_FILES,
 ];
 const INDEXED_CODEC = [
   "codec-flat.json",
@@ -376,6 +380,7 @@ function plan() {
   };
 
   mandatoryRequests(vectors, send);
+  bindingRequests(vectors, send);
 
   // Direct T payloads: these cases have no structural option wrapper.
   for (const c of vectors("required-node.json").cases) {

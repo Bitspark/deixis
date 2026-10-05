@@ -23,6 +23,7 @@ sys.path.insert(0, str(_ROOT / "core" / "py"))
 sys.path.insert(0, str(_ROOT / "pos" / "py"))
 sys.path.insert(0, str(_ROOT / "set" / "py"))
 
+from binding import handle as handle_binding  # noqa: E402
 from codec import handle as handle_codec  # noqa: E402
 from deixis_core import DuplicateKeyError, Node, Some  # noqa: E402
 from deixis_pos import is_key as pos_is_key  # noqa: E402
@@ -407,6 +408,8 @@ def handle(request: dict[str, Any]) -> dict[str, Any]:
         return handle_codec(request)
     if str(request.get("op", "")).startswith("mnode."):
         return handle_mandatory(request, replace, attach)
+    if str(request.get("op", "")).startswith("binding."):
+        return handle_binding(request)
     if str(request.get("op", "")).startswith("required."):
         return handle_required(request)
     op = request.get("op")

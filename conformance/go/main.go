@@ -782,6 +782,8 @@ func main() {
 		var err error
 		if strings.HasPrefix(envelope.Op, "mnode.") {
 			response, err = handleMandatory(line)
+		} else if strings.HasPrefix(envelope.Op, "binding.") {
+			response, err = handleBinding(line)
 		} else if strings.HasPrefix(envelope.Op, "codec.") {
 			response, err = handleCodec(line)
 		} else {

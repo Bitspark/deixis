@@ -108,6 +108,31 @@ for these operations either.
 judged on the reason as well as the verdict, and a case without one on the verdict alone,
 never as "expect no reason".
 
+## Binding protocol (`deixis-binding-scripted`)
+
+[`binding.mjs`](binding.mjs) replays [`binding-scripted.json`](../../vectors/binding-scripted.json),
+the scripted laws of [ADR 0013](../../docs/design/0013-binding-views-and-the-service-line.md)
+§2, §3 and §5. Binding is not a deixis API. Each CLI answers these operations from a
+scripted harness over its core's native node, which it builds and reads through compose,
+decompose and at. A node's own value is a name, spelled as hex. A request is
+`{"name": hex, "origin": γ, "at": [hex key, …]}`: the exact name bytes, the context and the
+path from the original root. A binder is a script, `[[hex name, outcome], …]`, and records
+every name it is asked for. A name the script does not list is refused as `unrecognized`.
+
+| op | request fields | response |
+| --- | --- | --- |
+| `binding.prepare` | `node`, `context` | a result: the prepared tree |
+| `binding.at-after-prepare` | `node`, `context`, `path` | a result: `{"prepare-then-select": r, "select-then-prepare": r}`, each `r` defined or undefined |
+| `binding.resolve-at` | `node`, `context`, `path`, `binder` | a result: `{"outcome": o, "consulted": [hex name, …]}`, where `o` is `{"absent": {}}` or the binder's outcome |
+| `binding.resolve-all-or-fail` | `node`, `context`, `binder` | a result: `{"outcome": {"failed": o} or {"bound-tree": node}, "consulted": […]}` |
+
+An outcome is `{"bound": id}`, `{"refused": reason}`, `{"fault": cause}` or
+`{"cancelled": {}}`. The harness judges trees structurally, with children as a finite map
+whose order is ignored. Requests, outcomes and ids compare exactly, and `consulted` compares
+as an ordered list. Both sides of the law are judged against the one expected result, so a
+CLI that computes only one side fails. The file's description states its case count, and
+the harness refuses the run (exit 2) when the file holds a different number.
+
 ## Codec protocol (`deixis-codec-v2`)
 
 **Specified 2026-09-23; replayed on every run since all four CLIs serve it.** The harness
@@ -221,11 +246,12 @@ control run at 209/209 in each implementation.
 `node-*.json` files exercise its explicit optional specialization.
 `identity.json` and `set.json` are replayed through E on
 `embedded` requests, under the laws that pin them. `positional.json` spells keys and is
-replayed as it is. The four `codec-v2-*.json` files are replayed through `codec.mjs`.
+replayed as it is. `binding-scripted.json` is replayed through `binding.mjs`. The four
+`codec-v2-*.json` files are replayed through `codec.mjs`.
 Indexed and not replayed, and said on every run: the four v1 codec files, because
 `deixis-codec-v1` is withdrawn and never had an implementation, and `invalid.json`, the previous
 model's construction refusals, because no law re-reads it in the optional specialization. Replaying
 it through E anyway would check an expectation that no fixture states; `node-invalid.json`
-pins duplicate-key refusals in that specialization. The current total is 3201
-requests per implementation over 22 replayed files, 2833 of them the v2 codec's, and the
-envelope drive adds 13 checks: 3214 per implementation.
+pins duplicate-key refusals in that specialization. The current total is 3220
+requests per implementation over 23 replayed files, 2833 of them the v2 codec's and 19 the
+binding family's, and the envelope drive adds 13 checks: 3233 per implementation.

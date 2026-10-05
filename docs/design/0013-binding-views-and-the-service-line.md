@@ -368,3 +368,13 @@ The structural laws of §2, §3 and §5 are checked by the scripted vector famil
 `toNative` and negative-conformance tests, all with runs that can come out red. The system-level
 guarantees in §5, §8 and §9 have no evidence until the owning services exist and their batteries
 run. This record states obligations; it does not report them as met.
+
+**Implementation update, 2026-10-05:** §10 item 1's scripted family is
+[`binding-scripted.json`](../../vectors/binding-scripted.json), 19 cases replayed against all four
+cores on every run. [EVIDENCE.md](../EVIDENCE.md) records its scope and its negative controls.
+Items 2, 4 and 5 landed separately in deixis#14:
+- `toNative` / `ToNative`;
+- the pre-fetch verification test, with CODEC.md §14's note;
+- the nonconforming-child tests.
+
+Its foreign-tree tests are item 1's adapter conformance tests for TypeScript and Go.

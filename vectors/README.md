@@ -179,6 +179,18 @@ corpus — the constraint binds the harness, and this is where its reader arrive
   `mnode-instantiation` and `mnode-invalid` `.json`. All 121 cases run in the
   shared harness against all four cores, using each case's declared slot.
   Identity is checked in both directions, giving 145 requests per language.
+- **The scripted binding family** ([ADR 0013](../docs/design/0013-binding-views-and-the-service-line.md)
+  §10 item 1): [`binding-scripted.json`](binding-scripted.json), `deixis-binding-scripted`.
+  Its 19 cases cover the two-stage binding of §2, the outcome classes of §3 and the
+  structural rows of §5. Binding is not a deixis API, so each conformance CLI answers its
+  four operations from a scripted harness over its core's native node, and the file's
+  description defines them. Own values are names, spelled as hex. A binder is a script table
+  that records every name it is asked for, so a case can require that selection asked it
+  nothing. The file's `spec` field cites ADR 0013, and `tools/pincheck.py` checks each
+  case's `pins` against that record. All 19 cases run in the shared harness against all
+  four cores, one request each, and the harness refuses the run when the description's
+  stated count differs from the file's.
+  <!-- claim holds: `python -c "import json; print(len(json.load(open('vectors/binding-scripted.json',encoding='utf-8'))['cases']))"` == 19 -->
 - [`identity.json`](identity.json) — `deixis-core-identity`. Cases
   `{ name, left, right, equal, note }`: build both nodes, judge them with the fixture
   equality, expect exactly `equal`. Equality is symmetric; replayers should assert both
