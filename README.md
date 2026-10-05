@@ -29,6 +29,16 @@ back together, and how it is written down as bytes. It says nothing about what a
 means. A system that carries its content as trees, such as descriptors, records, signed
 facts or bindings, can share one structure and one encoding without sharing a vocabulary.
 
+## What deixis is not
+
+deixis is **not a data model**: it has no types, no schema and no validation, because the
+slot is opaque and what a value means belongs to whoever supplies it. It is **not a store**:
+it keeps nothing, answers no queries and records no history; a system keeps the bytes deixis
+writes. It is **not a transport**: it fixes how a tree is written as bytes and how it is
+addressed, not how those bytes travel or who may read them. And it **does not sign or
+trust**: an address says which bytes a tree is, never who made them or whether to believe
+them.
+
 ## Status
 
 - **The model is implemented** in four languages: Rust, Go, TypeScript and Python. All four
