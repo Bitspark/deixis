@@ -1,42 +1,49 @@
-r"""deixis's identity invariants change only by IDENTITY.md's change rule.
+r"""deixis's identity contracts change only by IDENTITY.md's change rule.
 
 WHY THIS EXISTS AT ALL. On 2026-10-05 a deixis design record (ADR 0013, first version)
-declared that it "supersedes the interaction terminology of ADR 0012", an owner-decided
-floor record, because a consumer's release had dropped that terminology the day before.
-Nothing in the repository could tell an ordinary revision from a reversal of the floor, so
-the reversal merged as one more paragraph. ADR 0015 wrote deixis's identity down as
-numbered invariants (IDENTITY.md) with a change rule; this check is the mechanical half of
-that rule.
+declared that it "supersedes the interaction terminology of ADR 0012", an owner-decided record,
+because a consumer's release had dropped that terminology the day before. Nothing could tell an
+ordinary revision from a reversal, so the reversal merged as one more paragraph. ADR 0015 wrote
+deixis's identity down (IDENTITY.md); research 0006's advice (R5-R7, R27) shaped how it is
+governed. This check is the mechanical half of the change rule: change detection and
+provenance, never a decision procedure.
 
 WHAT IT DECIDES.
-  1. IDENTITY.md numbers its invariants ID1..IDn contiguously, and each has a non-empty
-     quoted statement.
-  2. Each statement matches its pin in tools/identity.lock. A pin names the ADR that last
-     set the statement.
-  3. That ADR exists and carries an `Identity:` line that adopts or breaks the invariant,
-     and IDENTITY.md's change log names that ADR.
-  4. No markdown file declares, in the present tense, that it supersedes a record an
-     invariant's status rests on, or supersedes part of such a record from inside it,
-     unless the file carries an `Identity: breaks ID<n>` line. Lines that predate this
-     check are listed in the lock as `allow` entries.
-  5. No markdown file outside IDENTITY.md calls an invariant superseded, withdrawn or
-     replaced, unless it carries an `Identity: breaks` line.
-  6. Every quotation in an invariant's status occurs verbatim in a record that the same
-     status clause links, ignoring line breaks and `**` emphasis. A clause that links no
-     file in this repository (an issue, an internal note) is a reviewer's to check. This
-     is the guard the incident broke four times: an owner's words paraphrased, then
-     cited as if quoted. Its first draft was itself nearly "corrected" by a grep that
-     could not see a quotation wrapped across two lines, hence the normalization.
+  1. IDENTITY.md's entries (`### ID<n>. Title`) have unique, stable identifiers, a non-empty
+     quoted statement, a `**Why.**` paragraph, and the four attributes: Contract status,
+     Authority, Evidence, Coverage. The Authority attribute names the entry's part: structural
+     contract, derived construction, or family policy.
+  2. Each entry's statement, reason and authority match their pin in tools/identity.lock, and so
+     does every pinned section (`<!-- identity:pin NAME -->` ... `<!-- identity:end -->`). A pin
+     names the record that last set it.
+  3. That record exists, carries an `Identity:` line that adopts, updates or breaks the entry, and
+     IDENTITY.md's change log names it.
+  4. A supersession record (a structured `Supersedes:` line, or `Identity: breaks|retires`)
+     carries the seven fields of IDENTITY.md's change rule, a `Derivations:` field citing at
+     least two derivations, and a `Peer read:` field citing one. An update (`Updates:` or
+     `Identity: updates`) carries a `Peer read:` field. A record that sets a family-policy entry
+     carries an `Accepted-by:` field naming every component the entry's authority names.
+  5. A structured `Supersedes:` or `Updates:` line that names a record an entry rests on comes
+     with an `Identity:` line for an entry that rests on it.
+  6. Prose that declares, in the present tense, a supersession of a record an entry rests on is
+     an error unless its file also declares it structurally (rule 5), or the line predates this
+     check (an `allow` entry in the lock). Prose supersession of anything else is a warning.
+     ADAPTATION, named: research 0006's R7 makes keyword detection a warning. Here it stays an
+     error for the records the contracts rest on, because the incident was exactly an
+     undeclared prose supersession, and a warning in a CI log would not have stopped it. The
+     structured line is the way to satisfy it, so structured links remain the primary check.
+  7. No markdown file outside IDENTITY.md calls an entry superseded, withdrawn, replaced or
+     retired without an `Identity:` line that breaks or retires it.
+  8. Every quotation in an entry's attributes occurs verbatim in a record that the same clause
+     links, ignoring line breaks and `**` emphasis. A clause that links no file in this
+     repository (an issue, another repository, an internal note) is a reviewer's to check.
 
-WHAT IT DOES NOT DECIDE. Whether a change is RIGHT. It cannot see the two sealed
-derivations, the peer read or the owner's words the rule also requires; those are a
-reviewer's job. What it guarantees is that a change to an invariant cannot merge looking
-like an ordinary edit: it has to touch the pin and name an ADR that says `breaks`.
-Rule 4 reads the English "supersede(s)". A reversal written as "replaces" or "is no
-longer" escapes it, which is why the change rule, not this check, is the guard.
+WHAT IT DOES NOT DECIDE. Whether a change is right, whether a derivation was really sealed,
+whether a peer read was independent, or whether a component's agents really accepted. It
+guarantees only that a change to a contract cannot merge looking like an ordinary edit.
 
-`--self-test` plants each defect this check exists for in a scratch copy, the historical
-one included, and fails unless every plant turns it red and the clean copy stays green.
+`--self-test` plants each defect in a scratch copy and fails unless every plant turns the check
+red for that defect, and the clean copy and a lawful change stay green.
 
 stdlib only, read-only, and safe to import: it writes nothing and does nothing on import.
 """
@@ -59,17 +66,26 @@ SKIP = {".git", "node_modules", "target", "build", "dist", "__pycache__", ".venv
         "worktrees", ".mypy_cache", ".pytest_cache", ".ruff_cache"}
 
 HEADING = re.compile(r"^### (ID(\d+))\. ")
-IDENTITY_LINE = re.compile(r"^\s*(?:\*\*)?Identity:(?:\*\*)?\s*(adopts|breaks)\s+(.+)$", re.M)
+ATTR = re.compile(r"^- \*\*(Contract status|Authority|Evidence|Coverage):\*\*")
+ATTRS = ("Contract status", "Authority", "Evidence", "Coverage")
+PARTS = ("structural contract", "derived construction", "family policy")
+IDENTITY_LINE = re.compile(r"^\s*(?:\*\*)?Identity:(?:\*\*)?\s*(adopts|updates|breaks|retires)\s+(.+)$", re.M)
+STRUCT = re.compile(r"^\s*(?:\*\*)?(Supersedes|Updates):(?:\*\*)?\s*(.+)$", re.M)
+FIELD = lambda name: re.compile(r"^\s*(?:-\s*)?\*\*" + re.escape(name) + r":\*\*\s*\S", re.M | re.I)
+R6_FIELDS = ("Affected contract", "Old rationale and present tradeoff", "Authority and delegation",
+             "Alternatives and consequences", "Evidence and obligations", "Approved revision")
 ID_RANGE = re.compile(r"ID(\d+)\s*(?:to|–|-)\s*ID(\d+)")
 ID_ONE = re.compile(r"\bID(\d+)\b")
 SUPERSEDE = re.compile(r"\bsupersed(?:e|es|ing)\b", re.I)
 RETIRES_ID = re.compile(r"\bID\d+\b.*\b(?:superseded|withdrawn|replaced|retired)\b"
                         r"|\b(?:supersede[sd]?|withdraws?|replaces?|retires?)\b.*\bID\d+\b", re.I)
 DESIGN_REF = re.compile(r"\bADR (\d{4})\b|design/(\d{4})-|\]\((\d{4})-")
-QUOTE = re.compile(r'"([^"]+)"')
-CLAUSE = re.compile(r"\b(?:owner sessions|owner|agents|recorded|proved|checked|stated):")
-LINK = re.compile(r"\]\(([^)#\s]+)(?:#[^)]*)?\)")
 DOC_REF = re.compile(r"\]\((?:\.\./|docs/)?([A-Z][A-Z0-9-]*\.md)\)")
+QUOTE = re.compile(r'"([^"]+)"')
+CLAUSE = re.compile(r"\b(?:owner sessions|owner|agents|recorded|proved|checked|stated|derived):")
+LINK = re.compile(r"\]\(([^)#\s]+)(?:#[^)]*)?\)")
+REF = re.compile(r"\]\([^)]+\)|(?<![\w/])#\d+\b|\b[\w.-]+#\d+\b")
+SECTION = re.compile(r"<!-- identity:pin ([\w-]+) -->(.*?)<!-- identity:end -->", re.S)
 
 
 def norm(text: str) -> str:
@@ -80,108 +96,94 @@ def sha(text: str) -> str:
     return hashlib.sha256(norm(text).encode("utf-8")).hexdigest()
 
 
+def plain(text: str) -> str:
+    return norm(text.replace("**", ""))
+
+
 def read(path: str) -> str:
     with open(path, encoding="utf-8") as f:
         return f.read()
 
 
-def parse_identity(text: str):
-    """Return ({id: statement}, ordered ids, protected records, change-log text)."""
+def rel(root: str, path: str) -> str:
+    return os.path.relpath(path, root).replace(os.sep, "/")
+
+
+# ------------------------------------------------------------------------------ IDENTITY.md
+
+def parse_entries(text: str) -> list[dict]:
+    """One dict per `### ID<n>.` entry: id, statement, why, attrs {name: text}, part, components."""
     lines = text.splitlines()
-    statements: dict[str, str] = {}
-    order: list[int] = []
-    protected: set[str] = set()
-    i = 0
-    while i < len(lines):
-        m = HEADING.match(lines[i])
-        if not m:
+    starts = [i for i, l in enumerate(lines) if HEADING.match(l)]
+    bounds = starts[1:] + [len(lines)]
+    entries = []
+    for a, b in zip(starts, bounds):
+        block = lines[a:b]
+        # an entry ends at the next "## " part heading
+        for k, l in enumerate(block[1:], 1):
+            if l.startswith("## "):
+                block = block[:k]
+                break
+        ident = HEADING.match(block[0]).group(1)
+        statement, why, attrs, current = [], [], {}, None
+        i = 1
+        while i < len(block) and not block[i].startswith(">"):
             i += 1
-            continue
-        ident, num = m.group(1), int(m.group(2))
-        order.append(num)
-        j = i + 1
-        while j < len(lines) and not lines[j].startswith(">") and not lines[j].startswith("#"):
-            j += 1
-        quoted = []
-        while j < len(lines) and lines[j].startswith(">"):
-            quoted.append(lines[j][1:].strip())
-            j += 1
-        statements[ident] = "\n".join(quoted)
-        # The invariant's status paragraph names the records it rests on.
-        k = j
-        while k < len(lines) and not HEADING.match(lines[k]) and not lines[k].startswith("## "):
-            if lines[k].startswith("**Status.**"):
-                para = []
-                while k < len(lines) and lines[k].strip():
-                    para.append(lines[k])
+        while i < len(block) and block[i].startswith(">"):
+            statement.append(block[i][1:].strip())
+            i += 1
+        for j in range(i, len(block)):
+            if block[j].startswith("**Why.**"):
+                k = j
+                while k < len(block) and block[k].strip():
+                    why.append(block[k])
                     k += 1
-                body = " ".join(para)
-                for g in DESIGN_REF.findall(body):
-                    protected.add("design/" + next(x for x in g if x))
-                for doc in DOC_REF.findall(body):
-                    protected.add(doc)
-                continue
-            k += 1
-        i = j
-    log = text.split("## Change log", 1)[1] if "## Change log" in text else ""
-    return statements, order, protected, log
-
-
-def status_blocks(text: str):
-    """Yield (ident, status text): from **Status.** to the next heading or bold paragraph."""
-    lines = text.splitlines()
-    ident = None
-    i = 0
-    while i < len(lines):
-        m = HEADING.match(lines[i])
+                break
+        for l in block:
+            m = ATTR.match(l)
+            if m:
+                current = m.group(1)
+                attrs[current] = [l]
+            elif current and (l.startswith("  ") or not l.strip()):
+                attrs[current].append(l)
+            elif current and l.startswith("**"):
+                current = None
+            else:
+                current = None
+        attrs = {k: "\n".join(v).strip() for k, v in attrs.items()}
+        authority = attrs.get("Authority", "")
+        part = next((p for p in PARTS if p in authority.lower()), None)
+        components = []
+        m = re.search(r"family policy:\s*([^.]*?)\s+together", authority, re.I)
         if m:
-            ident = m.group(1)
-        elif lines[i].startswith("## "):
-            ident = None
-        elif ident and lines[i].startswith("**Status.**"):
-            block = [lines[i]]
-            i += 1
-            while i < len(lines) and not lines[i].startswith("#") and not (
-                    lines[i].startswith("**") and not lines[i].startswith("**Status")):
-                block.append(lines[i])
-                i += 1
-            yield ident, "\n".join(block)
-            continue
-        i += 1
+            components = [c.strip() for c in re.split(r",|\band\b", m.group(1)) if c.strip()]
+        entries.append({"id": ident, "num": int(ident[2:]), "statement": "\n".join(statement),
+                        "why": "\n".join(why), "attrs": attrs, "part": part,
+                        "components": components})
+    return entries
 
 
-def plain(text: str) -> str:
-    return norm(text.replace("**", ""))
+def entry_pin(e: dict) -> str:
+    return sha(e["statement"] + "\n" + e["why"] + "\n" + e["attrs"].get("Authority", ""))
 
 
-def unquoted(root: str, identity_text: str) -> list[str]:
-    errors = []
-    for ident, block in status_blocks(identity_text):
-        # A blockquote inside a status quotes an outside source at length; it is not a clause.
-        body = "\n".join(l for l in block.splitlines() if not l.startswith(">"))
-        starts = [m.start() for m in CLAUSE.finditer(body)] + [len(body)]
-        for a, b in zip(starts, starts[1:]):
-            clause = body[a:b]
-            files = []
-            for target in LINK.findall(clause):
-                path = os.path.normpath(os.path.join(root, target))
-                if os.path.isfile(path):
-                    files.append(path)
-            if not files:
-                continue
-            sources = [plain(read(f)) for f in files]
-            for quoted in QUOTE.findall(clause):
-                if not any(plain(quoted) in src for src in sources):
-                    errors.append(
-                        f"IDENTITY.md {ident}: the quotation \"{plain(quoted)}\" does not occur in "
-                        + ", ".join(rel(root, f) for f in files)
-                        + ". Quote the record verbatim, or say paraphrase and drop the quotation marks")
-    return errors
+def entry_sources(e: dict) -> set[str]:
+    """Records an entry rests on: local design records and docs linked from its attributes."""
+    out = set()
+    body = "\n".join(e["attrs"].values())
+    for g in DESIGN_REF.findall(body):
+        out.add("design/" + next(x for x in g if x))
+    for doc in DOC_REF.findall(body):
+        out.add(doc)
+    return out
+
+
+def change_log(text: str) -> str:
+    return text.split("## Change log", 1)[1] if "## Change log" in text else ""
 
 
 def parse_lock(text: str):
-    pins: dict[str, tuple[str, str]] = {}
-    allow: set[tuple[str, str]] = set()
+    pins, sections, allow, retired = {}, {}, set(), {}
     for raw in text.splitlines():
         line = raw.strip()
         if not line or line.startswith("#"):
@@ -189,12 +191,18 @@ def parse_lock(text: str):
         parts = line.split()
         if parts[0] == "allow" and len(parts) == 3:
             allow.add((parts[1], parts[2]))
+        elif parts[0] == "SECTION" and len(parts) == 4:
+            sections[parts[1]] = (parts[2], parts[3])
+        elif len(parts) == 3 and parts[0].startswith("ID") and parts[1] == "retired":
+            retired[parts[0]] = parts[2]
         elif len(parts) == 3 and parts[0].startswith("ID"):
             pins[parts[0]] = (parts[1], parts[2])
         else:
             raise SystemExit(f"identity.lock: cannot read line: {raw!r}")
-    return pins, allow
+    return pins, sections, allow, retired
 
+
+# ------------------------------------------------------------------------------ records
 
 def ids_in(spec: str) -> set[int]:
     out: set[int] = set()
@@ -212,6 +220,52 @@ def adr_file(root: str, number: str) -> str | None:
     return None
 
 
+def identity_lines(text: str) -> dict[str, set[int]]:
+    out: dict[str, set[int]] = {}
+    for kind, spec in IDENTITY_LINE.findall(text):
+        out.setdefault(kind, set()).update(ids_in(spec))
+    return out
+
+
+def field_text(text: str, name: str) -> str:
+    m = re.search(r"^\s*(?:-\s*)?\*\*" + re.escape(name) + r":\*\*(.*(?:\n(?!\s*(?:-\s*)?\*\*[\w -]+:\*\*|\s*$|#).*)*)",
+                  text, re.M | re.I)
+    return m.group(1) if m else ""
+
+
+def record_errors(r: str, text: str, entries_by_num: dict[int, dict]) -> list[str]:
+    """Rule 4 for one markdown record."""
+    errors = []
+    idl = identity_lines(text)
+    structs = STRUCT.findall(text)
+    supersedes = any(k == "Supersedes" for k, _ in structs) or bool(idl.get("breaks") or idl.get("retires"))
+    updates = any(k == "Updates" for k, _ in structs) or bool(idl.get("updates"))
+    if supersedes:
+        missing = [f for f in R6_FIELDS if not FIELD(f).search(text)]
+        if not structs and not (FIELD("Supersedes").search(text) or FIELD("Updates").search(text)):
+            missing.insert(1, "Supersedes")
+        if missing:
+            errors.append(f"{r}: a supersession record lacks the change rule's fields: "
+                          + ", ".join(missing))
+        if len(REF.findall(field_text(text, "Derivations"))) < 2:
+            errors.append(f"{r}: a supersession needs a `Derivations:` field citing two sealed "
+                          f"derivations, one of which tries to defeat the favoured design")
+    if (supersedes or updates) and len(REF.findall(field_text(text, "Peer read"))) < 1:
+        errors.append(f"{r}: a {'supersession' if supersedes else 'update'} needs a "
+                      f"`Peer read:` field citing the read")
+    touched = set().union(*idl.values()) if idl else set()
+    accepted = field_text(text, "Accepted-by").lower()
+    for num in sorted(touched):
+        e = entries_by_num.get(num)
+        if e and e["part"] == "family policy":
+            lacking = [c for c in e["components"] if c.lower() not in accepted]
+            if lacking:
+                errors.append(f"{r}: it sets family policy {e['id']}, which only the agents of "
+                              f"every affected component change together; its `Accepted-by:` "
+                              f"lacks " + ", ".join(lacking))
+    return errors
+
+
 def markdown_files(root: str):
     for dirpath, dirnames, filenames in os.walk(root):
         dirnames[:] = sorted(n for n in dirnames if n not in SKIP)
@@ -220,96 +274,145 @@ def markdown_files(root: str):
                 yield os.path.join(dirpath, name)
 
 
-def rel(root: str, path: str) -> str:
-    return os.path.relpath(path, root).replace(os.sep, "/")
+def refers_to(rel_path: str, line: str, record: str) -> bool:
+    if record.startswith("design/"):
+        num = record.split("/")[1]
+        return (rel_path.startswith(f"docs/design/{num}-") or f"ADR {num}" in line
+                or f"design/{num}-" in line or f"]({num}-" in line)
+    return rel_path == f"docs/{record}" or bool(re.search(r"[(/]" + re.escape(record) + r"\)", line))
 
 
-def refers_to(rel_path: str, line: str, protected: set[str]) -> bool:
-    """Is this file one of the protected records, or does the line cite one?"""
-    for rec in protected:
-        if rec.startswith("design/"):
-            num = rec.split("/")[1]
-            if rel_path.startswith(f"docs/design/{num}-"):
-                return True
-            if f"ADR {num}" in line or f"design/{num}-" in line or f"]({num}-" in line:
-                return True
-        else:
-            if rel_path == f"docs/{rec}":
-                return True
-            if re.search(r"[(/]" + re.escape(rec) + r"\)", line):
-                return True
-    return False
+def unquoted(root: str, entries: list[dict]) -> list[str]:
+    errors = []
+    for e in entries:
+        body = "\n".join(l for l in "\n".join(e["attrs"].values()).splitlines()
+                         if not l.lstrip().startswith(">"))
+        starts = [m.start() for m in CLAUSE.finditer(body)] + [len(body)]
+        for a, b in zip(starts, starts[1:]):
+            clause = body[a:b]
+            files = [os.path.normpath(os.path.join(root, t)) for t in LINK.findall(clause)]
+            files = [f for f in files if os.path.isfile(f)]
+            if not files:
+                continue
+            sources = [plain(read(f)) for f in files]
+            for quoted in QUOTE.findall(clause):
+                if not any(plain(quoted) in src for src in sources):
+                    errors.append(f"IDENTITY.md {e['id']}: the quotation \"{plain(quoted)}\" does not "
+                                  f"occur in " + ", ".join(rel(root, f) for f in files)
+                                  + ". Quote the record verbatim, or say paraphrase and drop the "
+                                    "quotation marks")
+    return errors
 
 
-def check(root: str) -> list[str]:
+# ------------------------------------------------------------------------------ the check
+
+def check(root: str, warnings: list[str] | None = None) -> list[str]:
     errors: list[str] = []
-    identity_path = os.path.join(root, "IDENTITY.md")
-    lock_path = os.path.join(root, "tools", "identity.lock")
-    identity_text = read(identity_path)
-    statements, order, protected, log = parse_identity(identity_text)
-    pins, allow = parse_lock(read(lock_path))
-    errors.extend(unquoted(root, identity_text))
+    warnings = warnings if warnings is not None else []
+    identity_text = read(os.path.join(root, "IDENTITY.md"))
+    entries = parse_entries(identity_text)
+    by_num = {e["num"]: e for e in entries}
+    log = change_log(identity_text)
+    pins, sections, allow, retired = parse_lock(read(os.path.join(root, "tools", "identity.lock")))
 
-    if order != list(range(1, len(order) + 1)):
-        errors.append(f"IDENTITY.md: invariants must be numbered ID1..IDn in order, found {order}")
-    for ident, text in statements.items():
-        if not text.strip():
-            errors.append(f"IDENTITY.md: {ident} has no quoted statement")
-    if set(pins) != set(statements):
-        errors.append("identity.lock pins " + ", ".join(sorted(pins)) +
-                      " but IDENTITY.md states " + ", ".join(sorted(statements)))
+    # rule 1
+    ids = [e["id"] for e in entries]
+    if len(ids) != len(set(ids)):
+        errors.append("IDENTITY.md: entry identifiers must be unique")
+    for e in entries:
+        if not e["statement"].strip():
+            errors.append(f"IDENTITY.md {e['id']}: no quoted statement")
+        if not e["why"].strip():
+            errors.append(f"IDENTITY.md {e['id']}: no **Why.** paragraph")
+        for a in ATTRS:
+            if a not in e["attrs"]:
+                errors.append(f"IDENTITY.md {e['id']}: lacks the {a} attribute "
+                              f"(every entry carries Contract status, Authority, Evidence, Coverage)")
+        if "Authority" in e["attrs"] and e["part"] is None:
+            errors.append(f"IDENTITY.md {e['id']}: its Authority does not name its part "
+                          f"(structural contract, derived construction or family policy)")
+        if e["part"] == "family policy" and not e["components"]:
+            errors.append(f"IDENTITY.md {e['id']}: a family-policy entry names its components "
+                          f"(\"family policy: A, B and C together\")")
+    for gone in retired:
+        if gone in ids:
+            errors.append(f"IDENTITY.md: {gone} is retired in the lock and cannot be reused")
 
-    for ident, text in statements.items():
-        if ident not in pins:
+    # rules 2 and 3
+    if set(pins) != set(ids):
+        errors.append("identity.lock pins " + ", ".join(sorted(pins)) + " but IDENTITY.md states "
+                      + ", ".join(sorted(ids)))
+    for e in entries:
+        if e["id"] not in pins:
             continue
-        digest, adr = pins[ident]
-        if sha(text) != digest:
-            errors.append(
-                f"{ident}'s statement changed. An invariant changes only by IDENTITY.md's change "
-                f"rule: an ADR with the line `Identity: breaks {ident}`, a change-log entry, and "
-                f"the new pin in tools/identity.lock ({sha(text)})")
+        digest, adr = pins[e["id"]]
+        if entry_pin(e) != digest:
+            errors.append(f"{e['id']}'s statement, reason or authority changed. A contract changes "
+                          f"only by IDENTITY.md's change rule: a record with an `Identity:` line for "
+                          f"{e['id']}, a change-log entry, and the new pin ({entry_pin(e)})")
         path = adr_file(root, adr)
         if path is None:
-            errors.append(f"{ident} is pinned to ADR {adr}, which does not exist")
+            errors.append(f"{e['id']} is pinned to ADR {adr}, which does not exist")
             continue
-        covered = set()
-        for _, spec in IDENTITY_LINE.findall(read(path)):
-            covered |= ids_in(spec)
-        if int(ident[2:]) not in covered:
-            errors.append(f"{ident} is pinned to ADR {adr}, whose `Identity:` line does not "
-                          f"adopt or break it")
+        covered = set().union(*identity_lines(read(path)).values()) if identity_lines(read(path)) else set()
+        if e["num"] not in covered:
+            errors.append(f"{e['id']} is pinned to ADR {adr}, whose `Identity:` line does not cover it")
         if f"ADR {adr}" not in log and f"design/{adr}-" not in log:
-            errors.append(f"{ident} is pinned to ADR {adr}, which IDENTITY.md's change log does "
-                          f"not name")
+            errors.append(f"{e['id']} is pinned to ADR {adr}, which the change log does not name")
+    for key, (digest, adr) in sections.items():
+        fname, name = key.split("#", 1)
+        path = os.path.join(root, fname)
+        found = {m.group(1): m.group(2) for m in SECTION.finditer(read(path))} if os.path.isfile(path) else {}
+        if name not in found:
+            errors.append(f"pinned section {key} is missing its identity:pin markers")
+        elif sha(found[name]) != digest:
+            errors.append(f"pinned section {key} changed; it changes only with a record and a new "
+                          f"pin ({sha(found[name])})")
+        if adr_file(root, adr) is None or (f"ADR {adr}" not in log and f"design/{adr}-" not in log):
+            errors.append(f"pinned section {key} names ADR {adr}, which is missing or not in the change log")
 
-    # The records the lock names are the identity records themselves: they state the
-    # invariants and discuss supersession on purpose, under the change rule.
-    identity_records = {adr for _, adr in pins.values()}
+    # rules 4 to 7
+    identity_records = {adr for _, adr in pins.values()} | {adr for _, adr in sections.values()}
     for path in markdown_files(root):
         r = rel(root, path)
         if r == "IDENTITY.md":
             continue
-        if r.startswith("docs/design/") and r[12:16] in identity_records:
-            continue
         text = read(path)
-        breaks = any(kind == "breaks" for kind, _ in IDENTITY_LINE.findall(text))
-        if breaks:
-            continue
+        errors.extend(record_errors(r, text, by_num))
+        idl = identity_lines(text)
+        structs = STRUCT.findall(text)
+        named_ids = set().union(*idl.values()) if idl else set()
+        for kind, target in structs:
+            for e in entries:
+                if any(refers_to("", target, src) for src in entry_sources(e)) and \
+                        not (named_ids & {x["num"] for x in entries
+                                          if any(refers_to("", target, s) for s in entry_sources(x))}):
+                    errors.append(f"{r}: `{kind}: {target.strip()}` names a record "
+                                  f"{e['id']} rests on, but no `Identity:` line covers an entry resting on it")
+                    break
+        is_identity_record = r.startswith("docs/design/") and r[12:16] in identity_records
+        breaks = bool(idl.get("breaks") or idl.get("retires"))
         for n, line in enumerate(text.splitlines(), 1):
-            if SUPERSEDE.search(line) and refers_to(r, line, protected):
-                if (r, sha(line)) not in allow:
-                    errors.append(
-                        f"{r}:{n}: declares a supersession touching a record deixis's identity "
-                        f"rests on. A reversal of the floor needs an ADR with an "
-                        f"`Identity: breaks ID<n>` line (IDENTITY.md, change rule): {line.strip()}")
-            if RETIRES_ID.search(line):
-                errors.append(f"{r}:{n}: retires an identity invariant without an "
-                              f"`Identity: breaks` line: {line.strip()}")
+            if SUPERSEDE.search(line) and not is_identity_record and not STRUCT.match(line):
+                protected = [s for e in entries for s in entry_sources(e) if refers_to(r, line, s)]
+                if protected and not structs and (r, sha(line)) not in allow:
+                    errors.append(f"{r}:{n}: declares a supersession of a record deixis's contracts "
+                                  f"rest on ({protected[0]}) without declaring it: add `Supersedes:` "
+                                  f"and `Identity:` lines (IDENTITY.md, change rule): {line.strip()}")
+                elif not protected and (r, sha(line)) not in allow:
+                    warnings.append(f"{r}:{n}: prose supersession (warning only): {line.strip()}")
+            if RETIRES_ID.search(line) and not breaks and not is_identity_record:
+                errors.append(f"{r}:{n}: retires an identity entry without an `Identity: breaks` "
+                              f"or `retires` line: {line.strip()}")
+
+    # rule 8
+    errors.extend(unquoted(root, entries))
     return errors
 
 
+# ------------------------------------------------------------------------------ self-test
+
 def self_test(root: str) -> list[str]:
-    """Plant each defect in a scratch copy; every plant must turn the check red."""
     failures: list[str] = []
 
     def copy() -> str:
@@ -330,58 +433,131 @@ def self_test(root: str) -> list[str]:
         with open(path, "w", encoding="utf-8", newline="\n") as f:
             f.write(t)
 
-    def arm(name: str, plant, want_red: bool) -> None:
+    def write(path: str, s: str) -> None:
+        with open(path, "w", encoding="utf-8", newline="\n") as f:
+            f.write(s)
+
+    def arm(name: str, plant, want: str | None) -> None:
+        """want: None for green, else a fragment the errors must contain."""
         tmp = copy()
         try:
             plant(tmp)
-            red = bool(check(tmp))
-            if red != want_red:
-                failures.append(f"self-test arm '{name}': expected {'red' if want_red else 'green'}, "
-                                f"got {'red' if red else 'green'}")
+            errors = check(tmp)
+            if want is None and errors:
+                failures.append(f"self-test arm '{name}': expected green, got: {errors[0][:160]}")
+            elif want is not None and not any(want in e for e in errors):
+                failures.append(f"self-test arm '{name}': expected red for '{want}', got: "
+                                + (errors[0][:160] if errors else "green"))
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
 
-    first = sorted(parse_identity(read(os.path.join(root, "IDENTITY.md")))[0])[0]
+    def entry(t, ident):
+        return next(e for e in parse_entries(read(os.path.join(t, "IDENTITY.md"))) if e["id"] == ident)
 
-    arm("clean copy", lambda t: None, False)
+    def repin(t, ident, adr):
+        new = entry_pin(entry(t, ident))
+        edit(os.path.join(t, "tools", "identity.lock"),
+             lambda s: re.sub(r"(?m)^" + ident + r" \S+ \S+$", f"{ident} {new} {adr}", s, count=1))
 
-    def reword(t):
-        edit(os.path.join(t, "IDENTITY.md"),
-             lambda s: re.sub(r"(### " + first + r"\. [^\n]*\n\n> )", r"\1Usually, ", s, count=1))
-    arm("an invariant's statement edited in place", reword, True)
+    def reword(t, ident, old, new):
+        edit(os.path.join(t, "IDENTITY.md"), lambda s: s.replace(old, new, 1))
+
+    fam = next(e for e in parse_entries(read(os.path.join(root, "IDENTITY.md"))) if e["part"] == "family policy")
+    first = parse_entries(read(os.path.join(root, "IDENTITY.md")))[0]
+
+    def record(t, ident, *, fields=True, derivations=True, peer=True, accepted=None):
+        lines = [f"# Planted\n\nIdentity: breaks {ident}\n",
+                 "Supersedes: [ADR 0012](0012-data-wire-tree-symmetry.md)\n"]
+        if fields:
+            for f in R6_FIELDS:
+                lines.append(f"**{f}:** planted.\n")
+        if derivations:
+            lines.append("**Derivations:** [one](0001-keys-are-bytes.md), [two](0002-positional-keys.md).\n")
+        if peer:
+            lines.append("**Peer read:** [read](0003-instantiations-beyond-ontos.md).\n")
+        if accepted is not None:
+            lines.append(f"**Accepted-by:** {accepted}.\n")
+        write(os.path.join(t, "docs", "design", "0999-planted.md"), "\n".join(lines))
+        edit(os.path.join(t, "IDENTITY.md"), lambda s: s + "- planted, [ADR 0999](docs/design/0999-planted.md).\n")
+
+    arm("clean copy", lambda t: None, None)
+
+    arm("an entry's statement edited in place",
+        lambda t: reword(t, first["id"], first["statement"].splitlines()[0], "Usually, " + first["statement"].splitlines()[0]),
+        "statement, reason or authority changed")
 
     def historical(t):
-        with open(os.path.join(t, "docs", "design", "0999-planted.md"), "w", encoding="utf-8") as f:
-            f.write("# Planted\n\nIt **supersedes the interaction terminology of "
-                    "[ADR 0012](0012-data-wire-tree-symmetry.md)**:\n")
-    arm("ADR 0013's original sentence, superseding ADR 0012", historical, True)
+        write(os.path.join(t, "docs", "design", "0999-planted.md"),
+              "# Planted\n\nIt **supersedes the interaction terminology of "
+              "[ADR 0012](0012-data-wire-tree-symmetry.md)**:\n")
+    arm("ADR 0013's original sentence, an undeclared supersession of ADR 0012", historical,
+        "without declaring it")
 
-    def amend_0012(t):
-        edit(adr_file(t, "0012"), lambda s: s.replace(
-            "## Decision", "*(Amended: ADR 0999 supersedes this record's interaction "
-            "terminology.)*\n\n## Decision", 1))
-    arm("an amendment inside ADR 0012 saying it is superseded", amend_0012, True)
+    arm("an amendment inside ADR 0012 saying it is superseded",
+        lambda t: edit(adr_file(t, "0012"), lambda s: s.replace(
+            "## Decision", "*(Amended: ADR 0999 supersedes this record's interaction terminology.)*\n\n## Decision", 1)),
+        "without declaring it")
 
-    def paraphrase(t):
-        edit(os.path.join(t, "IDENTITY.md"), lambda s: s.replace("\"Let's use mandatory", "\"We use mandatory", 1))
-    arm("an owner's words paraphrased inside quotation marks", paraphrase, True)
+    arm("a document retiring an entry",
+        lambda t: edit(os.path.join(t, "README.md"), lambda s: s + f"\n{fam['id']} is superseded by bitwire 0.4.0.\n"),
+        "retires an identity entry")
 
-    def retire(t):
-        edit(os.path.join(t, "README.md"), lambda s: s + "\nID12 is superseded by bitwire 0.4.0.\n")
-    arm("a document retiring an invariant", retire, True)
+    arm("an owner's words paraphrased inside quotation marks",
+        lambda t: edit(os.path.join(t, "IDENTITY.md"), lambda s: s.replace("\"Let's use mandatory", "\"We use mandatory", 1)),
+        "does not occur in")
+
+    arm("R4: the withdrawn criterion sentence re-added to ID12",
+        lambda t: reword(t, "ID12", "Raw conveyance does not interpret application paths.",
+                         "Raw conveyance does not interpret application paths. A path parameter on the "
+                         "primitive is addressing duplicated."),
+        "statement, reason or authority changed")
+
+    arm("R13: ID11 collapsed back into one overloaded `/` law",
+        lambda t: reword(t, "ID11", "opaque addressed handle, `under(under",
+                         "opaque addressed handle, or across any connection, `connect(a) / p ≈ connect(a ++ p)` and `under(under"),
+        "statement, reason or authority changed")
+
+    arm("R27: an entry missing its Coverage attribute",
+        lambda t: edit(os.path.join(t, "IDENTITY.md"),
+                       lambda s: s.replace(first["attrs"]["Coverage"].splitlines()[0], "", 1)),
+        "lacks the Coverage attribute")
+
+    def missing_field(t):
+        reword(t, "ID12", "Raw conveyance", "Raw conveyance, in this plant,")
+        record(t, "ID12", fields=False, accepted=", ".join(fam["components"]))
+        repin(t, "ID12", "0999")
+    arm("R6: a supersession record without the change rule's fields", missing_field, "lacks the change rule's fields")
+
+    def no_derivations(t):
+        reword(t, "ID12", "Raw conveyance", "Raw conveyance, in this plant,")
+        record(t, "ID12", derivations=False, peer=False, accepted=", ".join(fam["components"]))
+        repin(t, "ID12", "0999")
+    arm("condition 2: a supersession without two derivations and a peer read", no_derivations, "Derivations")
+
+    def one_component(t):
+        reword(t, "ID12", "Raw conveyance", "Raw conveyance, in this plant,")
+        record(t, "ID12", accepted=fam["components"][0])
+        repin(t, "ID12", "0999")
+    arm("condition 1: family policy changed with one component's acceptance", one_component, "Accepted-by")
 
     def lawful(t):
-        target = os.path.join(t, "IDENTITY.md")
-        edit(target, lambda s: re.sub(r"(### " + first + r"\. [^\n]*\n\n> )", r"\1Usually, ", s, count=1))
-        new = parse_identity(read(target))[0][first]
-        with open(os.path.join(t, "docs", "design", "0999-planted.md"), "w", encoding="utf-8") as f:
-            f.write(f"# Planted\n\nIdentity: breaks {first}\n\nThis supersedes "
-                    f"[ADR 0012](0012-data-wire-tree-symmetry.md) on purpose.\n")
-        edit(target, lambda s: s + "- planted break, [ADR 0999](docs/design/0999-planted.md).\n")
-        lock = os.path.join(t, "tools", "identity.lock")
-        edit(lock, lambda s: re.sub(r"^" + first + r" \S+ \S+$",
-                                    f"{first} {sha(new)} 0999", s, count=1, flags=re.M))
-    arm("a change made by the change rule", lawful, False)
+        reword(t, "ID12", "Raw conveyance", "Raw conveyance, in this plant,")
+        record(t, "ID12", accepted=", ".join(fam["components"]))
+        repin(t, "ID12", "0999")
+    arm("a family-policy change made by the change rule", lawful, None)
+
+    def section(t):
+        lock = parse_lock(read(os.path.join(t, "tools", "identity.lock")))[1]
+        key = sorted(lock)[0]
+        fname, name = key.split("#", 1)
+        edit(os.path.join(t, fname), lambda s: s.replace(f"<!-- identity:pin {name} -->",
+                                                         f"<!-- identity:pin {name} -->\nPlanted.", 1))
+    arm("a pinned section edited", section, "pinned section")
+
+    arm("prose supersession of an unprotected record only warns",
+        lambda t: write(os.path.join(t, "docs", "design", "0999-planted.md"),
+                        "# Planted\n\nThis supersedes [ADR 0005](0005-set-keys.md)'s example.\n"),
+        None)
 
     return failures
 
@@ -392,14 +568,19 @@ def main() -> int:
         failures = self_test(root)
         for f in failures:
             print(f)
-        print("identity self-test: " + ("FAILED" if failures else "every plant turns the check red; the clean copy and a lawful change stay green"))
+        print("identity self-test: " + ("FAILED" if failures else
+              "every plant turns the check red for its own defect; the clean copy, a lawful change "
+              "and an unprotected prose supersession stay green"))
         return 1 if failures else 0
-    errors = check(root)
+    warnings: list[str] = []
+    errors = check(root, warnings)
+    for w in warnings:
+        print("warning: " + w)
     for e in errors:
         print(e)
-    statements = parse_identity(read(os.path.join(root, "IDENTITY.md")))[0]
-    print(f"identity: {len(statements)} invariants, " +
-          ("FAILED" if errors else "every statement matches its pin, and no record supersedes their sources"))
+    n = len(parse_entries(read(os.path.join(root, "IDENTITY.md"))))
+    print(f"identity: {n} entries, " + ("FAILED" if errors else
+          "every pin holds, every supersession is declared, every quotation is verbatim"))
     return 1 if errors else 0
 
 

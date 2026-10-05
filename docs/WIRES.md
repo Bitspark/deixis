@@ -156,8 +156,12 @@ has completed its migration or behavioral conformance.
 Corollaries, each by re-applying the equation:
 
 - **Cut anywhere**: `connect(a ++ p ++ q)` agrees under every cut; each cut
-  point is a hop, so **multi-hop routing is iterated application** and a relay
-  chain is a relay.
+  point is a hop, so **multi-hop routing is iterated application**. A chain of
+  compatible relays preserves the declared safety relation when their interfaces
+  and observation relations compose; end-to-end liveness, admission behaviour and
+  resource bounds require additional compatible assumptions. *(Amended 2026-10-05,
+  [ADR 0015](design/0015-deixis-identity.md) §5: the earlier wording made every
+  chain of relays a relay unconditionally.)*
 - **Mounts compose**: a position whose own value names a bound `connect`
   extends the law by transitivity of `≈`. Floor resolution never enters a
   value ([PATH.md](PATH.md)), so continuing a path through a mount is the
@@ -177,21 +181,36 @@ certified by a battery when one exists. The law is spec and battery jointly,
 the same shape as the vectors doctrine — and until routing vectors and the
 two-nodes-one-process rig exist, it is a stated law, not an invariant.
 
-*(Amended 2026-10-05; the law above stands, and is [IDENTITY.md](../IDENTITY.md)'s ID11. These
-precisions come from Bitspark/deixis#19 and research 0002's advice.)*
-- **What `/` is.** `/` is the floor's resolution only where `connect(a)` yields a complete
-  structural view. Through an opaque addressed facade it is prefix binding, and the law then says
-  only that prefixes compose. It claims nothing about whether a path exists or what lies below
-  it, since an addressed-only facade is not a tree ([ADR 0012](design/0012-data-wire-tree-symmetry.md)).
-- **What a profile that states the law defines:** `connect`, its root scope, the admitted
-  observations, failure, and definedness on both sides.
-- **The relay law the crossing half needs.** Path associativity does not prove a relay
-  transparent. Research 0002's advice (§5.4) gives the safety law: for each direction `d`, with
-  `I_d(t)` the complete frames accepted by time `t` and `O_d(t)` those emitted,
-  `O_d(t) ≼ I_d(t)`, a byte-identical prefix. That one condition excludes invention, corruption,
-  duplication, reordering, and skipping followed by later delivery, in each direction
-  independently. Liveness holds only within the profile's stated assumptions. "The composition
-  of safety-transparent relays is safety-transparent."
+<!-- identity:pin wires-s4-amendment -->
+*(Amended 2026-10-05, [ADR 0015](design/0015-deixis-identity.md) §5; the law above stands.
+Its precise readings come from Bitspark/deixis#19, research 0002's advice and research 0006's
+advice, R13 and R14.)* The overloaded `/` hides three different obligations:
+- **A complete view** ([IDENTITY.md](../IDENTITY.md) ID11). Where a connection explicitly
+  supplies a coherent complete view `C(ρ, v)` under scope `ρ` and version `v`,
+  `at(C(ρ, v)(a), p) ≃ C(ρ, v)(a ++ p)`, agreement on absence included. Two remote observations
+  around a mutation need not denote one tree, hence the coherence condition.
+- **An opaque addressed handle** (ID11). `under(under(A, p), q) ≃ under(A, p ++ q)`: a law of
+  constructing send access. It says nothing about whether a path exists or what lies below
+  it, since an addressed-only facade is not a tree
+  ([ADR 0012](design/0012-data-wire-tree-symmetry.md)). `under` is send-only: it rebases no
+  incoming path and establishes no receive owner.
+- **Dispatch coherence, per relay profile** (ID13).
+  `dispatch_P(under(A, p), q, x) ≈_P dispatch_P(A, p ++ q, x)`. The profile `P` declares its
+  observation boundary, representation, naming and scope, state and authority, ordering,
+  failure and flow control, liveness assumptions and composition conditions. Its observations
+  distinguish wrong-target dispatch, corruption, prohibited duplication and prohibited
+  fallback; a relation that equated every outcome would satisfy the equation and prove nothing.
+
+None of the three requires a prefix-closed domain, which would force an ancestor namespace to
+be exposed merely because a descendant is. A mount is continued only by an explicit resolver
+rule ([ADR 0013](design/0013-binding-views-and-the-service-line.md) §8). Path associativity
+does not prove a relay transparent. For a byte-preserving ordered relay, research 0002's advice
+(§5.4) gives the safety law: for each direction `d`, with `I_d(t)` the complete frames accepted
+by time `t` and `O_d(t)` those emitted, `O_d(t) ≼ I_d(t)`, a byte-identical prefix. That one
+condition excludes invention, corruption, duplication, reordering, and skipping followed by
+later delivery, in each direction independently. Liveness holds only within the profile's
+stated assumptions.
+<!-- identity:end -->
 
 ## 5. Sessions — the codec's behavioral sibling
 
@@ -216,10 +235,20 @@ the candidate to beat, with linearity stated honestly: a name's bytes copy
 freely, so one-shot is authority-enforced single **redemption** at the binder —
 affine, not strict (external advice, research 0002; minimum laws in its
 integration ledger).
-*(Closed 2026-10-05, [ADR 0015](design/0015-deixis-identity.md) §4, an agents' decision:
-research 0002's integration ledger adopted affine one-shot endpoint transitions as normative
-and persistent or multiplexed transports as permitted refinements. ADR 0012's
-`send(message): void` on a persistent wire is such a refinement.)*
+<!-- identity:pin wires-s5-open -->
+*(Still OPEN, 2026-10-05, [ADR 0015](design/0015-deixis-identity.md) §5.)* Research 0002's
+integration ledger adopted affine one-shot endpoint transitions as normative and persistent or
+multiplexed transports as permitted refinements. A persistent `send(message)` is such a
+refinement only with a state mapping; the signature alone is not a refinement argument
+(research 0006, R26). Two options remain:
+- supply the state mapping from persistent sends to affine one-shot transitions, covering
+  concurrent sends, continuation advancement, cancellation, failure and replay; or
+- record that persistent messaging is the primitive and affine sessions an optional profile,
+  with the obligations that change.
+
+Trigger: bitwire#76 merges, and a persistent `Wire.send` becomes the released primitive.
+Owner: seat caa.
+<!-- identity:end -->
 
 ## 6. Realization sketch — non-normative
 

@@ -15,7 +15,7 @@
 
 **[IDENTITY.md](IDENTITY.md) records what deixis is:** its invariants, their reasons and
 falsifiers, and the only way they change. Trees of readers, senders and receivers share that
-structure; no consumer defines it, and no consumer's release or downstream record supersedes it.
+structure; no consumer defines it, and no consumer's release or downstream record amends it.
 
 ```
 Node(.) = (.) × (Key ⇀ Node(.))

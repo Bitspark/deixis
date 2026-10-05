@@ -1,409 +1,536 @@
 # deixis's identity
 
-**What deixis is, the invariants that make it that, and the only way they change.** This page
-is about deixis as a whole. It is not [docs/IDENTITY-SURFACE.md](docs/IDENTITY-SURFACE.md),
-which lists the parts of the codec that decide octets and content addresses.
+**What deixis is, the contracts that make it that, and the only way they change.** This page is
+about deixis as a whole. It is not [docs/IDENTITY-SURFACE.md](docs/IDENTITY-SURFACE.md), which
+lists the parts of the codec that decide octets and content addresses.
 
-**Status: frozen** by [ADR 0015](docs/design/0015-deixis-identity.md). An invariant here
-changes only through [the change rule](#how-an-invariant-changes). No consumer's release, no
-downstream record and no consultation supersedes one. This page does not freeze the codec:
-`deixis-codec-v2` stays a candidate on its own freeze track ([CODEC.md](docs/CODEC.md),
-[issue #1](https://github.com/Bitspark/deixis/issues/1)).
+**Status: accepted** by [ADR 0015](docs/design/0015-deixis-identity.md), after an openly framed
+expert consultation (research 0006). An entry here changes only through
+[a supersession record](#how-a-contract-changes). Consumers cannot amend a depended-on contract
+by implication. This page does not freeze the codec: `deixis-codec-v2` stays a candidate on its
+own freeze track ([CODEC.md](docs/CODEC.md), [issue #1](https://github.com/Bitspark/deixis/issues/1)).
 
 ## What deixis is
 
-**deixis is the structure of pointing.** It is two things and nothing else:
+**deixis is the structure of pointing:** a finite tree whose keys are exact byte strings,
+`Node(T) = T × (Bytes ⇀fin Node(T))`, and selection, by which a path reaches a position in it.
+An operation reaches the value held there by selecting first, and nothing else is added.
 
-- a finite tree whose keys are exact byte strings, `Node(T) = T × (Bytes ⇀fin Node(T))`;
-- the one law by which a path reaches a position in that tree, and an operation reaches the
-  value held there.
+deixis selects. It never routes, invokes, binds, stores, connects or keeps time. Capabilities,
+binding, transport, mutable state and services are built above it, and they respect its
+contracts.
 
-deixis selects. It never routes, invokes, binds, stores, connects or keeps time. Everything
-else in the family is built above it: capabilities, binding, transport, mutable state and
-services. They respect its laws, and nothing above it amends them.
+The test for anything proposed here is the one deixis's vision document calls the second-party
+criterion: *would this survive the first consumer never existing?* If a deixis contract changes
+because a consumer changed, and nothing records that the contract was superseded, the
+dependency points the wrong way.
 
-Its dependencies point floor-ward. The test for anything proposed here is the one deixis's
-vision document calls the second-party criterion: *would this survive the first consumer never
-existing?* If a deixis record changes because a consumer changed, the dependency points the
-wrong way.
+## How to read this page
 
-## How to read an invariant
+The page has three parts, governed separately, because they have different owners
+([ADR 0015](docs/design/0015-deixis-identity.md) §1):
 
-Each invariant has a number, a **statement**, a **reason**, what would **falsify** it, and a
-**status** with its sources. The statement is the quoted block. [tools/identity_check.py](tools/identity_check.py)
-pins it, so CI fails when it changes outside the change rule. The reason is part of the record
-on purpose: a reason that lives only in an issue, a draft or a paper is invisible to the next
-reader, and that is how this page came to be needed ([ADR 0015](docs/design/0015-deixis-identity.md)).
+| part | entries | changed by |
+| --- | --- | --- |
+| **Structural contract** | ID1 to ID8 | deixis's agents |
+| **Derived constructions** | ID9 to ID11 | deixis's agents, for the structural argument; the implementing libraries own their effectful helpers |
+| **Family policy** | ID12, ID13 | the agents of every affected component, together |
 
-Statuses:
-- **owner**: decided by the owner, in the record named, quoted as that record gives it;
-- **owner sessions**: settled in design sessions with the owner, recorded in deixis's internal
-  design notes and quoted here, because those notes are not public;
-- **agents**: decided by this repository's agents;
-- **recorded**: marked decided in a record that names no decider;
-- **proved**: a result of [the paper](docs/paper/deixis.tex), named by its label;
-- **checked**: replayed by corpus vectors against all four cores on every change;
-- **stated**: doctrine that no vector or battery checks yet.
+Each entry has a stable identifier, a **statement** (the quoted block), the reason for it, what
+would falsify it, and four attributes:
+- **Contract status:** proposed, accepted, deprecated, superseded or retired;
+- **Authority:** who may change it, and the decisions it rests on (*provenance*), quoted
+  verbatim;
+- **Evidence:** proof, derivation and assumptions. The *paper* is
+  [docs/paper/deixis.tex](docs/paper/deixis.tex), cited by label;
+- **Coverage:** vector families, batteries and cores that check it.
 
-The numbers start at `ID` because `I1` to `I3` and `D1`, `D2` already name other things
-([ADR 0008](docs/design/0008-proof-obligations.md)). The charter of
-[ADR 0014](docs/design/0014-structural-identity-and-lifted-access.md), whose `D1` to `D8` are
-folded in here, collided with the second; [ADR 0015](docs/design/0015-deixis-identity.md) §2a maps
-them.
+A law can be accepted before anything checks it. A passing battery does not decide who may
+change a contract. [tools/identity_check.py](tools/identity_check.py) pins each statement
+together with its reason and authority, so CI fails when any of them changes outside the change
+rule.
 
-## The floor
+Identifiers start at `ID` because `I1` to `I3` and `D1`, `D2` already name other things
+([ADR 0008](docs/design/0008-proof-obligations.md)). They are stable: a retired identifier is
+never reused. The charter of [ADR 0014](docs/design/0014-structural-identity-and-lifted-access.md),
+whose `D1` to `D8` are folded in here, is mapped in ADR 0015 §2a.
+
+## Structural contract
+
+<!-- identity:pin completeness -->
+**Completeness criterion.** A tree is determined by a finite, prefix-closed set of paths `P`
+containing the empty path, and a valuation `v : P → T`. Every position has one own value.
+Selection at `p` exists exactly when `p` is in `P`, and the subtree there holds the suffixes `q`
+with `p ++ q` in `P`. ID1 to ID8 are complete in this sense: they determine every structural
+observation (positions, exact keys, own slots, complete children, reconstruction and
+selection) without consulting what the slots mean. They are minimal in the sense that anything
+further is derivable or outside the contract, not in the sense that each law is independent of
+the others.
+<!-- identity:end -->
 
 ### ID1. Shape
 
-> Every node has exactly one own value of the slot type `T` and a finite map from byte-string
-> keys to child nodes. Every tree is finite and well-founded. There are no node kinds:
-> optionality is the slot choice `T = Option[U]`.
+> A node has one own value and a finite map from exact byte keys to child nodes. The child
+> relation is finite and well-founded. These restrictions do not inspect references or
+> structure inside `T`. There are no node kinds: optionality is the slot choice `T = Option[U]`.
 
-**Why.** One constructor keeps every law a single induction and every encoding a single
-grammar. A node kind would put a meaning into the structure, and two kinds can disagree about
-the same shape.
+**Why.** One constructor keeps every law a single induction and every encoding a single grammar.
+A node kind would put a meaning into the structure. The restrictions stop at the slot, so an
+opaque value may refer to anything without making the tree cyclic.
 
-**Falsified by:** a parent value invented by default; a node with no own value or two; a cyclic or
-infinite structure presented as a tree; a separate leaf kind.
+**Falsified by:** a parent value invented by default; a node with no own value or two; a
+structural child cycle; an infinite structure presented as a tree; a separate leaf kind.
 
-**Status.** owner: [ADR 0010](docs/design/0010-mandatory-node-values.md), "Let's use mandatory
-T." (2026-09-23). proved: `def:node`, `stip:structural`. checked: `mnode-invalid`,
-`mnode-instantiation`.
+- **Contract status:** accepted, ADR 0015.
+- **Authority:** structural contract. Provenance: owner: [ADR 0010](docs/design/0010-mandatory-node-values.md),
+  "Let's use mandatory T." (2026-09-23).
+- **Evidence:** proved: `def:node`, `stip:structural`.
+- **Coverage:** `mnode-invalid`, `mnode-instantiation`.
 
 ### ID2. Keys and paths
 
-> Keys are exact byte strings, compared octet by octet. They are never text, never normalized
-> and never split on a separator, and the empty key is a key. A path is a sequence of keys,
-> never their concatenation, and the empty path is not the empty key. Sibling order is not part
-> of a node.
+> Keys have immutable byte-string meaning. Paths are sequences of keys; the empty path differs
+> from a one-element path containing the empty key. No text normalization, separator
+> interpretation, or sibling order belongs to structural identity.
 
-**Why.** Any reading of a key (an encoding, a separator, a case rule, an order) is a meaning.
-Built into the floor, it would make two readers disagree about which tree they hold. Meaning
-belongs to whoever reads the key.
+**Why.** Any built-in reading of a key (an encoding, a separator, a case rule, an order) is a
+meaning, and two readers holding the same tree would then disagree about it. Meaning belongs
+to whoever reads the key.
 
-**Falsified by:** keys normalized as text; `a/b` read as two keys, or the empty path read as an
-empty-key child; segments joined lossily; sibling order changing equality.
+**Falsified by:** keys normalized as text; a key containing a separator read as two keys; the
+empty path read as an empty-key child; segments joined lossily; sibling order changing
+equality; a caller's key buffer mutated after binding that changes what was bound.
 
-**Status.** recorded: [ADR 0001](docs/design/0001-keys-are-bytes.md), whose status reads
-"decided" and names no decider. stated:
-[TREE.md](docs/TREE.md), [PATH.md](docs/PATH.md), and the paper's `rem:prefixfree` on why
-paths do not flatten. checked: `mnode-navigation` (`m-nav-empty-key-path`,
-`m-nav-non-utf8-key-exact`).
+- **Contract status:** accepted, ADR 0015.
+- **Authority:** structural contract. Provenance: recorded: [ADR 0001](docs/design/0001-keys-are-bytes.md),
+  whose status reads "decided" and names no decider.
+- **Evidence:** stated: [TREE.md](docs/TREE.md), [PATH.md](docs/PATH.md), and the paper's
+  `rem:prefixfree` on why paths do not flatten.
+- **Coverage:** `mnode-navigation` (`m-nav-empty-key-path`, `m-nav-non-utf8-key-exact`).
 
 ### ID3. Selection
 
-> `at(N, ε) = N`, and `at(at(N, p), q) ≃ at(N, p ++ q)`, where both sides are defined together.
-> Selection is partial: a miss is undefined. It never creates, defaults or searches. It never
-> enters or invokes an own value, so it never follows a mount. A miss is distinct from every own
-> value, including one that fails or refuses.
+> `at(N, ε) = N`. For `N = (t, c)`, `at(N, k·p) = at(c[k], p)` exactly when `k` is a child key;
+> otherwise selection is absent. Concatenation obeys Kleene equality:
+> `at(at(N, p), q) ≃ at(N, p ++ q)`. Selection performs no slot operation: it never creates,
+> defaults or searches, and never enters an own value, so it never follows a mount. Absence is
+> distinct from every own value, including one that fails or refuses.
 
 **Why.** This is the one law every "where" in the family reuses: a key path inside a value, a
-cell name, a path across a connection. A default or a search would let two paths reach one node
-with no rule for which wins. Entering an own value would make selection depend on what values
-mean. Keeping a miss apart from a refusing value is what lets a caller tell "nothing there"
-from "something there said no".
+cell name, a path across a connection. The one-key recursion ties selection to the child map.
+A default or a search would let two paths reach one node with no rule for which wins, and
+keeping absence apart from refusal is what lets a caller tell "nothing there" from "something
+there said no".
 
 **Falsified by:** a lookup that creates a missing child; a fallback to an ancestor or a default
-handler; following a name or a mount inside an own value; a miss reported as a refusal, or a refusal
-as a miss; a cut of the path that changes which node is selected, or whether one is.
+handler; following a name or a mount inside an own value; absence reported as a refusal, or a
+refusal as absence; a cut of the path that changes which node is selected, or whether one is.
 
-**Status.** owner: [ADR 0012](docs/design/0012-data-wire-tree-symmetry.md), "A missing path is
-resolved before any payload operation; it must remain distinguishable from a present node whose
-read fails or whose send is refused." stated: [PATH.md](docs/PATH.md), resolution never enters a
-value. proved: `prop:action`. checked: `mnode-navigation`, including
-`m-nav-json-payload-spelling-a-node-is-not-entered`.
+- **Contract status:** accepted, ADR 0015.
+- **Authority:** structural contract. Provenance: owner: [ADR 0012](docs/design/0012-data-wire-tree-symmetry.md),
+  "A missing path is resolved before any payload operation; it must remain distinguishable from
+  a present node whose read fails or whose send is refused."
+- **Evidence:** proved: `prop:action`. stated: [PATH.md](docs/PATH.md), resolution never enters a
+  value.
+- **Coverage:** `mnode-navigation`, including `m-nav-json-payload-spelling-a-node-is-not-entered`.
 
 ### ID4. Complete parts
 
-> A node is exactly its own value and its children: `compose(parts(N)) = N` and
-> `parts(compose(t, m)) = (t, m)`. A parent's own value is an input, never inferred from its
-> children. Attaching a child at a fresh key changes nothing else. Anything that claims the
-> tree contract exposes this complete structure; path-addressed access alone, such as an opaque
-> router, does not claim it.
+> Own value and complete children determine a node, and composition and decomposition are
+> inverse structural observations. A parent's own value is an input, never inferred from its
+> children. Reconstruction preserves slot handles and their aliasing. Attaching a child at a
+> fresh key changes nothing else. An addressed facade is not a complete node.
 
 **Why.** A holder of the parts must be able to rebuild exactly the node, or identity and
-encoding drift apart. Growth that touches nothing else is what makes a tree extensible without
-renegotiating what it already holds. Addressed access alone cannot be a tree, because send
-behaviour cannot tell an absent path from a present participant that refuses.
+encoding drift apart. Structural equality is not language object identity, so reconstruction
+keeps the handles it was given. Growth that touches nothing else is what makes a tree
+extensible. Addressed access alone cannot be a tree, because send behaviour cannot tell an
+absent path from a present participant that refuses.
 
-**Falsified by:** a parent's value rebuilt from its children; an interior own value dropped; an
-attach that changes an existing value; an opaque router presented as a `WireTree`; an unfetched
-remote subtree presented as a complete node; a live participant cloned by reconstruction.
+**Falsified by:** a parent's value rebuilt from its children; an omitted child or interior own
+value; an attach that changes an existing value; a changed own handle or a cloned live
+participant after reconstruction; an unfetched remote placeholder or an opaque router presented
+as a complete node.
 
-**Status.** owner: [ADR 0012](docs/design/0012-data-wire-tree-symmetry.md), "An addressed-only
-access facade is not a `WireTree` or `DataTree`: it omits the complete structure." stated:
-[TREE.md](docs/TREE.md), § Growth. proved: `prop:parts`. checked: `mnode-parts`,
-`mnode-attach`.
+- **Contract status:** accepted, ADR 0015.
+- **Authority:** structural contract. Provenance: owner: [ADR 0012](docs/design/0012-data-wire-tree-symmetry.md),
+  "An addressed-only access facade is not a `WireTree` or `DataTree`: it omits the complete
+  structure."
+- **Evidence:** proved: `prop:parts`. stated: [TREE.md](docs/TREE.md), § Growth.
+- **Coverage:** `mnode-parts`, `mnode-attach`.
 
-### ID5. Carrier independence
+### ID5. Slot independence
 
-> ID1 to ID4 hold for every slot type `T`, without inspecting, comparing, serializing or
-> invoking own values. `map` is a functor: it preserves paths, and
-> `at(map f N, p) ≃ map f (at(N, p))`.
+> Structural operations do not interpret `T`. For total pure functions `f`, `map` preserves shape
+> and satisfies identity, composition and selection naturality:
+> `at(map f N, p) ≃ map f (at(N, p))`. Effectful traversal has a separate contract.
 
 **Why.** This is what lets one structure carry data, capabilities, names or anything else, and
-what makes the floor's laws theorems rather than assumptions about `T`. It also means the floor
-can forbid no `T`. Requirements on what a node holds, such as ID12's, are the family's, not the
-floor's.
+what makes the structural laws theorems rather than assumptions about `T`. It also means the
+structural contract can forbid no `T`: requirements on what a node holds are family policy, not
+structure. Purity matters: a logging `f` visits the whole tree under `map f N` but only the
+selected subtree under `map f (at(N, p))`.
 
 **Falsified by:** a law that holds only for some `T`; a `map` that rekeys, prunes, resolves or
-interprets values.
+interprets values; a naturality claim made for an effectful `f`.
 
-**Status.** proved: `prop:functor`. checked: `mnode-map`.
+- **Contract status:** accepted, ADR 0015.
+- **Authority:** structural contract.
+- **Evidence:** proved: `prop:functor`, for total pure `f`.
+- **Coverage:** `mnode-map`.
 
 ### ID6. Supplied identity
 
-> Equality of trees is lifted from an equivalence `≈` supplied for the slot. deixis chooses
-> none, and no layer above redefines tree equality. Sharing of equal subtrees is unobservable.
+> For each declared slot equivalence `R`, tree equivalence is its pointwise lifting over
+> identical path domains. deixis chooses no equivalence, and no layer above redefines tree
+> equivalence. Structural representation sharing is not part of abstract identity, but must not
+> change slot identity or aliasing observable under the slot contract.
 
-**Why.** What makes two values the same is a meaning, so it is supplied with the meaning.
-The floor's part is to lift it lawfully to whole trees.
+**Why.** What makes two values the same is a meaning, so it is supplied with the meaning. The
+structural part is to lift it lawfully to whole trees. Sharing is an implementation choice,
+except that it must not merge two live values that the slot contract keeps apart.
 
-**Falsified by:** byte equality imposed on a slot whose supplied `≈` identifies different
-representations; equality that can observe sharing; behavioural equivalence inferred from equal
-bytes.
+**Falsified by:** byte equality imposed on a slot whose supplied equivalence identifies different
+representations; equality that can observe sharing; two initially equal mutable values merged
+by sharing; behavioural equivalence inferred from equal bytes.
 
-**Status.** stated: [SLOTS.md](docs/SLOTS.md), [TREE.md](docs/TREE.md). proved: `thm:equiv`,
-`thm:congruence`. checked: `mnode-identity`.
+- **Contract status:** accepted, ADR 0015.
+- **Authority:** structural contract.
+- **Evidence:** proved: `thm:equiv`, `thm:congruence`. stated: [SLOTS.md](docs/SLOTS.md),
+  [TREE.md](docs/TREE.md).
+- **Coverage:** `mnode-identity`.
 
-### ID7. Values, not behaviour
+### ID7. Values, not live resources
 
-> A snapshot is a value, and a capability is not. The codec encodes values only: never a
-> reader, a sender, a credential or executable behaviour. A content address is a hash of
-> encoded bytes, and a path is a position under a root; the two are never conflated. A
-> published byte-profile name always denotes the same bytes.
+> Codec profiles encode declared ground representations. Encoding and decoding do not export,
+> invoke or resolve live resources. Content addresses and structural paths remain distinct.
 
-**Why.** Behaviour has no computable lawful bytes (the paper's existence boundary and its
-computability gap), so encoding it would only encode a name for it, and binding a name to
-behaviour is a consumer's act under its own authority. A content address names content and a path names a place; a record that confused
-them would treat a position as an identity. A name that changed its bytes would silently change
-every content address computed under it.
+**Why.** A codec that reconstructed live resources would bind behaviour as a side effect of
+reading bytes; binding a name to behaviour is a consumer's act under its own authority. A
+content address names content and a path names a place, and a record that confused them would
+treat a position as an identity. Code descriptions and credential bytes can still be data:
+whether bytes confer authority is decided by whatever protocol recognizes them. That a published
+byte profile keeps its meaning belongs to the codec's own track ([CODEC.md](docs/CODEC.md)).
 
-**Falsified by:** an encoded closure, reader or credential; a content address used as a path, or a
-path as a content address; a published byte-profile name pointed at different bytes.
+**Falsified by:** a decoder that opens a connection, resolves a name or rebuilds a reader; a
+content address used as a path, or a path as a content address.
 
-**Status.** owner: [ADR 0012](docs/design/0012-data-wire-tree-symmetry.md), "Encoding bytes
-does not serialize a reader, its ambient credentials, or a live sending capability." stated:
-[CODEC.md](docs/CODEC.md), "Values, not behavior" and § Consumer byte-profile names. proved:
-`thm:countable`, `prop:gap`. checked: the codec families in [vectors/](vectors/).
+- **Contract status:** accepted, ADR 0015.
+- **Authority:** structural contract. Provenance: owner: [ADR 0012](docs/design/0012-data-wire-tree-symmetry.md),
+  "Encoding bytes does not serialize a reader, its ambient credentials, or a live sending
+  capability."
+- **Evidence:** stated: [CODEC.md](docs/CODEC.md), "Values, not behavior". proved: `thm:countable`,
+  `prop:gap`, which bound what behaviour can be encoded.
+- **Coverage:** the codec families in [vectors/](vectors/).
 
 ### ID8. The floor stays empty
 
-> The floor has no I/O, no names in the binding sense, no time, no routing, no invocation and
-> no default. Structural operations never bind, invoke, acquire or release what an own value
-> holds. The floor carries no meaning: no reserved keys and no blessed envelope.
+> Structural operations assign no application meaning to keys or slots, and perform no
+> application I/O, routing, binding, invocation, or explicit resource acquisition or release.
+> Language ownership rules specify retention and destruction separately. The floor has no
+> names in the binding sense, no time, no reserved keys and no blessed envelope.
 
-**Why.** Each of these is a meaning or an effect, and the floor stays eternal by refusing
-them. The design notes of 7 August 2026: "Floor: nothing, ever. No reserved tag keys, no
-blessed envelope. A floor tag would leak semantics into identity (identical shapes, different
-tags → different nodes) and is a repair magnet (tag vs shape disagreement)", and "insertion
-order = **time**, sharing = **place** — expelled from values so the floor stays eternal". The notes of 8 August: "deixis
-never routes and never invokes — it selects", and "The invariant to preserve forever:
-invocation adds zero interface to deixis."
+**Why.** Each of these is a meaning or an effect, and the floor stays eternal by refusing them.
+The design notes of 7 August 2026: "Floor: nothing, ever. No reserved tag keys, no blessed
+envelope. A floor tag would leak semantics into identity (identical shapes, different tags →
+different nodes) and is a repair magnet (tag vs shape disagreement)", and "insertion order =
+**time**, sharing = **place** — expelled from values so the floor stays eternal". The notes of
+8 August: "deixis never routes and never invokes — it selects", and "The invariant to preserve
+forever: invocation adds zero interface to deixis." A generic container cannot promise that no
+destructor ever runs, so ordinary ownership is specified per language rather than denied.
 
-**Falsified by:** selection or enumeration that sends a message, opens a connection or waits on I/O;
-reconstruction that closes a borrowed endpoint; a reserved key with a meaning; a default route.
+**Falsified by:** selection or enumeration that sends a message, opens a connection or waits on
+I/O; reconstruction that closes a borrowed endpoint; a reserved key with a meaning; a default
+route.
 
-**Status.** owner sessions: design notes of 2026-08-07 (§2, §4) and 2026-08-08 (§2, §5), both
-recorded from sessions with the owner.
+- **Contract status:** accepted, ADR 0015.
+- **Authority:** structural contract. Provenance: owner sessions: design notes of 2026-08-07
+  (§2, §4) and 2026-08-08 (§2, §5), recorded from sessions with the owner and quoted above,
+  because those notes are not public.
+- **Evidence:** stated.
+- **Coverage:** none yet.
 
-## Pointing
+## Derived constructions
 
-The floor's one contribution to behaviour is derived, not added. An operation of a node's own
-value becomes an operation of the tree by selecting first.
+The owner's sketch, `Deixis[T] = { m(path, ...) for m(...) in T.methods }`, with
+`A.m(path1, B.m(path,...)) ≈ A.m(path1++path,...)`, has two useful readings. One is
+**structural projection**: selecting a subtree and then selecting within it is selecting the
+concatenated path, so an operation reached either way is the same (ID9, ID10). The other is
+**mount forwarding**: a resolver that continues through an explicitly interpreted mount, under
+a routing profile (ID11, ID13). The literal nested call is not a law. `A.m(p1, B.m(p, x))`
+performs two operations and passes the inner result to the outer one, where its counterpart
+performs one. ADR 0015 §2 records the sketch.
 
 ### ID9. The projection
 
-> For a carrier with an operation `m`, the tree's addressed operation is
-> `A.m(p, …args) = at(A, p).own().m(…args)`. It is defined exactly where `at(A, p)` is, passes
-> the arguments unchanged, and invokes `m` once, on the selected own value.
+> For an operation `m` of `T`, `lift_m(N, p, x)` is `MissingPath` when `at(N, p)` is absent, and
+> otherwise `m(t, x)` with `t` the own value of the selected node. On absence it invokes no slot
+> operation. Otherwise it initiates exactly one invocation of the selected operation, on the
+> selected slot, with unchanged arguments and receiver binding, and preserves that operation's
+> outcome. Selection determines whether dispatch is available, not whether execution succeeds.
 
-**Why.** It gives every carrier addressed operations while adding no operation to deixis
+**Why.** It gives every slot type addressed operations while adding no operation to deixis
 (ID8). Data and interaction get theirs the same way, so the rules for paths are written once.
+"Exactly one invocation" concerns the projection. It is not exactly-once network delivery, and
+it does not limit how many effects the invoked operation performs.
 
-**Falsified by:** invoking before the path is resolved; invoking on a miss; invoking twice; passing
-the path to the own value's operation.
+**Falsified by:** invoking before the path is resolved; invoking on absence; invoking twice;
+adding or reinterpreting a routing argument without a declared contract; reporting a selected
+operation's refusal as absence.
 
-**Status.** owner: [ADR 0012](docs/design/0012-data-wire-tree-symmetry.md),
-`read(tree, path) = select(tree, path).own().read()` and
-`send(tree, path, message) = select(tree, path).own().send(message)`, "derivations, not
-alternate routing laws". stated: [WIRES.md](docs/WIRES.md).
+- **Contract status:** accepted, ADR 0015.
+- **Authority:** derived construction. Provenance: owner: [ADR 0012](docs/design/0012-data-wire-tree-symmetry.md),
+  `read(tree, path) = select(tree, path).own().read()` and
+  `send(tree, path, message) = select(tree, path).own().send(message)`, "derivations, not
+  alternate routing laws".
+- **Evidence:** derived from ID3. stated: [WIRES.md](docs/WIRES.md).
+- **Coverage:** not yet. A projection family is planned (ADR 0015 §7): zero invocations on
+  absence, exactly one on presence, unchanged argument and handle identity, at every cut.
 
 ### ID10. Composition inside one tree
 
-> If `B = at(A, p1)`, then `B.m(p, …) ≃ A.m(p1 ++ p, …)`. Both sides select the same own value,
-> pass the same arguments and invoke once, and a miss is a miss on both sides. Composition
-> concatenates paths; it never feeds one call's result into another. The equation compares the
-> two sides from the same state; it does not claim that running both, one after the other,
-> gives equal results.
+> For an immutable structural view, `lift_m(at(A, p), q, x) ≃_O lift_m(A, p ++ q, x)`, where the
+> left side propagates `MissingPath` if the first selection misses. `≃_O` compares corresponding
+> executions under a declared observation model `O`: separately initialised fixtures with the
+> same capability identity, aliasing, mutable state, authority, lifetime scope and external
+> operations. It is not a claim that two successive executions of one fixture agree.
 
 **Why.** It lets a holder hand out a part of what it holds by selecting, and lets anyone compose
-by prefix, with no new law to check.
+by prefix, with no new law to check. Both sides reach the same slot by pure selection and
+initiate the same operation with the same arguments. The observation model says what is
+compared (admission outcomes, results, errors, emitted messages, termination and order) and
+what is not (promise identity, wall-clock timing, incidental scheduling).
 
-**Falsified by:** a sender bound at `p1` that reaches a different target for `p` than the root does
-for `p1 ++ p`; a miss on one side and a call on the other.
+**Falsified by:** a sender bound at `p1` that reaches a different target for `p` than the root
+does for `p1 ++ p`; absence on one side and a call on the other; observations that differ
+between corresponding fixtures.
 
-**Status.** proved: immediate from ID3 (`prop:action`). The projection it composes is owner
-(ID9). checked: not yet; ADR 0015 plans a projection vector family.
+- **Contract status:** accepted, ADR 0015.
+- **Authority:** derived construction.
+- **Evidence:** derived from ID3 and ID9.
+- **Coverage:** not yet; with ID9's family, plus an effects-and-aliases family.
 
-### ID11. Crossing, per relay profile
+### ID11. Prefix composition across a boundary
 
-> Across a connection, `connect(a) / p ≈ connect(a ++ p)`. Both sides are defined together,
-> and undefined refuses: it never default-routes. The `≈` is the relation the relay profile
-> declares. The law promises agreement per path and nothing about order across paths.
-> Multi-hop routing is iterated application, so a relay chain is a relay. Where `connect(a)`
-> yields a complete structural view, `/` is selection (ID3). Through an opaque addressed facade,
-> `/` is prefix binding: the law then says only that prefixes compose, and claims nothing about
-> whether a path exists or what lies below it.
+> Where a connection explicitly supplies a coherent complete view `C(ρ, v)` under scope `ρ` and
+> version `v`, `at(C(ρ, v)(a), p) ≃ C(ρ, v)(a ++ p)`, including agreement on absence. For an
+> opaque addressed handle, `under(under(A, p), q) ≃ under(A, p ++ q)`: a law of constructing send
+> access that says nothing about remote existence. Neither law requires a prefix-closed domain,
+> and a mount is continued only by an explicit resolver rule.
 
-**Why.** It states what any realization must preserve without fixing wire anatomy, so any
-transport can carry the same addressing. Naming the relation per profile is what keeps it
-honest: "behaviourally equal" with no relation named is not a law. Path associativity does
-not prove a relay transparent. That needs a relay law of its own, such as research 0002's
-safety law ([WIRES.md](docs/WIRES.md) §4).
+**Why.** The two cases differ materially. A complete view can agree on absence; an opaque handle
+can be built for a path where nothing exists, and a later send is admitted locally before remote
+dispatch discovers that. The coherent-view condition matters, because two remote observations
+around a mutation need not denote one tree. Requiring a prefix-closed domain would force an
+ancestor namespace to be exposed merely because a descendant is.
 
-**Falsified by:** a relay that default-routes an undefined path; a cut at a different hop that
-reaches a different target; existence or enumeration claimed through an opaque facade.
+**Falsified by:** existence or enumeration claimed through an opaque handle; a complete view
+whose cut at a different point reaches a different node; a mount followed by plain selection.
 
-**Status.** owner: [WIRES.md](docs/WIRES.md) §4, 2026-08-08: "The conveyance criterion and the
-routing law are DECIDED (operator)." Its
-structural half is proved from ID3. Its crossing half is an obligation of each relay profile.
-No battery exists yet, so WIRES.md's own rule applies: it is a stated law, not yet a checked
-one.
+- **Contract status:** accepted, ADR 0015.
+- **Authority:** derived construction. Provenance: owner: [WIRES.md](docs/WIRES.md) §4,
+  2026-08-08: "The conveyance criterion and the routing law are DECIDED (operator)."
+- **Evidence:** derived from ID3 for complete views; by construction for `under`.
+- **Coverage:** not yet.
 
-## The family's layering
+## Family policy
 
-deixis anchors this; it is not a floor law. By ID5 the floor holds for every `T`, so the
-requirement that primitives be addressless belongs to the family that builds on deixis.
+These entries are not structural law: by ID5 the structural contract holds for every `T`, and
+`Node<AddressedWire>` is as lawful a tree as `Node<Wire>`. They record the family's decided
+design, which deixis anchors and the affected components own together.
 
-### ID12. Addressless primitives, one shared path layer
+### ID12. Interaction layering
 
-> The primitives are addressless: `Data.read()` and `Wire.send(message)` take no tree path, and
-> the full trees are `DataTree = DeixisNode<Data>` and `WireTree = DeixisNode<Wire>`. Every
-> transport implements only the addressless contract. Paths are handled once, in one shared
-> layer that realizes `X1 = Deixis[X0]` for every transport and for both wings:
-> `A1 = Deixis[A0]` for `Wire` and `B1 = Deixis[B0]` for `Data`. A path inside a message is
-> that layer's encoding; a path parameter on the primitive is addressing duplicated.
+> Raw conveyance does not interpret application paths. Addressed profiles define path
+> representation, scope, composition, dispatch and failure independently of the carrier.
+> Complete capability trees derive addressed access by structural selection. Opaque addressed
+> access does not imply a complete tree. Exchange metadata belongs to an explicitly identified
+> profile and need not be required of all messages. Conveyance, addressing and exchange are
+> separate contracts; the family's names are `Data.read()` and `Wire.send(message)`, with
+> `DataTree = DeixisNode<Data>` and `WireTree = DeixisNode<Wire>`, and one lift serves both
+> wings.
 
 "Addressless" means that the primitive and its relay interpret no application path. It does
-not mean the absence of identifiers, endpoints or resource management.
+not mean the absence of identifiers, endpoints or resource management. "One shared layer" means
+one authoritative addressing contract with reusable implementations, not one implementation
+across languages. An envelope that carries paths and exchange fields is admissible as an
+optional combined addressed-exchange profile, carried as an ordinary value.
 
-**Why.** A primitive that interprets tree paths duplicates selection, and its composition is
-then unconstrained by the selection law, so the projection law can silently fail. With the
-layering:
-- transports stay minimal: each implements framing, order, admission and termination, never
-  paths, so any conduit fits, from an in-process call to a journal or a relay;
-- path semantics (exact keys, misses that refuse, prefix composition, mounts) are implemented
-  once, for every transport and both wings;
-- a relay stays application-blind, and forwards bytes it does not read;
-- holders compose sub-capabilities by prefix (ID10).
+**Why.** Separation of independently meaningful contracts: a message can be conveyed without
+interpreting a destination, addressing can exist without request and reply correlation, and a
+complete tree can exist without a connection or an exchange. That is an engineering argument,
+not a theorem. For a family with several transports, data and interaction, opaque relays and
+future protocols, the narrower primitive is the better default. Its costs are a real layer
+boundary, profile-specific validation, and more API concepts. It does not promise less code.
 
-**Falsified by:** a transport that parses application paths; path rules implemented again per
-transport; a primitive whose send takes a tree path.
+**Would be reconsidered if** representative consumers showed that the same envelope semantics,
+not merely the same field names, were universally useful, that the raw surface caused
+substantial recurring misuse or maintenance cost, and that a mandatory envelope kept explicit
+composition, scope, ownership and transport-seam contracts.
 
-**Status.** owner: [ADR 0012](docs/design/0012-data-wire-tree-symmetry.md) (2026-09-26), "Use
-Data / DataTree and Wire / WireTree", whose primitives are addressless. owner: the first version
-of bitwire#42, recorded there as "Operator direction recorded on 2026-09-25":
+**Falsified by:** a transport that parses application paths; exchange fields required of every
+raw message; path rules implemented differently per transport against one contract; an opaque
+addressed facade presented as a complete tree.
 
-> Separate the addressless Wire primitive (A0) from the addressed composition (A1), with
-> `A1 = Deixis[A0]`. The service architecture uses a Bitwire A0 relay behind a generic Deixis
-> service; the same Deixis service implementation also lifts raw Bytes B0 to B1.
+- **Contract status:** accepted, ADR 0015, which records its adoption as a supersession of
+  bitwire decision 0014's collapsed sending surface (ADR 0015 §4).
+- **Authority:** family policy: deixis, bitwire and bitruntime together. Provenance: owner:
+  [ADR 0012](docs/design/0012-data-wire-tree-symmetry.md) (2026-09-26), "Use Data / DataTree and
+  Wire / WireTree", whose primitives are addressless. owner: the first version of bitwire#42,
+  recorded there as "Operator direction recorded on 2026-09-25":
 
-owner: [WIRES.md](docs/WIRES.md) §1, within the operator-decided conveyance criterion: a relay's
-contract is "messages in, messages out, per-end order — with the protocol nowhere in it". On 2026-10-05 the owner recalled this layering and asked for a re-derivation; [ADR
-0015](docs/design/0015-deixis-identity.md) records it.
+  > Separate the addressless Wire primitive (A0) from the addressed composition (A1), with
+  > `A1 = Deixis[A0]`. The service architecture uses a Bitwire A0 relay behind a generic Deixis
+  > service; the same Deixis service implementation also lifts raw Bytes B0 to B1.
 
-**What follows from it.** These are readings of ID9 to ID12 recorded in
+  owner: the plan approved on 2026-10-04 for bitwire 0.4.0, which this policy supersedes (ADR
+  0015 §4). owner: the standing ruling of 2026-10-04, "Ultimately, it is your call. Never ask
+  me.", which delegates the decision to the components' agents.
+- **Evidence:** research 0006's advice, R1 and R2, weighed both designs with their authority.
+- **Coverage:** bitwire's and bitruntime's batteries, once bitwire#76 merges (ADR 0015 §7).
+
+**What follows from it.** These readings are recorded in
 [ADR 0013](docs/design/0013-binding-views-and-the-service-line.md) and ADR 0015. They are not
 pinned.
-- A receiver's tree of handlers is a `WireTree`, because a handler is a send end on the
-  identity wire ([WIRES.md](docs/WIRES.md) §2). Routing an incoming message is selection, then
-  invocation: ID9 applied at the receiver.
-- A sender across a connection holds the projection without the structure. That is lawful under
-  ID11, and it does not claim the tree (ID4).
+- "A handler presented through Wire.send realizes a local sending capability; a tree of those
+  Wire values is a WireTree. A bare native function tree remains its own generic instantiation"
+  (bitwire#76). A handler that sees a whole envelope, destination included, distinguishes a
+  path routed within a subtree from the same path routed from the root. Prefix transparency then
+  needs a routing cursor beside the unchanged envelope, or an explicit rebasing relation.
 - Names and ends are different carriers. A name is bytes and crosses places. An end is a live
   capability and stays where it was bound. Binding maps one to the other
   ([ADR 0013](docs/design/0013-binding-views-and-the-service-line.md) §2).
-- The floor never follows a mount (ID3). The path layer may, explicitly
-  ([ADR 0013](docs/design/0013-binding-views-and-the-service-line.md) §8).
+
+### ID13. Dispatch coherence, per relay profile
+
+> Across a relay profile `P`, `dispatch_P(under(A, p), q, x) ≈_P dispatch_P(A, p ++ q, x)`, where
+> `P` declares its observation boundary, representation, naming and scope, state and authority,
+> ordering, failure and flow control, liveness assumptions and composition conditions. Its
+> observations distinguish wrong-target dispatch, corruption, prohibited duplication and
+> prohibited fallback, and an undefined route refuses. A chain of compatible relays preserves the
+> declared safety relation when their interfaces and observation relations compose. End-to-end
+> liveness, admission behaviour and resource bounds require additional compatible assumptions.
+
+**Why.** Path associativity does not make a relay transparent. Without a declared observation
+relation, a relation that equates every outcome would satisfy the equation and prove nothing.
+For a byte-preserving ordered relay, research 0002's safety law is the starting point: for each
+direction `d`, `O_d(t) ≼ I_d(t)`, the frames emitted are a byte-identical prefix of those
+accepted ([WIRES.md](docs/WIRES.md) §4).
+
+**Falsified by:** a relay that default-routes an undefined path; dispatch to a different target
+under a cut; a profile whose relation cannot tell a wrong target from the right one; liveness
+claimed for a chain without its assumptions.
+
+- **Contract status:** accepted, ADR 0015.
+- **Authority:** family policy: deixis, bitwire and bitruntime together. Provenance: owner:
+  [WIRES.md](docs/WIRES.md) §4, 2026-08-08: "The conveyance criterion and the routing law are
+  DECIDED (operator)."
+- **Evidence:** research 0002's relay law; research 0006's advice, R13 and R14.
+- **Coverage:** none yet. The crossing battery of WIRES.md §8, and bitwire's and bitruntime's
+  families (ADR 0015 §7).
 
 ## What deixis requires of a consumer
 
 1. Anything that claims `WireTree`, `DataTree` or the tree contract exposes complete structure
-   (ID4), and keeps a miss distinguishable from a refusal (ID3). Addressed access alone says
-   that it is only that.
-2. A consumer that carries paths carries deixis paths: exact byte keys, relative to a binding
-   root, never absolute in anything frozen. Their meaning is selection and nothing else: no
-   normalization, no fallback, no default route (ID2, ID3, ID11).
-3. The primitive every transport implements takes no tree path. Path handling is the shared
-   layer's, implemented once (ID12).
-4. Any addressed operation a consumer offers is the projection and composes by prefix (ID9 to
+   (ID4), and keeps absence distinguishable from refusal (ID3). Addressed access alone says that
+   it is only that.
+2. A consumer that carries paths carries deixis paths: exact byte keys, relative to a scope,
+   never absolute in anything frozen. Their meaning is selection or prefix binding and nothing
+   else: no normalization, no fallback, no default route (ID2, ID3, ID11).
+3. Any addressed operation a consumer offers is the projection, and composes by prefix (ID9 to
    ID11).
-5. Consumers do not redefine tree equality (ID6) and do not encode behaviour (ID7).
-6. A consumer's decision never amends an invariant here. A contradiction is a conflict, opened
-   on deixis with the provenance of both sides.
+4. Consumers do not redefine tree equivalence (ID6) and do not decode into live resources (ID7).
+5. A consumer cannot amend a contract here by implication. A contradiction is a conflict,
+   resolved by the authority responsible for the affected contract, with the provenance of both
+   sides.
 
 ## Words
 
 - **Content address** is the codec's hash of encoded bytes, and nothing else.
 - **Addressless**, **addressed** and **addressing**, in the family sense, are about paths.
-- New text never writes a bare "address". The two senses collide, and the collision is
-  exactly the confusion ID7 forbids.
+- New text never writes a bare "address". The two senses collide, and the collision is exactly
+  the confusion ID7 keeps apart.
 
-## How an invariant changes
+## How a contract changes
 
-Changing an invariant is a versioned break of deixis's identity. It needs all of the following:
+Every substantive change is a **supersession record**: an ADR in [docs/design/](docs/design/)
+that carries structured lines, `Identity: breaks ID<n>` (or `updates`, `adopts`, `retires`)
+and, where it replaces an earlier decision, `Supersedes:` or `Updates:` naming it. Its fields,
+each a bold label in the record:
 
-1. **An ADR that names it.** A record in [docs/design/](docs/design/) carries the line
-   `Identity: breaks ID<n>` for each invariant it changes. It quotes the current statement and
-   its reason, says why the reason no longer holds, weighs keeping the invariant unchanged as
-   an alternative, and accounts for the consumers that must migrate and the evidence for the
-   new law.
-2. **Two independent derivations**, written sealed and compared before either author reads the
-   other's. This is deixis's freeze method: independent derivations compared against stated
-   criteria.
-3. **A peer read** by an agent other than the author, before merge.
-4. **The owner's words, verbatim**, where the invariant's status is owner or owner sessions.
-   This asks the owner to decide nothing. It forbids an agent from overturning a ruling the
-   owner made, on a paraphrase or on its own reading.
-5. **A change-log entry** below, and the new pin in
-   [tools/identity.lock](tools/identity.lock) naming that ADR.
-6. **The new statement carries its reason.**
+1. **Affected contract:** the contract and its exact clauses, and which part of this page they
+   are in.
+2. **Supersedes** or **Updates:** the earlier decisions, partly or wholly.
+3. **Old rationale and present tradeoff:** a sound reason may still be true and now be
+   outweighed. It does not have to be shown false.
+4. **Authority and delegation:** who decides, and the source and scope of that authority.
+5. **Alternatives and consequences:** including keeping the contract, migration, compatibility
+   and operational cost.
+6. **Evidence and obligations:** keeping proof, tests, assumptions and unbuilt commitments
+   apart.
+7. **Approved revision:** which semantic change was reviewed, before it is implemented or
+   released.
 
-[tools/identity_check.py](tools/identity_check.py) enforces the mechanical parts in CI:
-- every statement matches its pin;
-- every pin names an ADR that adopts or breaks that invariant;
-- the change log names that ADR;
-- every quotation in a status occurs verbatim in the record it cites, line breaks and emphasis
-  aside;
-- no document declares that it supersedes a record an invariant rests on, unless it carries
-  the `breaks` line.
+**Who decides.** The owner's standing ruling of 4 October 2026, "Ultimately, it is your call.
+Never ask me.", delegates these decisions to the agents of the affected components. The owner's
+earlier words are provenance, quoted verbatim; they are not a test the change must pass, and an
+old quotation does not authorize a new reversal.
+- The structural contract and the derived constructions are changed by deixis's agents.
+- A family policy is changed only by a record that the agents of **every** affected component
+  accept, named in its **Accepted-by:** field. No single component's agents can supersede a
+  family policy, and a consumer's release is not acceptance.
+
+**How much review.** Review is proportionate:
+- **Editorial** (wording, links): none beyond ordinary review.
+- **Update** within an existing delegation that supersedes nothing: a peer read, cited in a
+  **Peer read:** field.
+- **Supersession** of any recorded decision, and above all one the owner made: two derivations
+  written sealed and compared, one of which explicitly tries to defeat the favoured design,
+  cited in a **Derivations:** field; a peer read; and every field above. Reviewer independence
+  is recorded by session, because all sessions share one account.
+
+**Then:** a change-log entry below, and the new pin in [tools/identity.lock](tools/identity.lock)
+naming the record.
+
+[tools/identity_check.py](tools/identity_check.py) is a change-detection and provenance aid,
+not a decision procedure. In CI it checks that:
+- every entry carries its statement, reason and four attributes, and names its part;
+- every statement, reason, authority and pinned section matches its pin, and every pin names a
+  record that covers it and that the change log names;
+- a supersession record carries the fields above, two cited derivations and a peer read; an
+  update carries a peer read; a family-policy record carries every component's acceptance;
+- a structured `Supersedes:` or `Updates:` line naming a record an entry rests on comes with an
+  `Identity:` line for that entry, and prose that supersedes such a record without one fails;
+- every quotation in an entry's attributes occurs verbatim in the local record it cites, line
+  breaks and emphasis aside.
 
 ## Guards against drift
 
-These are process rules, adopted with the invariants because the failure they prevent was a
+These are process rules, adopted with the contracts because the failure they prevent was a
 process failure ([ADR 0015](docs/design/0015-deixis-identity.md), "What happened").
 
-- **Authority flows floor-ward.** A consumer's decision that contradicts an invariant is a
-  conflict to resolve here, with both sides' provenance checked. The floor does not follow it.
-- **Consultations are framed fairly.** A consultation that touches an invariant presents each
-  design with its authority and its stated reason. It never presents a reversal as settled.
+- **Consumers cannot amend a depended-on contract by implication.** Conflicts are resolved by
+  the authority responsible for the affected contract.
+- **Consultations are framed fairly.** A consultation that touches an entry presents each design
+  with its authority and its stated reason. It never presents a reversal as settled.
+- **Advice is read against its premises.** Record which boundaries a consultation was allowed to
+  question. A premise fixed in the question is not a conclusion the answer established.
 - **A reversal says so.** A plan that reverses a recorded decision says "this reverses X",
   quotes X's reason, and names any guard it overrides. An approval covers only what the plan
   surfaced.
 - **The owner is quoted, not paraphrased.** Records quote the owner verbatim or say
   "paraphrase". A recollection or a question is never recorded as a ruling or a confirmation.
-- **Downstream text cites, never restates.** Release notes, consumer pages and research
-  documents cite the record. They never restate a supersession. A change to a document that an
-  invariant cites is read against this page before merge, because no check sees a reworded
+- **Downstream text links its source.** Release notes, consumer pages and research documents
+  may carry a clearly labelled summary linked to the record. A change to a document that an
+  entry cites is read against this page before merge, because no check sees a reworded
   restatement.
 - **A grade with one reader gets a peer read** before its record merges.
-- **Advice is read against its premises.** Record which boundaries a consultation was allowed
-  to question. A premise fixed in the question is not a conclusion the answer established.
 - **Tests check promises, not names.** A test exercises the promised observations and the
   falsifiers above. Banning or requiring a type name checks neither.
 
 ## Change log
 
-- **ID1 to ID12 adopted**, [ADR 0015](docs/design/0015-deixis-identity.md). The charter of ADR 0014
-  (`D1` to `D8`) is folded in; ADR 0015 §2a has the mapping.
+- **ID1 to ID13 adopted**, [ADR 0015](docs/design/0015-deixis-identity.md), after research 0006.
+  The charter of ADR 0014 (`D1` to `D8`) is folded in; ADR 0015 §2a has the mapping. ID12
+  supersedes bitwire decision 0014's collapsed sending surface; ADR 0015 §4 is the supersession
+  record.
