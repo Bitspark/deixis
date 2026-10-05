@@ -755,6 +755,16 @@ the judgments of what it reads:
    a path leaves none. A key that names no entry of the chunk reached is an answer, not
    a fault, and the navigation ends there.
 
+**Asynchronous stores** (non-normative). The fetch the constructors take is synchronous, but an
+asynchronous store needs no separate verification interface:
+1. Fetch the root's octets first, and pass resolve-root a fetch over the octets already held.
+2. A verified chunk lists each child's address before anything is fetched. Fetch the child's
+   octets, then pass resolve-child the same kind of fetch.
+
+Both provenance anchors stay as above. The caller's address anchors the root, and a verified
+parent's links header anchors each child. Octets that do not hash to the address asked for are
+still a `hash_mismatch`.
+
 ## 15. Security considerations
 
 - **Collision incident policy.** On insertion of a digest already present, a store

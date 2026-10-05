@@ -281,3 +281,129 @@ export class Node<T> implements DeixisNode<T> {
     return true;
   }
 }
+
+/**
+ * Thrown by {@link toNative} when a foreign tree reaches itself: a node is its own ancestor.
+ * The stable rejection code is `"cycle"`. A subtree shared at two positions is not a cycle.
+ */
+export class CycleError extends Error {
+  readonly code = "cycle";
+  /** The path at which the node met itself again. */
+  readonly path: Path;
+
+  constructor(path: Path) {
+    super(`cycle at /${path.map(hex).join("/")}`);
+    this.name = "CycleError";
+    this.path = path;
+  }
+}
+
+/**
+ * Thrown by {@link toNative} when a foreign node lists a child that its own `at` cannot select,
+ * or cannot select itself at the empty path. Its `children()` and `at` disagree, so the tree is
+ * outside the contract, whichever answer a caller might prefer. The stable code is
+ * `"nonconforming_child"`.
+ */
+export class NonconformingTreeError extends Error {
+  readonly code = "nonconforming_child";
+  /** The path whose selection disagreed with the parent's child map. */
+  readonly path: Path;
+
+  constructor(path: Path) {
+    super(`children() and at() disagree at /${path.map(hex).join("/")}`);
+    this.name = "NonconformingTreeError";
+    this.path = path;
+  }
+}
+
+/** Thrown by {@link toNative} when a supplied limit is exceeded. The stable code is `"limit_exceeded"`. */
+export class TreeLimitError extends Error {
+  readonly code = "limit_exceeded";
+  /** Which limit: `"depth"` (path length) or `"nodes"` (distinct foreign nodes converted). */
+  readonly limit: "depth" | "nodes";
+
+  constructor(limit: "depth" | "nodes") {
+    super(`tree exceeds the ${limit} limit`);
+    this.name = "TreeLimitError";
+    this.limit = limit;
+  }
+}
+
+/** Optional bounds for {@link toNative}. Both are unbounded unless given. */
+export interface ToNativeLimits {
+  /** The longest path, in keys, the tree may contain. */
+  readonly depth?: number;
+  /** The number of distinct foreign nodes the conversion may visit. */
+  readonly nodes?: number;
+}
+
+/**
+ * Copies a lawful complete foreign tree, any {@link DeixisNode}, into the native {@link Node},
+ * which is the representation the codec encodes (ADR 0013 §10).
+ *
+ * Keys are copied and own values are retained as they are: never cloned, never invoked. Nothing
+ * is fetched or bound. A native node is returned unchanged. A subtree shared at several positions
+ * is converted once and shared, which is unobservable. Refusals are raised, never repaired:
+ * {@link CycleError}, {@link DuplicateKeyError}, {@link NonconformingTreeError} when a node's
+ * `children()` lists a key its own `at` cannot select, and {@link TreeLimitError}. The walk is
+ * iterative, so depth does not grow the call stack.
+ */
+export function toNative<T>(tree: DeixisNode<T>, limits: ToNativeLimits = {}): Node<T> {
+  if (tree instanceof Node) return tree;
+  const maxDepth = limits.depth ?? Number.POSITIVE_INFINITY;
+  const maxNodes = limits.nodes ?? Number.POSITIVE_INFINITY;
+  interface Frame {
+    readonly node: DeixisNode<T>;
+    readonly key: Uint8Array | undefined;
+    readonly entries: ReadonlyArray<readonly [Key, DeixisNode<T>]>;
+    next: number;
+    readonly built: [Uint8Array, Node<T>][];
+  }
+  const done = new Map<DeixisNode<T>, Node<T>>();
+  const active = new Set<DeixisNode<T>>();
+  const stack: Frame[] = [];
+  const pathTo = (key: Uint8Array | undefined): Key[] => {
+    const path = stack.slice(1).map((frame) => frame.key!);
+    if (key !== undefined) path.push(key);
+    return path;
+  };
+  // Returns the native node at once when it is already known, or pushes a frame to build it.
+  const enter = (node: DeixisNode<T>, key: Uint8Array | undefined): Node<T> | undefined => {
+    if (node instanceof Node) return node;
+    const known = done.get(node);
+    if (known !== undefined) return known;
+    if (active.has(node)) throw new CycleError(pathTo(key));
+    if (stack.length > maxDepth) throw new TreeLimitError("depth");
+    if (done.size + active.size >= maxNodes) throw new TreeLimitError("nodes");
+    if (node.at([]) === undefined) throw new NonconformingTreeError(pathTo(key));
+    const entries = node.children();
+    for (const [childKey] of entries) {
+      if (node.at([childKey]) === undefined) {
+        throw new NonconformingTreeError([...pathTo(key), Uint8Array.from(childKey)]);
+      }
+    }
+    active.add(node);
+    stack.push({ node, key, entries, next: 0, built: [] });
+    return undefined;
+  };
+
+  const immediate = enter(tree, undefined);
+  if (immediate !== undefined) return immediate;
+  for (;;) {
+    const top = stack[stack.length - 1]!;
+    if (top.next < top.entries.length) {
+      const [childKey, child] = top.entries[top.next++]!;
+      const copied = Uint8Array.from(childKey);
+      const native = enter(child, copied);
+      if (native !== undefined) top.built.push([copied, native]);
+      continue;
+    }
+    stack.pop();
+    const native = Node.compose(top.node.own(), top.built);
+    active.delete(top.node);
+    done.set(top.node, native);
+    const parent = stack[stack.length - 1];
+    if (parent === undefined) return native;
+    parent.built.push([top.key!, native]);
+  }
+}

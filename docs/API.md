@@ -80,6 +80,24 @@ same structure. Independent bindings in other repositories, such as bitwire's
 and bitstore's, implement the same shape and laws without depending on these
 packages.
 
+**Converting a foreign tree to the native node.** The codec encodes native nodes only.
+`toNative(tree, limits?)` in TypeScript and `ToNative(tree, limits)` in Go copy a lawful complete
+foreign tree into the native node ([ADR 0013](design/0013-binding-views-and-the-service-line.md)
+§10):
+- **What it keeps.** Keys are copied, own values are retained as they are, and nothing is invoked,
+  fetched or bound. A native node is returned unchanged.
+- **Shared subtrees.** A subtree shared at several positions is converted once.
+- **Refusals.** It refuses rather than repairs:
+  - `cycle`: a node is its own ancestor;
+  - `duplicate_key`;
+  - `nonconforming_child`: a node's `children()` lists a key its own `at` cannot select, or it
+    cannot select itself at the empty path;
+  - `limit_exceeded`, for the optional `depth` and `nodes` limits.
+- **Why a nonconforming child is refused.** For such a child, deixis's generic selection may answer
+  differently in TypeScript (which walks `children()`) and in Go (which delegates to the child's
+  `At`), and neither answer is sanctioned.
+- **Rust and Python** have no foreign-tree interface, so they need no conversion.
+
 ## Native constructors
 
 The four implementations use the model of
