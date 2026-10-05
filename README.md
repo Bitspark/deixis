@@ -13,6 +13,10 @@
 
 **deixis is the structure of a tree, and nothing about what a tree holds.**
 
+The [project charter](CHARTER.md) records the invariants, their falsifiers and the
+boundary between structure, lifted access, binding and transport. Trees of
+readers, senders and receivers share that structure; no consumer defines it.
+
 ```
 Node(.) = (.) × (Key ⇀ Node(.))
 Key     = Bytes

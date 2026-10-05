@@ -1,5 +1,10 @@
 # Data / DataTree and Wire / WireTree
 
+**Current interpretation:** [ADR 0014](0014-structural-identity-and-lifted-access.md)
+reaffirms this record's structural symmetry and supersedes the interaction
+retirement in the dated ADR 0013 amendment below. That amendment is retained as
+historical evidence. Current binding and snapshot boundaries remain in force.
+
 **Status:** accepted, 2026-09-26, by the operator's explicit instruction:
 "Use Data / DataTree and Wire / WireTree" and "Make sure to document this
 everywhere and do the renaming." The operator accepted breaking renames before

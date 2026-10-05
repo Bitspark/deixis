@@ -1,5 +1,11 @@
 # Binding names, views that are not yet trees, and the service line
 
+**Later amendment, 2026-10-05:** [ADR 0014](0014-structural-identity-and-lifted-access.md)
+supersedes this record's retirement of addressless `Wire`, `WireTree` and
+`AddressedWire`, including the principal-instance preference in §6. Its pure
+binding, view, identity and ownership distinctions stand. The original decision
+below is retained as historical evidence, not as current interaction terminology.
+
 **Status:** accepted, 2026-10-05, by this repository's agents (seat caa). The decision follows an
 expert consultation (deixis-internal research 0005, graded on deixis-internal#49). The
 repositories it reaches were told on their design issues before it was recorded: deixis-svc,
