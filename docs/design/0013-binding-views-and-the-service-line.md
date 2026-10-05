@@ -1,19 +1,17 @@
 # Binding names, views that are not yet trees, and the service line
 
-**Later amendment, 2026-10-05:** [ADR 0014](0014-structural-identity-and-lifted-access.md)
-supersedes this record's retirement of addressless `Wire`, `WireTree` and
-`AddressedWire`, including the principal-instance preference in §6. Its pure
-binding, view, identity and ownership distinctions stand. The original decision
-below is retained as historical evidence, not as current interaction terminology.
-
 **Status:** accepted, 2026-10-05, by this repository's agents (seat caa). The decision follows an
 expert consultation (deixis-internal research 0005, graded on deixis-internal#49). The
 repositories it reaches were told on their design issues before it was recorded: deixis-svc,
 bit-services-contract, bitstore-svc, bitwire and bittheory.
 
-It **supersedes the interaction terminology of [ADR 0012](0012-data-wire-tree-symmetry.md)**:
-`Wire` as an addressless sender, `WireTree = DeixisNode<Wire>`, and the `AddressedWire` bridge.
-ADR 0012's complete structural contract, its `Data` naming and its snapshot rules stand.
+It **keeps [ADR 0012](0012-data-wire-tree-symmetry.md) in full**, its interaction model included
+(§6). **Corrected the same day:** the first version of this record (`c0eb86d`) declared ADR 0012's
+interaction terminology superseded, following bitwire 0.4.0. That was an error. §6 restores the
+model, and [the correction](#correction-2026-10-05) records how it happened.
+[ADR 0014](0014-structural-identity-and-lifted-access.md), recorded the same day by a Codex
+session, which records that it worked at the owner's request, reached the same restoration
+independently.
 
 ## Context
 
@@ -21,11 +19,10 @@ ADR 0012's complete structural contract, its `Data` naming and its snapshot rule
   (`DataTree = DeixisNode<Data>`, `WireTree = DeixisNode<Wire>`). It said "reconstructing readers
   from persisted bytes is a separate consumer operation", and did not define that operation or
   give it an owner.
-- **bitwire moved on 4 October 2026.** bitwire 0.4.0 (its decision 0014) replaced the addressless
-  sender with one duplex `Wire` that sends and receives envelopes, each carrying source and
-  destination byte paths scoped to the connection. `WireTree` and `AddressedWire` no longer exist
-  there. bitruntime 0.5.0 routes envelopes into a receiver-side tree of handlers: `route(tree, e)`
-  is `tree.at(e.destination)` followed by invoking its own value.
+- **bitwire diverged on 4 October 2026.** bitwire 0.4.0 (its decision 0014) removed the
+  addressless/addressed split. Its one duplex `Wire` sends envelopes, each carrying source and
+  destination byte paths, and `WireTree` and `AddressedWire` were deleted. bitruntime 0.5.0 routes
+  envelopes into a receiver-side tree of handlers. This record does not follow that change (§6).
 - **The interpretation law was stated four times without being reconciled:**
   - [ADR 0010](0010-mandatory-node-values.md) §7 with [ADR 0009](0009-optional-node-values.md)
     §11;
@@ -113,8 +110,8 @@ This reconciles the earlier statements:
 Two adapters are allowed as consumer conveniences, not as the binding contract:
 - **A deferred `Data` reader** built from a request. Its failures must say whether they arose in
   binding or in the read.
-- **An application send adapter** (for example `SendAt`), never a replacement `Wire`. A binding
-  refusal in it is not a `Wire.send` rejection, since `send` need never have been called.
+- **An addressed sender obtained by binding a name** through the shared addressing layer (§6). A
+  binding refusal in it is not a `Wire.send` rejection, since `send` need never have been called.
 
 ### 3. Outcomes carry phase and cause
 
@@ -181,33 +178,98 @@ existing codec byte changes.
   universal equivalence. A sum carrier combines relations by tag; it does not make them
   interchangeable.
 
-### 6. The interaction instance (supersedes ADR 0012's interaction terminology)
+### 6. The interaction instance (ADR 0012 stands)
 
-> A complete receiver-side tree of handlers is a principal interaction instance of `Node[T]`. A
-> duplex connection is not a tree. A process may also assemble a complete tree of
-> connection-bound send adapters, but such a tree is a local application structure, not the
-> bitwire primitive.
+ADR 0012's interaction model is the family's. Its layering was the owner's direction before ADR
+0012 was written. The first version of bitwire#42, opened on 2026-09-25 and recorded there as
+"Operator direction recorded on 2026-09-25", says:
 
-- **`WireTree` is not restored in bitwire.** In deixis, `DeixisNode<Wire>` is no longer a family
-  name. `Wire` means bitwire's duplex connection endpoint.
-- **`route` is selection followed by invocation.** Its `false` reports an absent path in the
-  receiver's tree. A namespace protocol may translate that into a binding refusal, but `route`
-  itself is not binding.
-- **Constructing `(connection, p)`** establishes the ability to submit envelopes addressed to `p`.
-  It does not establish that `p` exists remotely. Existence, authorization or target identity need
-  an exchange protocol.
-- **Incarnation does not pin a handler.** A handler at `p` can be replaced within one participant
-  lifetime. A token-identity reference needs stable target IDs, a routing revision pinned at
-  dispatch, or no reassignment for the reference's lifetime. Otherwise it is a **mutable route
-  alias**, and it says so.
-- **Realization independence respects shared connection ordering.** Splitting one connection into
+> Separate the addressless Wire primitive (A0) from the addressed composition (A1), with
+> `A1 = Deixis[A0]`. The service architecture uses a Bitwire A0 relay behind a generic Deixis
+> service; the same Deixis service implementation also lifts raw Bytes B0 to B1.
+
+That text survives only in the issue's edit history, because the body was rewritten on 25 and
+26 September. ADR 0012 records the names and the derivation; it does not record this reason.
+[WIRES.md](../WIRES.md) §1, §3 and §4 describe the same layering from the interaction side:
+
+```text
+Addressed operations: the deixis projection
+                  ↕
+Shared addressing layer   (paths, once, for every transport)
+                  ↕
+Addressless Wire          (send(message): the primitive every transport carries)
+                  ↕
+Local, WebSocket, relay or any other transport
+```
+
+- **`Wire` is the addressless primitive.** It takes no path. Every transport implements the same
+  addressless delivery contract, and none implements addressing.
+- **One lift serves both wings.** The same deixis lift turns `A0` into `A1 = Deixis[A0]` for
+  `Wire`, and `B0` into `B1 = Deixis[B0]` for `Data`. That is ADR 0012's symmetry: `WireTree` and
+  `DataTree` are one generic construction with different own values.
+- **Addressing is one shared layer above it**, turning addressless into addressed for every
+  transport. It may encode a path inside the data the wire carries (an envelope is one such
+  encoding), but the layer owns that representation. The primitive neither requires nor interprets
+  paths.
+- **The deixis projection.** A tree projects each operation `m` of its own values to an addressed
+  operation:
+
+  ```text
+  A.m(p, …args)  =  select(A, p).own().m(…args)
+  ```
+
+  For example, `send(tree, path, message) = select(tree, path).own().send(message)` (ADR 0012).
+- **Its composition law.** If `B = select(A, p1)`, then `B.m(p, …) ≃ A.m(p1 ++ p, …)` inside one
+  held tree. This is an equality, immediate from selection's law: both sides select the same node
+  and invoke its own value once with the same arguments.
+  - both sides select the same target, keep the arguments, and invoke the operation once;
+  - a missing path stays missing;
+  - across a connection the same shape is WIRES.md §4's routing law,
+    `connect(a) / p ≈ connect(a ++ p)`. Its `≈` is the relation the relay profile declares, and no
+    battery checks it yet;
+  - it composes calls by concatenating paths. It never feeds one call's result into another.
+- **`WireTree = DeixisNode<Wire>` stays the family name** for a complete tree of addressless
+  senders. Full deixis is the projection *and* the structure: own values, complete children,
+  selection and decomposition.
+- **Addressed access alone is not a tree.** An opaque router, or a facade offering
+  `send(path, message)` such as bitwire 0.3.0's `AddressedWire`, provides the projection without
+  the structure. ADR 0012 says of any "addressed-only access facade" that it "is not a `WireTree`
+  or `DataTree`". Send behaviour alone cannot tell an absent path from a present participant
+  that refuses.
+- **A receiver's handler tree is a `WireTree`.** *(This record's reading, not the owner's words.)*
+  A handler is a send end on the identity wire: "a closure held and called locally is a send on
+  it" (WIRES.md §2). So a tree of handlers selected by destination path, as bitruntime's `route`
+  selects them, is a `WireTree`, and `route`, selection followed by invocation, is the projection
+  applied at the receiver. A sender across a connection holds the projection without the
+  structure, which is lawful under WIRES.md §4 and does not claim the tree. The two are one
+  design seen from its two ends.
+
+**bitwire 0.4.0 diverged.** bitwire's decision 0014 (4 October) removed the addressless/addressed
+split as compatibility baggage:
+- its `Wire` carries destination paths in every envelope;
+- `WireTree` and `AddressedWire` were deleted;
+- bitruntime 0.5.0 deleted `Bind`, `Serve` and `AsAddressed`.
+
+That conflicts with this record and with ADR 0012. The restoration of the addressless primitive and
+the shared addressing layer is Bitspark/bitwire#76, peer-read by deixis-fable. One option, for
+bitwire's and bitruntime's agents to decide, is to keep 0.4.0's envelope format as that layer's
+encoding.
+
+**Obligations of the addressing layer**, wherever it lives. They come from research 0005's advice
+(§2.4 and §5.3):
+- **Existence.** Constructing an addressed sender at `p` gives the ability to submit messages
+  addressed to `p`. It does not establish that `p` exists remotely. Existence, authorization or
+  target identity need an exchange protocol.
+- **Route identity.** Incarnation does not pin a handler: a handler at `p` can be replaced within one
+  participant lifetime. A reference that promises token identity needs stable target IDs, a routing
+  revision pinned at dispatch, or no reassignment for its lifetime. Otherwise it is a **mutable
+  route alias**, and it says so.
+- **Ordering.** Realization independence respects shared ordering. Splitting one connection into
   several, or adding independent deferred-resolution queues, is not justified merely because each
-  path still reaches the same handler.
-- **Designation is not authority.** A routing domain and a path say where an envelope is
-  addressed, not who may act. A portable end reference carries a declared authority model.
-  Serializable is not safe to publish: names that confer authority need a policy for persistence,
-  logging, discovery and export. Borrowing is not ownership: disposal rights live in explicit
-  lifecycle objects.
+  path still reaches the same target.
+- **Designation is not authority.** A path says where a message is addressed, not who may act. A
+  portable end reference carries a declared authority model. Names that confer authority need a
+  publication policy, and disposal rights live in explicit lifecycle objects.
 
 ### 7. Data: restoring snapshot readers
 
@@ -366,7 +428,8 @@ These have named owners outside this record:
   implementation);
 - end-reference authority models and route-identity guarantees (bitwire and the applications);
 - `restoreSnapshot` and the phase-preserving deferred reader (bitstore);
-- send adapters (bitruntime or the applications).
+- the shared addressing layer's contract and implementation, and restoring the addressless
+  primitive (bitwire and bitruntime, carried by deixis-fable).
 
 ## Validation boundary
 
@@ -384,3 +447,76 @@ Items 2, 4 and 5 landed separately in deixis#14:
 - the nonconforming-child tests.
 
 Its foreign-tree tests are item 1's adapter conformance tests for TypeScript and Go.
+
+## Correction, 2026-10-05
+
+The first version of this record (`c0eb86d`, Bitspark/deixis#13) superseded ADR 0012's interaction
+terminology. It made a receiver-side handler tree "the principal interaction instance" and dropped
+`WireTree`. That was an error, made by seat caa, and corrected the same day. The owner recalled
+the September intent and asked for a re-derivation. Keeping ADR 0012's layering is this
+repository's decision, re-derived from the record: ADR 0012 (26 September), the first version of
+bitwire#42 (25 September) and WIRES.md (decided 8 August).
+
+**How it happened:**
+0. **No accepted record said what the split was for.** bitwire's accepted decision 0012
+   (2026-09-26, v0.3.0) gives naming symmetry as its reason: "on the user's explicit direction to
+   make the names and structure symmetric". The A0/A1 layering lived only in the first version of
+   bitwire#42 and in bitwire's draft decision 0011 (bitwire PR #49), which was never merged.
+   deixis's ADR 0012 records the names and the derivation, and not the reason either.
+1. **bitwire read a request for less baggage as covering the split.** In the session that
+   produced bitwire's decision 0014, the owner wrote, on 4 October at 00:15 UTC: "I would prefer
+   there to be a clean cut. no historic profiles, no legacy baggage. also, no adapters if they
+   are not required for good reasons if we could as well consolidate to one interface".
+   - The authoring agent had just read bitwire's guard on the split, "Preserve this
+     distinction". It then reversed its own advice of minutes earlier ("The addressless sending
+     primitive still needs no path") and proposed one contract with no adapter.
+   - The plan the owner approved did not say that it reversed bitwire's 0012, deixis's ADR 0012
+     or that guard.
+   - Decision 0014, as merged, then says "The owner requested a clean replacement without
+     historical profiles, compatibility exports or redundant wire adapters", without the
+     qualifier. Its change note says "Owner explicitly adopted the replacement and prohibited
+     compatibility baggage", and its migration line removes "addressless/addressed API splits"
+     together with the historic profiles and compatibility aliases.
+   - The request and the split do not conflict. One addressless interface and one derived lift,
+     with no adapter between two wire interfaces, satisfy both.
+1b. **The premise was false for the split.** Before bitruntime 0.5.0, addressing lived once,
+   above a transport-agnostic seam. bitruntime's `transports/go/transport.go`, before `80793ba`:
+   "the seam beneath every carrier … The bitwire/1 protocol engine runs over it; beneath it the
+   transport is an in-memory pipe, a WebSocket or a framed byte stream, and neither side of the
+   seam knows which." No transport implemented addressing. The real duplication was two sending
+   interfaces, `Wire` and `AddressedWire`, with bridges between them. 0.5.0 deleted the seam, and
+   queueing is now written once per carrier (`queued` in `core/go/pair.go`, `queuedEnvelope` in
+   `websocket/go/wire.go`). The change that removed "redundant adapters" added duplication below
+   the wire.
+2. **Research 0005 treated 0014 as fixed.** The consultation that led to this record called it a
+   fixed constraint ("does not reopen them"). It also left out ADR 0012's authority, "accepted …
+   by the operator's explicit instruction", and the reason for the split, which ADR 0012 itself
+   does not state (step 0). It put the change to the expert as settled, and it misread WIRES.md as
+   closer to bitwire 0.4.0 than to ADR 0012.
+3. **The expert answered inside that frame.** The grade had a single reader, because the research
+   owner and the architecture seat were the same agent. This record then copied the answer.
+4. **The direction was inverted.** A floor record was superseded by a consumer's release, although
+   bitwire's own 0014 calls the `DeixisNode` structure independent.
+
+deixis-fable found the omitted authority and reason in step 2, the settled framing in step 3, the
+single reader and the inverted direction, and named what survived. deixis-fable also recovered
+the owner's words of 4 October (step 1) from the session's log, and the bitwire-side causes
+(steps 0 and 1b). seat caa checked each quotation at its source.
+
+**What survived throughout:** WIRES.md §4's routing law and ADR 0012's derivation of `send`, which
+together are §6's projection law. No core code, codec byte or vector changed.
+
+**What bitwire lost.** bitwire's contract carried the composition law from its first release:
+v0.1.0's `docs/wire/contract.md` says "Selecting an origin prepends its prefix to sent and
+registered paths" and `at(at(w, a), b) ≃ at(w, a ++ b)`, and both were still there at v0.3.0.
+bitruntime implemented the law in `At` until `80793ba`. bitwire 0.4.0's contract states no prefix
+law. The law survived in deixis's doctrine and was deleted from the consumer's contract and code.
+
+**The rule adopted:**
+- A consumer's decision that reverses a floor decision the owner accepted is a conflict to resolve,
+  with its provenance checked. It is never an input that supersedes the floor.
+- When an architecture grade has a single reader, a peer reads it before the record merges.
+- A plan that reverses a recorded decision says "this reverses X", quotes X's reason, and names
+  any guard it overrides. An approval covers only what the plan surfaced.
+- Records quote the owner verbatim, or say "paraphrase". A recollection or a question is never
+  recorded as a ruling or a confirmation.
