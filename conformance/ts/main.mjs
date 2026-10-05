@@ -16,6 +16,7 @@ import { contains, isSet, recognize, setOf } from "../../set/ts/dist/index.js";
 import { handleBinding } from "./binding.mjs";
 import { handleCodec } from "./codec.mjs";
 import { handleMandatory } from "./mandatory.mjs";
+import { handleProjection } from "./projection.mjs";
 
 const encoder = new TextEncoder();
 
@@ -309,6 +310,7 @@ function handle(request) {
   if (request.op.startsWith("codec.")) return handleCodec(request);
   if (request.op.startsWith("mnode.")) return handleMandatory(request, replace, attach);
   if (request.op.startsWith("binding.")) return handleBinding(request);
+  if (request.op.startsWith("projection.")) return handleProjection(request);
   if (request.op.startsWith("required.")) return handleRequired(request);
   const { op } = request;
 

@@ -14,6 +14,7 @@
 mod binding;
 mod codec;
 mod mandatory;
+mod projection;
 mod required;
 
 use std::io::{self, BufRead, Write};
@@ -722,6 +723,9 @@ fn handle(request: &Json) -> Vec<(&'static str, String)> {
     }
     if let Some(op) = op.strip_prefix("binding.") {
         return binding::handle(request, op);
+    }
+    if let Some(op) = op.strip_prefix("projection.") {
+        return projection::handle(request, op);
     }
     match op {
         "core.equal" => {
