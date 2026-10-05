@@ -1,0 +1,30 @@
+# deixis's identity: each entry's statement, reason and authority, pinned to the record
+# that last set it, and each pinned section. Change one only by IDENTITY.md's change rule;
+# tools/identity_check.py explains.
+# Format: ID<n> <sha256> <ADR> | ID<n> retired <ADR> | SECTION <file>#<name> <sha256> <ADR>
+
+ID1 e51ff96f67005b27b980c37876a1007855ef10df3f55418f7873996ab330d1b4 0015
+ID2 1318d21b7a85eb2629811c64248baffe347e56119b43292a95ddbfd48ae2ab46 0015
+ID3 7caa9ae5ff94a278db7d4b9b2dd43ef865b8d4cd6691aaebcecb0acacc916e83 0015
+ID4 58a04acfe51f486d2df7ed8fa0bd2bba0595eb149241fa5b1de6d79ade48a801 0015
+ID5 ea0c9fd1ae4fc5bbd3d11b887e20c102ee4d01924553b92587c1ec9ad119fd7a 0015
+ID6 d2be221e55e41d7cbf4e68924b1bb298217b0a56364a2acb1233acd281dfd9cf 0015
+ID7 5de0b8e1c01b8ef4012662d3a9e9934ccd124157451e7da69e6abbd9e942c072 0015
+ID8 b8ff3a85452caf6a8f13eda28a5289513b76f8c66a298a727403ae208e6188b7 0015
+ID9 e32b051d761c2301e8216c385b08326fff79bf8eb4d4be23dc6c684d40f80df5 0015
+ID10 e0883e349a01362a15f355481b5d594febc34ae10f31bbfbf5054e44bb69d33e 0015
+ID11 530d5b6d2de8e85ffdf7d090ce6684da0179473e16f2877a336052e42cba872d 0015
+ID12 833eb858c37e4bfd289e58bbe15abcc215014efe726eaa908484f2076d81940f 0015
+ID13 6d13981a5556367e365315c333a4f2b1b26828ab8551d7e5c0ea557af17cb6fa 0015
+SECTION IDENTITY.md#completeness 3cf16fd51596f381c6ef1ea762ca27ba699da06f69174fb37a1539fb845773a4 0015
+SECTION docs/WIRES.md#wires-s4-amendment 8c36ff82a751aaf012809a4b8b04b20b4922e88e845fbd0a6c9d4e664f3805d9 0015
+SECTION docs/WIRES.md#wires-s5-open 82c8076f1368cab01b803cc00fc78c66d5b508ae4c4aef9197a38421967dc94c 0015
+
+# Lines that predate the check and declare a supersession touching a source of an
+# entry. All four record ADR 0010 superseding ADR 0009's optional node values, on the
+# owner's decision of 2026-09-23 ("Let's use mandatory T."), which ID1 rests on.
+# Format: allow <file> <sha256 of the whitespace-normalized line>.
+allow docs/TREE.md fad35a0133994d0293d06e99b9d03dbd62103b130767eecaad3661c78e4dca69
+allow docs/design/0008-proof-obligations.md 4c0a96824a434329db32f723e005314eb3d1b12aeef9374dfeda2ab565f43637
+allow docs/design/0010-mandatory-node-values.md 3276c6399e4f83b613d1d22b23c7a1c374ac0b0be9c32a38c8998e8b5b2f5232
+allow docs/design/0010-mandatory-node-values.md b35fab093a88d40b9d5aa6ea8f36926e5571836d2436bc212bf9b3edc9528ea9

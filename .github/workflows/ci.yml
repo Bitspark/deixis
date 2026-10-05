@@ -203,3 +203,10 @@ jobs:
       # reviewed by hand.
       - name: Bitspark project names are spelled as their repositories
         run: node scripts/naming.mjs
+      # deixis's identity (IDENTITY.md, ADR 0015). Each invariant's statement is pinned to the
+      # ADR that last set it, and a record that supersedes a source of an invariant needs an
+      # `Identity: breaks ID<n>` line. Added after a design record superseded an owner-decided
+      # floor record by following a consumer's release, and merged as an ordinary paragraph.
+      # The self-test plants that sentence and requires red.
+      - name: deixis's identity changes only by its change rule
+        run: python tools/identity_check.py && python tools/identity_check.py --self-test

@@ -3,9 +3,11 @@
 deixis is small on purpose, and most of what a contributor needs to know follows from
 that. Read this page before opening a pull request.
 
-Also read [CHARTER.md](CHARTER.md). Changes to meaning must identify the affected
-invariant IDs and follow its amendment discipline. A downstream implementation
-is evidence to assess, not authority to redefine the foundation.
+Also read [IDENTITY.md](IDENTITY.md). **Its invariants change only by its change rule**: an ADR
+with an `Identity: breaks ID<n>` line, two independent derivations, a peer read, and the
+owner's words verbatim where the owner decided it. A downstream implementation is evidence to
+assess, not authority to redefine the foundation. A pull request that carries a consumer's
+change into an invariant is declined until that rule has run, however reasonable it looks.
 
 ## The rule that declines the most changes
 

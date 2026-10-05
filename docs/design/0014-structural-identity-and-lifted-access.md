@@ -4,7 +4,12 @@
 deixis, bitwire and bitruntime. The implementation agent's reasoned decision is
 recorded here; this is not a claim that the owner separately selected every API
 detail or that independent review has occurred. Delivery evidence remains
-separate. The [charter](../../CHARTER.md) makes the resulting identity explicit.
+separate. The [charter](../../IDENTITY.md) makes the resulting identity explicit.
+
+*(Amended 2026-10-05: the charter this record introduced is folded into
+[IDENTITY.md](../../IDENTITY.md) by [ADR 0015](0015-deixis-identity.md), so that deixis has one
+identity document. Its `D1` to `D8` map to `ID1` to `ID8` (ADR 0015 §2a), and its links here
+point to IDENTITY.md.)*
 
 This supersedes ADR 0013's retirement of the addressless sender, `WireTree`, and
 addressed sending distinction, and its preference for a receiver-side principal
@@ -109,7 +114,7 @@ reconstruction, missing-versus-refused dispatch, and identical addressing over
 local and WebSocket carriers. Endpoint admission and resource-release checks must
 continue to pass after the split.
 
-The [charter's amendment discipline](../../CHARTER.md#amendment-discipline) is part
+The [charter's amendment discipline](../../IDENTITY.md#how-an-invariant-changes) is part
 of repository review. A future consumer migration must identify any proposed
 foundation change explicitly rather than first implementing it downstream and
 then treating that implementation as an unreviewable premise upstream.
