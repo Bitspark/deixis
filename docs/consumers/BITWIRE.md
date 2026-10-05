@@ -1,87 +1,81 @@
-# bitwire: Wire and WireTree
+# bitwire: the envelope Wire and receiver handler trees
 
-**Accepted contract, 2026-09-26.** The operator chose the symmetric primitive
-and tree names in [ADR 0012](../design/0012-data-wire-tree-symmetry.md):
+**Current from 2026-10-05, after bitwire 0.4.0 (its decision 0014, 2026-10-04).** The interaction
+half of [ADR 0012](../design/0012-data-wire-tree-symmetry.md) is superseded by
+[ADR 0013](../design/0013-binding-views-and-the-service-line.md). bitwire's own contract is the
+source; this page records what bitwire takes from deixis and where the line falls.
 
 ```ts
-interface Wire {
-  send(message: Message): void;
+interface Envelope {
+  readonly source: Path;          // Path = readonly Atom[]: exact byte keys, scoped to the connection
+  readonly destination: Path;
+  readonly id: Atom;
+  readonly correlation?: Atom;
+  readonly payload: Value;        // an immutable ontos value
 }
-
-type WireTree = DeixisNode<Wire>;
+interface Wire {
+  send(envelope: Envelope): Promise<void>;                  // resolves on local admission only
+  receive(handler: (envelope: Envelope) => void): () => void;
+  readonly closed: Promise<Termination>;
+  close(): Promise<void>;
+}
 ```
 
-`Wire` is addressless sending access. `WireTree` is the full deixis structure,
-not merely an interface that can dispatch to paths. The shared structural
-contract is specified in [API.md](../API.md); the corresponding storage
-instantiation is [DataTree](BITSTORE.md).
+`Wire` is bitwire's one duplex connection endpoint. **A connection is not a tree.** There is no
+`WireTree` and no `AddressedWire`: bitwire's decision 0014 removed both, and its build rejects the
+names.
 
 ## What it takes from the floor
 
-- Every node has an own `Wire` and a complete child map. A refusing Wire is
-  still an own value; it does not mean that the node is missing.
-- Keys are exact byte strings. Both trees use this same key domain, including
-  empty and non-UTF-8 keys. String keys are an explicit application encoding,
-  not the complete structural key domain.
-- `own()`, `children()`, `at(path)` and decomposition expose the full
-  structure. Selection is partial: an absent child is distinguishable from a
-  present child whose Wire refuses every send. Empty-path selection is self.
-- Construction and recomposition preserve the own value and complete map.
-  Every tree is finite and well-founded; opaque payloads remain opaque.
-- Structure alone does not choose an equality or a codec for Wire values.
-  Those require a separately supplied relation or representation, as for any
-  other payload in [SLOTS.md](../SLOTS.md).
-
-Addressed sending is derived, on paths for which selection succeeds:
-
-```text
-send(tree, path, message) = select(tree, path).own().send(message)
-```
-
-Missing selection must be reported as missing, rather than replaced with a
-default Wire. deixis specifies the selection result; the operation adapter
-defines how it reports that result to its caller. Binding a path prefix alone
-does not establish that a subtree exists.
+- **The receiver's routing tree.** It is a complete `DeixisNode` whose own values are handlers.
+  bitruntime's `route(tree, envelope)` is `tree.at(envelope.destination)` followed by invoking the
+  selected own value, and it returns `false` for an absent path. That is selection followed by
+  invocation, not name binding (ADR 0013 §6). It never falls back to an ancestor.
+- **Keys** are exact byte strings, including empty and non-UTF-8 keys, in bitwire's own nominal
+  `Atom` type. Slash bytes are ordinary key bytes, and nothing is parsed or normalized.
+- **The complete structural contract.** `own()`, `children()`, `at(path)` and decomposition agree.
+  Missing selection is absent, and an existing handler that ignores an envelope is still present.
+  Construction rejects duplicate keys and cycles. bitwire declares the shape itself, because each
+  repository stays installable without the others. Its child order is presentation order, not key
+  identity.
+- **No equality or codec on handlers.** Structure alone chooses neither, as for any other payload
+  in [SLOTS.md](../SLOTS.md).
 
 ## What it adds above it
 
-bitwire owns the message, send-admission, refusal, receiving and lifecycle
-contracts. A bare sending `Wire` does not by itself grant receive attachment
-or closing. bitruntime supplies implementations and derived operations under
-bitwire's contract. deixis implements neither transport nor dispatch.
+- **Messages and delivery.** bitwire owns envelopes, admission, ordering per direction, receive
+  attachment, termination and limits. Success means local admission, not delivery or execution.
+  A rejected `send` means "not admitted locally". A synchronous handler exception fails the
+  endpoint, so refusal is not a thrown exception.
+- **Senders cannot see remote absence.** Across a connection a sender observes admission only. It
+  cannot tell a missing remote path from a present handler that ignores the envelope. Stronger
+  guarantees (existence, authorization, target identity, outcome) belong to an exchange protocol
+  above the wire.
+- **A send capability at a path** is an application adapter over `(connection, path)`, not a
+  primitive. Constructing it does not establish that the path exists remotely. A handler at a path
+  can be replaced within one participant's lifetime. So a reference that promises token identity
+  needs a stable target ID, a pinned routing revision, or no reassignment; otherwise it is a
+  mutable route alias (ADR 0013 §6).
+- **Designation is not authority.** Source and correlation do not authenticate a sender. A portable
+  end reference carries a declared authority model.
 
-Remote or restricted addressed access may be useful, but a handle that only
-offers `send(path, message)` is not the full `WireTree` contract. It needs a
-distinct access interface unless it also supplies complete structure and
-partial selection. Similarly, an opaque child that accepts arbitrary paths
-on demand cannot be called a finite deixis subtree merely because prefix
-composition works.
+deixis implements neither transport nor dispatch. Binding portable names to send adapters
+follows ADR 0013 §2: a pure preparation, then a per-request resolution whose refusal is not a
+`Wire.send` rejection.
 
-## Migration and evidence
+## History
 
-This is a breaking contract selection, not a declaration that every bitwire
-language binding and runtime has already migrated. The consumer's package
-versions, tests and release records establish implementation status.
+- **26 September 2026.** bitwire's decision 0012
+  ([v0.3.0](https://github.com/Bitspark/bitwire/tree/v0.3.0/docs/decisions)) chose an addressless
+  `Wire.send(message)`, a `WireTree = DeixisNode<Wire>`, and an `AddressedWire` carrier bridge.
+- **Earlier.** Decision 0006 described an origin plus named, possibly opaque addressed access,
+  with Unicode-string keys whose image excluded arbitrary binary keys.
+- **4 October 2026.** bitwire 0.4.0 replaced all of it. Published releases remain immutable
+  history, not supported profiles.
+- **Implementation ownership** is unchanged: bitwire holds the contract and its independent cases,
+  and bitruntime implements them. Historical results do not certify the replaced implementation.
 
-The earlier
-[decision 0006](https://github.com/Bitspark/bitwire/blob/main/docs/decisions/0006-declared-composites-realize-deixis-nodes.md)
-was accepted on 2026-09-23, added in `fdc2ae9`, and clarified in `150d67c`.
-It described an origin plus named, potentially opaque addressed access, with
-composition observed through send behavior and retained parts available to
-the construction owner. Its keys were Unicode scalar strings mapped to
-UTF-8, so its image excluded arbitrary binary keys. Those were the guarantees
-of that earlier access contract; they do not establish the new full tree
-contract. The proposed `End` primitive and addressed `Wire` naming in the
-later draft is superseded by the operator's `Wire` / `WireTree` choice.
-
-Implementation ownership remains the split recorded in bitwire decisions
-[0007](https://github.com/Bitspark/bitwire/blob/main/docs/decisions/0007-using-bitwire-never-requires-nightseam.md)
-and
-[0010](https://github.com/Bitspark/bitwire/blob/main/docs/decisions/0010-bitwire-holds-the-contract-and-bitruntime-implements-it.md):
-bitwire holds the contract and conformance; bitruntime implements them.
-Historical nightseam results and earlier declared-composite interpreters do
-not certify a renamed or extended implementation.
-
-The separate deixis-svc proposal must preserve this same full
-structural contract. Its deployment and crossing behavior require their own
-evidence. Nothing on this page certifies a sibling repository from deixis.
+The proposed generic structural service (deixis-svc) must not treat a relay or a connection as a
+complete tree. A relay-backed structural interface needs an application protocol that supplies
+discovery and snapshots (ADR 0013 §8). Nothing on this page certifies a sibling repository from
+deixis.

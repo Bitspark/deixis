@@ -11,6 +11,10 @@ implemented in all four cores and its corpus is replayed on every run; its freez
 downstream adoption remain open in [#1](https://github.com/Bitspark/deixis/issues/1). [API.md](API.md) documents
 the delivered interfaces. Live counts below are bound to the harness output.
 
+*(2026-10-05: [ADR 0013](design/0013-binding-views-and-the-service-line.md) supersedes the
+`Wire`/`WireTree` half of the next paragraph. The structural evidence it describes still covers
+every tree shape, a receiver's handler tree included.)*
+
 **Naming and structural contract, accepted 2026-09-26:**
 [ADR 0012](design/0012-data-wire-tree-symmetry.md) records addressless `Data`
 and `Wire`, with `DataTree = DeixisNode[Data]` and
