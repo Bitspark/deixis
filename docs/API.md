@@ -72,8 +72,9 @@ parts, while native `Compose` continues to accept concrete `Entry` values.
 Both generic constructors copy keys, reject duplicates, and retain lawful
 child trees without materializing their payloads or hidden implementations.
 Other languages preserve idiomatic spellings for the
-same structure. Independent public bindings do not require installing this
-private repository.
+same structure. Independent bindings in other repositories, such as bitwire's
+and bitstore's, implement the same shape and laws without depending on these
+packages.
 
 ## Native constructors
 
