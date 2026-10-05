@@ -1,0 +1,183 @@
+{
+  "description": "deixis scripted binding vectors — the two-stage binding of ADR 0013 §2, the outcome classes of §3 and the structural rows of §5, run on each core's native Node[T]. Binding is not a deixis API: each conformance CLI carries a scripted harness that builds and reads every tree through the core's own compose, decompose and at. A name is a byte string, spelled as hex (vectors/README.md). A node is {\"own\": <hex name>, \"children\": [[<hex key>, <node>], …]}, the spelling of vectors/MNODE-PLAN.md; paths are arrays of hex keys, and [] is ε. prepare under the context γ (a string) is §2's context-indexed map: the node at path p becomes the request {\"name\": <its name, the exact bytes>, \"origin\": γ, \"at\": p}, the context moved along the path to γ·p. Keys and the path set are unchanged. op prepare asserts the whole prepared tree. op at-after-prepare asserts both sides of §2's law, at(P_γ(N), p) and P_{γ·p}(at(N, p)): the CLI answers each side, and each must equal result, {\"defined\": …} or {\"undefined\": {}}. A selected subtree keeps the paths from the original root, because moving a subtree never re-roots it. binder is a script, [[<hex name>, <outcome>], …]. An outcome is {\"bound\": <id>}, {\"refused\": <reason>}, {\"fault\": <cause>} or {\"cancelled\": {}}, and a name the script does not list is {\"refused\": \"unrecognized\"}. op resolve-at prepares under context, selects path and answers {\"absent\": {}} when the path is missing, without consulting the binder; otherwise it answers the binder's outcome for the selected request's name. op resolve-all-or-fail is §2's eager batch: it resolves every request depth-first, a node before its children and children in ascending unsigned-octet key order, stops at the first outcome that is not bound and answers {\"failed\": <that outcome>}, or else {\"bound-tree\": <the tree of bound ids>}. Both resolving ops answer {\"outcome\": …, \"consulted\": [<hex name>, …]}, where consulted lists the names the binder was asked for, in order: §5's instrumented binder, so structural noninterference is observed rather than inferred. Hand-authored from docs/design/0013-binding-views-and-the-service-line.md as merged in c0eb86d, with docs/PATH.md for selection and vectors/MNODE-PLAN.md for spelling, and from nothing else. No implementation of these operations existed when they were written. pins are fragments of ADR 0013 that each judgment rests on, checked by tools/pincheck.py. Each note names the defect it catches. 19 cases.",
+  "profile": "deixis-binding-scripted",
+  "spec": "docs/design/0013-binding-views-and-the-service-line.md",
+  "cases": [
+    {
+      "name": "bind-prepare-whole-tree",
+      "op": "prepare", "context": "site-a",
+      "node": { "own": "726f6f74", "children": [["612f62", { "own": "736c617368", "children": [] }], ["", { "own": "656d707479", "children": [] }], ["61", { "own": "616c706861", "children": [["6a", { "own": "6a6f62", "children": [] }]] }]] },
+      "result": { "own": { "name": "726f6f74", "origin": "site-a", "at": [] }, "children": [["", { "own": { "name": "656d707479", "origin": "site-a", "at": [""] }, "children": [] }], ["61", { "own": { "name": "616c706861", "origin": "site-a", "at": ["61"] }, "children": [["6a", { "own": { "name": "6a6f62", "origin": "site-a", "at": ["61", "6a"] }, "children": [] }]] }], ["612f62", { "own": { "name": "736c617368", "origin": "site-a", "at": ["612f62"] }, "children": [] }]] },
+      "pins": ["preparation preserves it exactly"],
+      "note": "§2, P_γ(Node(n,m)) = Node(request(γ,n), {k ↦ P_{γ·[k]}(m[k])}); §5 path set. Every node, the root and the interior node [61] included, becomes a request whose at is its own path. Catches a request with no cursor or a cursor relative to its parent ([6a] instead of [61, 6a]), the empty key's cursor read as the root's ([] instead of [\"\"]), the one key 612f62 spelled as the two keys [61, 62], and a dropped or added child."
+    },
+    {
+      "name": "bind-prepare-captures-the-supplied-context",
+      "op": "prepare", "context": "site-b",
+      "node": { "own": "736f6c6f", "children": [] },
+      "result": { "own": { "name": "736f6c6f", "origin": "site-b", "at": [] }, "children": [] },
+      "pins": ["Preparation is pure."],
+      "note": "§2: a request captures its binding scope, here the context site-b, and nothing else. A single childless node is prepared too. Catches an origin that is hard-coded or taken from the tree instead of the context, and preparation that starts below the root."
+    },
+    {
+      "name": "bind-prepare-keeps-the-exact-name-bytes",
+      "op": "prepare", "context": "site-a",
+      "node": { "own": "", "children": [["04", { "own": "61626300", "children": [] }], ["03", { "own": "2f612f62", "children": [] }], ["02", { "own": "414243", "children": [] }], ["01", { "own": "ff00", "children": [] }]] },
+      "result": { "own": { "name": "", "origin": "site-a", "at": [] }, "children": [["01", { "own": { "name": "ff00", "origin": "site-a", "at": ["01"] }, "children": [] }], ["02", { "own": { "name": "414243", "origin": "site-a", "at": ["02"] }, "children": [] }], ["03", { "own": { "name": "2f612f62", "origin": "site-a", "at": ["03"] }, "children": [] }], ["04", { "own": { "name": "61626300", "origin": "site-a", "at": ["04"] }, "children": [] }]] },
+      "pins": ["keeps the original name bytes", "requests keep the exact bytes"],
+      "note": "§2 and §5 original names. The root's name is the empty byte string, and it is still a name at an existing node. ff00 is not UTF-8, 414243 is ABC in capitals, 2f612f62 is /a/b and 61626300 ends in a NUL. Catches a normalized or rewritten name (case folding, UTF-8 replacement, a trimmed NUL), an empty name read as no request, and a name that spells a path moving its request: the request at [03] stays at [03], never [61, 62]."
+    },
+    {
+      "name": "bind-law-selection-keeps-the-captured-path",
+      "op": "at-after-prepare", "context": "site-a",
+      "node": { "own": "726f6f74", "children": [["612f62", { "own": "736c617368", "children": [] }], ["", { "own": "656d707479", "children": [] }], ["61", { "own": "616c706861", "children": [["6a", { "own": "6a6f62", "children": [] }]] }]] },
+      "path": ["61"],
+      "result": { "defined": { "own": { "name": "616c706861", "origin": "site-a", "at": ["61"] }, "children": [["6a", { "own": { "name": "6a6f62", "origin": "site-a", "at": ["61", "6a"] }, "children": [] }]] } },
+      "pins": ["Moving a subtree never re-roots it.", "selecting before or after preparation gives equivalent scoped requests"],
+      "note": "§2's law at an interior path. Both orders give requests at [61] and [61, 6a], the paths from the original root. Catches re-rooting at the selected subtree on either side of the law: requests at [] and [6a], or a select-then-prepare side that restarts the context at γ instead of moving it to γ·[61]."
+    },
+    {
+      "name": "bind-law-empty-key-is-a-real-child",
+      "op": "at-after-prepare", "context": "site-a",
+      "node": { "own": "726f6f74", "children": [["612f62", { "own": "736c617368", "children": [] }], ["", { "own": "656d707479", "children": [] }], ["61", { "own": "616c706861", "children": [["6a", { "own": "6a6f62", "children": [] }]] }]] },
+      "path": [""],
+      "result": { "defined": { "own": { "name": "656d707479", "origin": "site-a", "at": [""] }, "children": [] } },
+      "pins": ["Moving a subtree never re-roots it."],
+      "note": "§2's law at the path of one empty key, which is not ε (PATH). Catches [\"\"] read as ε, which selects the whole tree, and a request at the empty key whose cursor collapses to []."
+    },
+    {
+      "name": "bind-law-slash-key-is-one-key",
+      "op": "at-after-prepare", "context": "site-a",
+      "node": { "own": "726f6f74", "children": [["612f62", { "own": "736c617368", "children": [] }], ["", { "own": "656d707479", "children": [] }], ["61", { "own": "616c706861", "children": [["6a", { "own": "6a6f62", "children": [] }]] }]] },
+      "path": ["612f62"],
+      "result": { "defined": { "own": { "name": "736c617368", "origin": "site-a", "at": ["612f62"] }, "children": [] } },
+      "pins": ["Moving a subtree never re-roots it."],
+      "note": "§2's law at a key holding a slash byte (a/b). It is one key, so the path has length one. Catches a cursor kept as a slash-joined string and split again, which misses the node or records at as [61, 62]."
+    },
+    {
+      "name": "bind-law-missing-path-is-undefined-on-both-sides",
+      "op": "at-after-prepare", "context": "site-a",
+      "node": { "own": "726f6f74", "children": [["612f62", { "own": "736c617368", "children": [] }], ["", { "own": "656d707479", "children": [] }], ["61", { "own": "616c706861", "children": [["6a", { "own": "6a6f62", "children": [] }]] }]] },
+      "path": ["62"],
+      "result": { "undefined": {} },
+      "pins": ["Both sides are undefined exactly when the source path is missing."],
+      "note": "§2: equal structural definedness. [62] is missing before preparation and after it. Catches a missing path answered with a placeholder request (an empty name, a default child) on either side of the law."
+    },
+    {
+      "name": "bind-law-two-keys-are-not-the-slash-key",
+      "op": "at-after-prepare", "context": "site-a",
+      "node": { "own": "726f6f74", "children": [["612f62", { "own": "736c617368", "children": [] }], ["", { "own": "656d707479", "children": [] }], ["61", { "own": "616c706861", "children": [["6a", { "own": "6a6f62", "children": [] }]] }]] },
+      "path": ["61", "62"],
+      "result": { "undefined": {} },
+      "pins": ["Both sides are undefined exactly when the source path is missing."],
+      "note": "§2: the node at [61] has the one child 6a, so [61, 62] is missing, although the root holds the single key 612f62. The pair to bind-law-slash-key-is-one-key. Catches a path joined with slash bytes and looked up as one key, which would find the slash node."
+    },
+    {
+      "name": "bind-resolve-missing-path-is-absent",
+      "op": "resolve-at", "context": "site-a",
+      "node": { "own": "726f6f74", "children": [["612f62", { "own": "736c617368", "children": [] }], ["", { "own": "656d707479", "children": [] }], ["61", { "own": "616c706861", "children": [["6a", { "own": "6a6f62", "children": [] }]] }]] },
+      "binder": [["726f6f74", { "cancelled": {} }], ["616c706861", { "refused": "expired" }], ["6a6f62", { "bound": "job@7" }], ["736c617368", { "fault": "unreachable" }]],
+      "path": ["62"],
+      "result": { "outcome": { "absent": {} }, "consulted": [] },
+      "pins": ["select, report structural absence if the path is missing, otherwise"],
+      "note": "§3: a path missing from a complete tree is structural absence, reported by at, and the binder is never asked. One of three outcomes on one tree and one binder, with bind-resolve-unlisted-name-is-refused and bind-resolve-fault-is-neither-absence-nor-refusal. Catches absence reported as a refusal or a fault, and a binder consulted for a path that does not exist."
+    },
+    {
+      "name": "bind-resolve-unlisted-name-is-refused",
+      "op": "resolve-at", "context": "site-a",
+      "node": { "own": "726f6f74", "children": [["612f62", { "own": "736c617368", "children": [] }], ["", { "own": "656d707479", "children": [] }], ["61", { "own": "616c706861", "children": [["6a", { "own": "6a6f62", "children": [] }]] }]] },
+      "binder": [["726f6f74", { "cancelled": {} }], ["616c706861", { "refused": "expired" }], ["6a6f62", { "bound": "job@7" }], ["736c617368", { "fault": "unreachable" }]],
+      "path": [""],
+      "result": { "outcome": { "refused": "unrecognized" }, "consulted": ["656d707479"] },
+      "pins": ["An unrecognized name still occupies an existing node."],
+      "note": "§2, §3: the binder does not list the name at [\"\"], so resolving it is a refusal, a defined result of an existing request. bind-law-empty-key-is-a-real-child shows prepare and at succeeding at the same node. Catches an unrecognized name turned into structural absence, and an invented capability for it."
+    },
+    {
+      "name": "bind-resolve-fault-is-neither-absence-nor-refusal",
+      "op": "resolve-at", "context": "site-a",
+      "node": { "own": "726f6f74", "children": [["612f62", { "own": "736c617368", "children": [] }], ["", { "own": "656d707479", "children": [] }], ["61", { "own": "616c706861", "children": [["6a", { "own": "6a6f62", "children": [] }]] }]] },
+      "binder": [["726f6f74", { "cancelled": {} }], ["616c706861", { "refused": "expired" }], ["6a6f62", { "bound": "job@7" }], ["736c617368", { "fault": "unreachable" }]],
+      "path": ["612f62"],
+      "result": { "outcome": { "fault": "unreachable" }, "consulted": ["736c617368"] },
+      "pins": ["Failure to establish validity is not proof of invalidity."],
+      "note": "§3: an unreachable authority yields a fault, never an invented refusal, and the node stays an existing node. Catches a fault reported as a refusal or as a missing child (§5 failure distinctions)."
+    },
+    {
+      "name": "bind-resolve-through-a-refused-node",
+      "op": "resolve-at", "context": "site-a",
+      "node": { "own": "726f6f74", "children": [["612f62", { "own": "736c617368", "children": [] }], ["", { "own": "656d707479", "children": [] }], ["61", { "own": "616c706861", "children": [["6a", { "own": "6a6f62", "children": [] }]] }]] },
+      "binder": [["726f6f74", { "cancelled": {} }], ["616c706861", { "refused": "expired" }], ["6a6f62", { "bound": "job@7" }], ["736c617368", { "fault": "unreachable" }]],
+      "path": ["61", "6a"],
+      "result": { "outcome": { "bound": "job@7" }, "consulted": ["6a6f62"] },
+      "pins": ["selection and reconstruction resolve and invoke nothing"],
+      "note": "§2, §5: the name at [61] is refused as expired, and the node still occupies its path, so selection walks through it to [61, 6a] and only the selected request is resolved. Catches selection that resolves each request on the way (consulted would hold the cancelled root and the expired [61]), and a refused node whose subtree reads as absent."
+    },
+    {
+      "name": "bind-resolve-cancelled-at-the-root",
+      "op": "resolve-at", "context": "site-a",
+      "node": { "own": "726f6f74", "children": [["612f62", { "own": "736c617368", "children": [] }], ["", { "own": "656d707479", "children": [] }], ["61", { "own": "616c706861", "children": [["6a", { "own": "6a6f62", "children": [] }]] }]] },
+      "binder": [["726f6f74", { "cancelled": {} }], ["616c706861", { "refused": "expired" }], ["6a6f62", { "bound": "job@7" }], ["736c617368", { "fault": "unreachable" }]],
+      "path": [],
+      "result": { "outcome": { "cancelled": {} }, "consulted": ["726f6f74"] },
+      "pins": ["Refusal, fault and cancellation"],
+      "note": "§2: ε selects the root, and its outcome is Cancelled, the fourth summand of BindResult, distinct from a refusal, a fault and absence. Catches cancellation folded into another outcome, and ε treated as a miss."
+    },
+    {
+      "name": "bind-noninterference-missing-path-under-a-faulting-binder",
+      "op": "resolve-at", "context": "site-a",
+      "node": { "own": "726f6f74", "children": [["612f62", { "own": "736c617368", "children": [] }], ["", { "own": "656d707479", "children": [] }], ["61", { "own": "616c706861", "children": [["6a", { "own": "6a6f62", "children": [] }]] }]] },
+      "binder": [["726f6f74", { "fault": "binder-down" }], ["656d707479", { "fault": "binder-down" }], ["616c706861", { "fault": "binder-down" }], ["6a6f62", { "fault": "binder-down" }], ["736c617368", { "fault": "binder-down" }]],
+      "path": ["61", "62"],
+      "result": { "outcome": { "absent": {} }, "consulted": [] },
+      "pins": ["selection and reconstruction resolve and invoke nothing"],
+      "note": "§5 structural noninterference. The binder faults on every name in the tree, and [61, 62] is missing below an existing node, so selection reports absence and asks the binder nothing. Catches a binder consulted before or during selection: resolving the ancestors on the way, resolving the whole tree first, or resolving the deepest existing node, each of which answers a fault or lists a name."
+    },
+    {
+      "name": "bind-noninterference-the-faulting-binder-does-fault",
+      "op": "resolve-at", "context": "site-a",
+      "node": { "own": "726f6f74", "children": [["612f62", { "own": "736c617368", "children": [] }], ["", { "own": "656d707479", "children": [] }], ["61", { "own": "616c706861", "children": [["6a", { "own": "6a6f62", "children": [] }]] }]] },
+      "binder": [["726f6f74", { "fault": "binder-down" }], ["656d707479", { "fault": "binder-down" }], ["616c706861", { "fault": "binder-down" }], ["6a6f62", { "fault": "binder-down" }], ["736c617368", { "fault": "binder-down" }]],
+      "path": ["61", "6a"],
+      "result": { "outcome": { "fault": "binder-down" }, "consulted": ["6a6f62"] },
+      "pins": ["Failure to establish validity is not proof of invalidity."],
+      "note": "§3, §5. The pair to bind-noninterference-missing-path-under-a-faulting-binder: the same binder at an existing path does fault, so the absence there is selection's answer and not a binder that happened to stay quiet. Catches a harness whose binder never answers, which would let the noninterference case pass for the wrong reason."
+    },
+    {
+      "name": "bind-eager-expired-sibling-fails-the-batch",
+      "op": "resolve-all-or-fail", "context": "site-a",
+      "node": { "own": "686f7374", "children": [["62", { "own": "6f6c64", "children": [] }], ["61", { "own": "6c697665", "children": [] }]] },
+      "binder": [["686f7374", { "bound": "host@1" }], ["6c697665", { "bound": "live@2" }], ["6f6c64", { "refused": "expired" }]],
+      "result": { "outcome": { "failed": { "refused": "expired" } }, "consulted": ["686f7374", "6c697665", "6f6c64"] },
+      "pins": ["Take a tree with a live child `a` and an expired sibling `b`: the batch fails,"],
+      "note": "§2's counterexample, first half: the live child at [61] binds and its sibling at [62] is refused as expired, so the eager batch fails. Catches a batch that skips the refused node and returns a pruned tree (§5: a refused name removes a node), and one that reports success with the failure hidden inside."
+    },
+    {
+      "name": "bind-eager-counterexample-selecting-the-live-child-binds",
+      "op": "resolve-at", "context": "site-a",
+      "node": { "own": "686f7374", "children": [["62", { "own": "6f6c64", "children": [] }], ["61", { "own": "6c697665", "children": [] }]] },
+      "binder": [["686f7374", { "bound": "host@1" }], ["6c697665", { "bound": "live@2" }], ["6f6c64", { "refused": "expired" }]],
+      "path": ["61"],
+      "result": { "outcome": { "bound": "live@2" }, "consulted": ["6c697665"] },
+      "pins": ["Take a tree with a live child `a` and an expired sibling `b`: the batch fails,"],
+      "note": "§2's counterexample, second half: on the tree and binder of bind-eager-expired-sibling-fails-the-batch, selecting the live child and resolving only it binds. So whole-tree binding cannot carry the selection law. Catches resolve-at implemented as the eager batch followed by selection."
+    },
+    {
+      "name": "bind-eager-all-bound-keeps-the-shape",
+      "op": "resolve-all-or-fail", "context": "site-a",
+      "node": { "own": "746f70", "children": [["ff", { "own": "6869", "children": [] }], ["61", { "own": "6d6964", "children": [["00", { "own": "64656570", "children": [] }]] }], ["", { "own": "6c6f", "children": [] }]] },
+      "binder": [["6869", { "bound": "hi@5" }], ["64656570", { "bound": "deep@4" }], ["746f70", { "bound": "top@1" }], ["6c6f", { "bound": "lo@2" }], ["6d6964", { "bound": "mid@3" }]],
+      "result": { "outcome": { "bound-tree": { "own": "top@1", "children": [["", { "own": "lo@2", "children": [] }], ["61", { "own": "mid@3", "children": [["00", { "own": "deep@4", "children": [] }]] }], ["ff", { "own": "hi@5", "children": [] }]] } }, "consulted": ["746f70", "6c6f", "6d6964", "64656570", "6869"] },
+      "pins": ["Whole-tree binding is an optional batch, never the foundation."],
+      "note": "§2 resolveAllOrFail: Node[BindingRequest[A]] → M(Node[A]). Every name binds, so the result is the tree of bound ids at the same paths, the empty key included. consulted is depth-first in unsigned-octet key order: the root, then \"\", then [61] and its child [61, 00] before ff. Catches a lost or added path, a result tree that carries names or requests instead of ids, and breadth-first, insertion or signed-octet order (each moves ff or 64656570)."
+    },
+    {
+      "name": "bind-eager-stops-at-the-first-failure-in-depth-first-order",
+      "op": "resolve-all-or-fail", "context": "site-a",
+      "node": { "own": "746f70", "children": [["ff", { "own": "6869", "children": [] }], ["61", { "own": "6d6964", "children": [["00", { "own": "64656570", "children": [] }]] }], ["", { "own": "6c6f", "children": [] }]] },
+      "binder": [["746f70", { "bound": "top@1" }], ["6c6f", { "bound": "lo@2" }], ["6d6964", { "bound": "mid@3" }], ["6869", { "fault": "unreachable" }]],
+      "result": { "outcome": { "failed": { "refused": "unrecognized" } }, "consulted": ["746f70", "6c6f", "6d6964", "64656570"] },
+      "pins": ["Whole-tree binding is an optional batch, never the foundation."],
+      "note": "§2, §3. The binder does not list deep (64656570, at [61, 00]), so it is refused as unrecognized, and hi at [ff] faults. Depth-first order reaches deep first, the batch stops there and hi is never asked. Catches breadth-first or reverse order and reporting the last failure (each answers hi's fault), and a batch that keeps resolving after the first failure."
+    }
+  ]
+}

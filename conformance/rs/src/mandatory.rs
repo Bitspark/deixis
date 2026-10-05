@@ -1,7 +1,7 @@
 //! ADR 0010 protocol over direct JSON payloads. Owns no expected results.
 use super::*;
 
-fn obj(fields: Vec<(&str, Json)>) -> Json {
+pub(super) fn obj(fields: Vec<(&str, Json)>) -> Json {
     Json::Obj(
         fields
             .into_iter()
@@ -9,7 +9,7 @@ fn obj(fields: Vec<(&str, Json)>) -> Json {
             .collect(),
     )
 }
-fn empty() -> Json {
+pub(super) fn empty() -> Json {
     Json::Obj(vec![])
 }
 fn missing() -> Json {
@@ -19,7 +19,7 @@ fn present(value: Json) -> Json {
     obj(vec![("defined", value)])
 }
 
-fn render(v: &Json) -> String {
+pub(super) fn render(v: &Json) -> String {
     match v {
         Json::Null => "null".into(),
         Json::Number(n) => n.clone(),

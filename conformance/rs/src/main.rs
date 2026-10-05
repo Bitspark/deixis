@@ -11,6 +11,7 @@
 //! `at`), which is what `docs/PATH.md` claims they are: derivable, and no methods of the
 //! floor.
 
+mod binding;
 mod codec;
 mod mandatory;
 mod required;
@@ -718,6 +719,9 @@ fn handle(request: &Json) -> Vec<(&'static str, String)> {
     let op = request.field("op").str();
     if let Some(op) = op.strip_prefix("mnode.") {
         return mandatory::handle(request, op);
+    }
+    if let Some(op) = op.strip_prefix("binding.") {
+        return binding::handle(request, op);
     }
     match op {
         "core.equal" => {

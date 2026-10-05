@@ -100,6 +100,7 @@ completion record.
 | **optional specialization** `Node[Option[T]]` | explicit option equality, resolution, parts; derived contexts, cuts and attachment; the original leaf/struct embedding | `node-identity.json` 20 · `node-navigation.json` 19 · `node-attach.json` 15 · `node-parts.json` 18 · `node-embedding.json` 10, plus its law over `identity.json` 21 · `node-invalid.json` 6 | **150** | `core/{rs,go,ts,py}` with caller-chosen optional payloads |
 | **`deixis-codec-v2`**, candidate ([CODEC.md](CODEC.md), [ADR 0011](design/0011-codec-for-mandatory-nodes.md)) | both forms and the bridge, every §9 code, precedence, streaming, the envelope | 197 cases and 101 chunks in `codec-v2-*.json`, authored from the contract text alone: 115 before any implementation existed, and batch 4's 23 `codec.navigate` cases before any core served that operation | **2846** (2833 requests + 13 envelope) | `core/{rs,go,ts,py}` |
 | **`deixis-set-v1`**, slot-member form on `Node[Option[T]]` ([0005](design/0005-set-keys.md)) | the declared image and its five refusals, by reason | `set.json` 14 through `node-set.json`'s five laws · `node-set.json` 4 | **20** | `set/{rs,go,ts,py}` |
+| **scripted binding laws** ([ADR 0013](design/0013-binding-views-and-the-service-line.md) §2, §3, §5) | preparation as a context-indexed map; the selection law, both sides; absence, refusal, fault and cancellation kept apart; selection that asks the binder nothing; the eager batch's counterexample | `binding-scripted.json` 19, authored in the implementation task before its handlers | **19** | a scripted harness in each `conformance/{rs,go,ts,py}` over `core/{rs,go,ts,py}` |
 
 **Required-payload evidence.** The 121 independent cases were specified on
 main through `347c726`, separately from this implementation. That revision
@@ -123,6 +124,31 @@ option equality, attachment or parts. These demonstrate concrete failure
 detection, not exhaustive verification of each defect class.
 <!-- claim recorded 2026-09-23: W1-W10 failure counts came from isolated mutations on codex/required-node-values, each restored; they are not live repository properties. -->
 
+**Scripted binding evidence, 2026-10-05.** [ADR 0013](design/0013-binding-views-and-the-service-line.md)
+§10 item 1 asks for shared scripted vectors of §2, §3 and the structural rows of §5, run in
+all four cores. `binding-scripted.json` is that family. Binding is not a deixis API, so the
+row witnesses that four cores' compose, decompose and at carry the laws under one scripted
+harness per language. It witnesses no binding library, because there is none. The binder is
+a script table that logs the names it is asked for, which is §5's instrumented binder: a
+case can require that selecting a missing path asked it nothing, and not merely that the
+answer was right. The vectors were written from ADR 0013 before any CLI answered them, but
+by the author of the four harnesses, so they are not independent-oracle evidence. §10 item
+1's TypeScript and Go adapter conformance tests are not part of this row.
+<!-- claim holds: `python -c "import json; print(len(json.load(open('vectors/binding-scripted.json',encoding='utf-8'))['cases']))"` == 19 -->
+<!-- claim holds: `grep -c "binding-scripted.json" tools/conformance/binding.mjs` == 1 -->
+
+**Its negative controls, recorded 2026-10-05 on the `binding-vectors` branch.** Each defect
+was seeded alone, the harness run against that CLI with `--no-codec`, and the file restored
+byte for byte, against a restored control at 387/387. Go's select-then-prepare side
+restarting the context at γ instead of γ·p failed the 3 defined law cases. Go's resolve-at
+resolving every request on the path before selection failed 7 of the 8 resolve-at cases.
+Python's selection rewriting each cursor relative to the selected subtree failed the same 3
+law cases. Python's resolve-at running the eager batch before selecting, with every outcome
+unchanged, failed all 8 resolve-at cases on the binder log alone. TypeScript's eager batch
+dropping a node that does not bind failed both of its failing-batch cases. A description
+stating 18 cases made the harness exit 2 before sending anything.
+<!-- claim recorded 2026-10-05: the five mutation arms and their failure counts are readings of one run each on the binding-vectors branch, each restored; they are not live repository properties. -->
+
 **What was executed, measured at `929c0b7` on 2026-09-23.** All 98 `node-*.json` cases
 were run: 92 are judged directly, and the other 6 are laws. The six laws that re-read
 `identity.json` and `set.json` count only because a moved pin fails the run: the harness
@@ -133,7 +159,7 @@ checked by machine for the first time; before, the harness checked only the verd
 counts a judged request, and an identity case is two requests, one per direction. So 150 is
 20·2 + 19 + 15 + 18 + 10 + 21·2 + 6, and 20 is 16 + 4.
 <!-- claim holds: `python -c "import json,glob; print(sum(len(json.load(open(f,encoding='utf-8'))['cases']) for f in sorted(glob.glob('vectors/node-*.json'))))"` == 98 -->
-<!-- claim holds: `node tools/conformance/harness.mjs` contains (22 replayed, 4 of them the v2 codec's -->
+<!-- claim holds: `node tools/conformance/harness.mjs` contains (23 replayed, 4 of them the v2 codec's -->
 
 **The judge was red-proved as well as the pins.** Each arm mutated one implementation on
 the branch, ran the harness, and was restored. Go's attach rebuilding the parent without its
@@ -161,10 +187,11 @@ run replays its corpus (the row above, and the detail below). It is still a **ca
 0006's clean-room implementation and the signed manifest are outstanding, so no v2 byte or
 address is frozen. `deixis-codec-v1` is withdrawn and was never implemented.
 
-**The control:** 39 + 145 + 14 + 150 + 20 = 368 node requests, and the v2 codec adds 2833, so
-`node tools/conformance/harness.mjs` prints `3201 requests over rs, go, ts, py` on every run.
-Its envelope drive adds 13 checks, for 3214 per implementation.
-<!-- claim holds: `node tools/conformance/harness.mjs` contains 3201 requests over rs, go, ts, py --> If these tables and that line ever
+**The control:** 39 + 145 + 14 + 150 + 20 = 368 node requests, the scripted binding family
+adds 19 and the v2 codec 2833, so `node tools/conformance/harness.mjs` prints
+`3220 requests over rs, go, ts, py` on every run. Its envelope drive adds 13 checks, for 3233
+per implementation.
+<!-- claim holds: `node tools/conformance/harness.mjs` contains 3220 requests over rs, go, ts, py --> If these tables and that line ever
 disagree, one of them is wrong and the run says so — which is the only reason a status
 page like this is worth keeping.
 
@@ -230,10 +257,10 @@ holds 197 cases and 101 chunks.
 
 | core | commit | scoped claim (CODEC.md §16) | replayed |
 | --- | --- | --- | --- |
-| Go | `34ee041`, with I6 at the root | flat-encoder; flat-decoder and flat-header-validator, each streaming; linked-resolver; closure-checker. Codec-holding for the ids its caller's registry resolves (`00 01`, option-of over a held id, and what the caller supplies), codec-blind for every other. No chunk-store. | 3214/3214 in every run, CI-gated |
-| Python | `1d29d7c` | flat-encoder; flat-decoder and flat-header-validator, each streaming; linked-resolver; closure-checker. Codec-holding for the ids its caller's registry resolves (`00 01`, option-of over a held id, and what the caller supplies), codec-blind for every other. No chunk-store. | 3214/3214 in every run, CI-gated |
-| TypeScript | `9280f41` | flat-encoder; flat-decoder and flat-header-validator, each streaming; linked-resolver; closure-checker. Codec-holding for the ids its caller's registry resolves (`00 01`, option-of over a held id, and what the caller supplies), codec-blind for every other. No chunk-store. | 3214/3214 in every run, CI-gated |
-| Rust | `7c70c3b` | flat-encoder; flat-decoder and flat-header-validator, each streaming; linked-resolver; closure-checker. Codec-holding for the ids its caller's registry resolves (`00 01`, option-of over a held id, and what the caller supplies), codec-blind for every other. No chunk-store. | 3214/3214 in every run, CI-gated |
+| Go | `34ee041`, with I6 at the root | flat-encoder; flat-decoder and flat-header-validator, each streaming; linked-resolver; closure-checker. Codec-holding for the ids its caller's registry resolves (`00 01`, option-of over a held id, and what the caller supplies), codec-blind for every other. No chunk-store. | 3233/3233 in every run, CI-gated |
+| Python | `1d29d7c` | flat-encoder; flat-decoder and flat-header-validator, each streaming; linked-resolver; closure-checker. Codec-holding for the ids its caller's registry resolves (`00 01`, option-of over a held id, and what the caller supplies), codec-blind for every other. No chunk-store. | 3233/3233 in every run, CI-gated |
+| TypeScript | `9280f41` | flat-encoder; flat-decoder and flat-header-validator, each streaming; linked-resolver; closure-checker. Codec-holding for the ids its caller's registry resolves (`00 01`, option-of over a held id, and what the caller supplies), codec-blind for every other. No chunk-store. | 3233/3233 in every run, CI-gated |
+| Rust | `7c70c3b` | flat-encoder; flat-decoder and flat-header-validator, each streaming; linked-resolver; closure-checker. Codec-holding for the ids its caller's registry resolves (`00 01`, option-of over a held id, and what the caller supplies), codec-blind for every other. No chunk-store. | 3233/3233 in every run, CI-gated |
 
 ## Witnessed in a neighbouring repo
 
