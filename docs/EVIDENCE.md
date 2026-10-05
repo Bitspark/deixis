@@ -194,7 +194,22 @@ in all four. A subtler variant, sharing capability objects but reporting each si
 invocations, was planted in Python, TypeScript and Go and failed only
 `proj-cut-count-is-one-on-each-side`. A description stating 27 cases made the harness exit 2
 before sending anything.
-<!-- claim recorded 2026-10-06: the mutation run (20 plants) and the hand-planted shared-fixture arms are readings of one run each on the projection-vectors branch, each restored; they are not live repository properties. -->
+
+Those classes left 12 cases red under no plant, so eleven more hand plants followed, one per
+defect that a remaining case's note names, each restored from git in the same run. Two went
+into the Python core's `at`: ε answered as a miss, and the empty key skipped as if it were ε.
+Nine went into the TypeScript harness:
+- a lift that descends to a leaf;
+- keys split at the slash byte;
+- a refusal, or an unlisted capability, reported as absence;
+- a fault reported as a refusal;
+- each ancestor invoked on the way;
+- arguments re-encoded as UTF-8;
+- a second invocation;
+- capabilities interned by behaviour.
+
+With them, every one of the 28 cases went red under at least one plant.
+<!-- claim recorded 2026-10-06: the mutation run (20 plants), the hand-planted shared-fixture arms and the eleven further hand plants are readings of one run each on the projection-vectors branch, each restored; they are not live repository properties. -->
 
 **What was executed, measured at `929c0b7` on 2026-09-23.** All 98 `node-*.json` cases
 were run: 92 are judged directly, and the other 6 are laws. The six laws that re-read
