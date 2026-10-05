@@ -11,24 +11,23 @@ const MISSING_PATH = { "missing-path": {} };
 const UNSCRIPTED = { fault: "unscripted" };
 
 /** A live capability: its behaviour comes from the world script, and every invocation is
- * recorded in its fixture's log. A count capability counts its own invocations. */
+ * recorded in its fixture's log. A count capability counts its own invocations. Its state
+ * is in plain fields, so a copy of it still works and only its count diverges: the
+ * failure the aliasing cases observe, where private fields would make a copy crash. */
 class Capability {
-  #fixture;
-  #behaviour;
-  #calls = 0;
-
   constructor(fixture, id, behaviour) {
-    this.#fixture = fixture;
+    this.fixture = fixture;
     this.id = id;
-    this.#behaviour = behaviour;
+    this.behaviour = behaviour;
+    this.calls = 0;
   }
 
   invoke(args) {
-    this.#calls++;
-    this.#fixture.log.push([this.id, toHex(args)]);
-    const b = this.#behaviour;
+    this.calls++;
+    this.fixture.log.push([this.id, toHex(args)]);
+    const b = this.behaviour;
     if (b === undefined) return UNSCRIPTED;
-    if (Object.hasOwn(b, "count")) return { ok: String(this.#calls) };
+    if (Object.hasOwn(b, "count")) return { ok: String(this.calls) };
     return b;
   }
 }

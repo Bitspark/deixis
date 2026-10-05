@@ -736,8 +736,11 @@ for (const implementation of selected) {
   } else {
     anyFailure = true;
     console.error(`✖ ${implementation.name}: ${passed}/${total}`);
-    for (const failure of failures.slice(0, 20)) console.error(`    ${failure}`);
-    if (failures.length > 20) console.error(`    … ${failures.length - 20} more`);
+    // --all-failures lists every failure: the mutation runner reads which cases a plant
+    // turned red, and a cut-off list would hide them.
+    const shown = process.argv.includes("--all-failures") ? failures.length : 20;
+    for (const failure of failures.slice(0, shown)) console.error(`    ${failure}`);
+    if (failures.length > shown) console.error(`    … ${failures.length - shown} more`);
   }
 }
 
