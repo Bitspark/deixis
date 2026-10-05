@@ -89,6 +89,10 @@ This private repository remains private. Public bitwire and bitstore bindings
 must remain installable without access to it. Their self-contained structural
 bindings implement the same published shape and laws; sharing that contract does
 not require a private package dependency or publication of this repository.
+*(Amended 2026-10-05: since 2026-10-04 deixis is public, as `Bitspark/deixis`,
+so the privacy this paragraph assumed no longer holds. The rule stands for its
+other reason: bitwire's and bitstore's self-contained bindings implement the same
+shape and laws, and sharing the contract needs no package dependency on deixis.)*
 
 ## Validation boundary
 
