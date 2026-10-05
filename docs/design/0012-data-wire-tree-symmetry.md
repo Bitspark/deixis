@@ -1,22 +1,20 @@
 # Data / DataTree and Wire / WireTree
 
-**Current interpretation:** [ADR 0014](0014-structural-identity-and-lifted-access.md)
-reaffirms this record's structural symmetry and supersedes the interaction
-retirement in the dated ADR 0013 amendment below. That amendment is retained as
-historical evidence. Current binding and snapshot boundaries remain in force.
-
 **Status:** accepted, 2026-09-26, by the operator's explicit instruction:
 "Use Data / DataTree and Wire / WireTree" and "Make sure to document this
 everywhere and do the renaming." The operator accepted breaking renames before
 more services depend on the previous names.
 
-*(Amended 2026-10-05: [ADR 0013](0013-binding-views-and-the-service-line.md) supersedes this
-record's interaction terminology, after bitwire 0.4.0 (its decision 0014) replaced the
-addressless sender with a duplex envelope `Wire`. `Wire` as an addressless sender,
-`WireTree = DeixisNode<Wire>` and the `AddressedWire` bridge are no longer family names. The
-principal interaction instance is a receiver-side tree of handlers. This record's complete
-structural contract, its `Data` naming and its snapshot rules stand. ADR 0013 §7 also defines the
-"separate consumer operation" below as bitstore's `restoreSnapshot`.)*
+*(Amended 2026-10-05, corrected the same day: this record stands in full. The first version of
+[ADR 0013](0013-binding-views-and-the-service-line.md) declared its interaction terminology
+superseded, following bitwire 0.4.0's decision 0014. That was an error.
+[ADR 0014](0014-structural-identity-and-lifted-access.md) reaffirms this record, and ADR 0013 §6
+is corrected in place, with a correction section that records the first version:
+- `Wire` stays the addressless primitive that every transport carries;
+- `WireTree = DeixisNode<Wire>` stays the family name;
+- addressed access stays a separate, shared layer.
+
+ADR 0013 §7 defines the "separate consumer operation" below as bitstore's `restoreSnapshot`.)*
 
 ## Decision
 

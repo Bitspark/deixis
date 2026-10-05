@@ -15,8 +15,8 @@ type DataTree = DeixisNode<Data>;
 
 `Data` is addressless access to fixed bytes. Successful reads of the same
 Data return the same content; failures remain explicit. `DataTree` has the
-same complete structural interface as every deixis tree, including the receiver handler trees on
-[bitwire's page](BITWIRE.md), documented in [API.md](../API.md). Restoring snapshot readers from a
+same complete structural interface as `WireTree` ([bitwire's page](BITWIRE.md)), documented in
+[API.md](../API.md). Restoring snapshot readers from a
 `Node[Bytes]` is bitstore's `restoreSnapshot`, with the one-way law
 `materialize(restoreSnapshot(S)) = S`
 ([ADR 0013](../design/0013-binding-views-and-the-service-line.md) §7). An own Data and a complete child map exist at every node,
