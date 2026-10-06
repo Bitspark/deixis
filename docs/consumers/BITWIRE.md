@@ -8,7 +8,7 @@ this mapping does not certify a release. Immutable bitwire 0.4.0 and bitruntime
 ```ts
 interface Wire { send(message: Value): Promise<void> }
 interface AddressedWire { send(path: Path, message: Value): Promise<void> }
-type WireTree = DeixisNode<Wire>;
+type WireNode = DeixisNode<Wire>;
 ```
 
 `Value` is a ground ontos value. `Path` retains exact byte keys and segment
@@ -18,7 +18,7 @@ endpoints. The same addressing layer can be used over every carrier.
 
 ## The structural relationship
 
-A WireTree has own send capabilities, complete finite children, exact partial
+A WireNode has own send capabilities, complete finite children, exact partial
 selection, and decomposition/reconstruction. Derived addressed sending is
 `select(tree,path).own().send(message)`. Missing selection invokes nothing;
 refusal by an existing sender remains a different outcome. Empty self and an
@@ -55,6 +55,7 @@ operational obligations, not consequences of path associativity.
 ## Decision history
 
 - September's ADR 0012 established Data/DataTree and Wire/WireTree symmetry.
+- ADR 0017 adopts bitwire 0.5.0's `WireNode`, replacing `WireTree` in naming only.
 - bitwire 0.4.0 removed the addressless/addressed distinction with the RPC cleanup.
 - ADR 0013 adopted that consumer change as its interaction baseline.
 - ADR 0014 restores the separation on its merits while retaining exact byte paths,

@@ -20,13 +20,13 @@ seriously proposed.
 | --- | --- | --- |
 | ontos | existing; bridge pins v0.2.0 | ontos values are a recognized subset of `Node(Option(Bytes))` with keys spelling positions — the founding instance |
 | bittree | existing; contract, no package | a bittree node is `Node[Label]` under a declared profile, with keys spelling ordinal and field |
-| [`BITWIRE.md`](BITWIRE.md) | ADR 0014; layered replacement being implemented | addressless Wire, addressed access, endpoint ownership and complete WireTree; receiver trees remain equally valid |
+| [`BITWIRE.md`](BITWIRE.md) | ADR 0014; layered replacement being implemented | addressless Wire, addressed access, endpoint ownership and complete WireNode; receiver trees remain equally valid |
 | [`BITSTORE.md`](BITSTORE.md) | existing library; accepted breaking contract | addressless `Data.read()`; full `DataTree = DeixisNode[Data]`; materialized byte snapshots stay distinct |
 | topos | not founded (ADR 0013 §9) | its minimal cells (version CAS) and retention coordination become a named module of deixis-svc |
 | deixis-svc | proposed service; ADR 0013 | a structural module (complete trees, explicit discovery views) and a cell module (named roots, CAS, retention) |
 
 The common naming and complete structure are recorded in
-[ADR 0012](../design/0012-data-wire-tree-symmetry.md). `DataTree` and `WireTree`
+[ADR 0012](../design/0012-data-wire-tree-symmetry.md). `DataTree` and `WireNode` (ADR 0012's `WireTree`)
 are the same generic construction with different own-value types. An
 addressed-only read or send handle is not the full structural interface.
 [ADR 0014](../design/0014-structural-identity-and-lifted-access.md) reaffirms this

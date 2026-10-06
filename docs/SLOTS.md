@@ -9,7 +9,7 @@ API. The codec tier below describes requirements; the delivered
 `deixis-codec-v2` codec remains a candidate, not frozen.
 
 [ADR 0012](design/0012-data-wire-tree-symmetry.md) names the family instances
-`DataTree = DeixisNode<Data>` and `WireTree = DeixisNode<Wire>`. `Data` is an
+`DataTree = DeixisNode<Data>` and `WireNode = DeixisNode<Wire>`. `Data` is an
 addressless byte reader and `Wire` an addressless sender. Both are legal opaque
 payloads with the same structural guarantees. A materialized `Node[Bytes]`
 snapshot can be encoded with identity-bytes; that does not serialize the reader

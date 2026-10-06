@@ -27,7 +27,7 @@ adoption and the candidate codec's freeze obligations remain tracked in
 
 [ADR 0012](design/0012-data-wire-tree-symmetry.md) names the common TypeScript
 interface `DeixisNode<T>`. `DataTree = DeixisNode<Data>` and
-`WireTree = DeixisNode<Wire>` instantiate this same complete structure. The
+`WireNode = DeixisNode<Wire>` instantiate this same complete structure. The
 payloads provide addressless reading and sending, respectively. A byte snapshot
 `Node[Bytes]` and a reader tree `Node[Data]` are different instantiations. An
 addressed operation alone, without the complete parts below, is not this tree.

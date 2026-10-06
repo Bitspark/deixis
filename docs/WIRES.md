@@ -23,7 +23,8 @@ exposition's precise points are the amendments in §4 and §8.)*
 
 **API clarification, accepted 2026-09-26:**
 [ADR 0012](design/0012-data-wire-tree-symmetry.md) uses `Wire` for the
-addressless `send(message)` capability and `WireTree = DeixisNode[Wire]` for
+addressless `send(message)` capability and `WireTree = DeixisNode[Wire]` (bitwire's `WireNode`
+since ADR 0017) for
 the full structure. Its storage counterpart is addressless `Data.read()`
 and `DataTree = DeixisNode[Data]`. Both trees require complete children,
 partial selection, own values, decomposition and recomposition over exact
@@ -128,7 +129,7 @@ no export tables, no demultiplexing scheme — so any realization satisfying it
 conforms to this crossing law, and how transport realizes that crossing is an
 implementation liberty. The complete deixis structure has its own obligations:
 an opaque addressed handle alone does not supply the child map, partial
-selection and decomposition required of a `WireTree`.
+selection and decomposition required of a `WireNode` (`DeixisNode[Wire]`).
 
 Three clauses make the equation honest:
 
@@ -235,19 +236,16 @@ the candidate to beat, with linearity stated honestly: a name's bytes copy
 freely, so one-shot is authority-enforced single **redemption** at the binder —
 affine, not strict (external advice, research 0002; minimum laws in its
 integration ledger).
-<!-- identity:pin wires-s5-open -->
-*(Still OPEN, 2026-10-05, [ADR 0015](design/0015-deixis-identity.md) §5.)* Research 0002's
-integration ledger adopted affine one-shot endpoint transitions as normative and persistent or
-multiplexed transports as permitted refinements. A persistent `send(message)` is such a
-refinement only with a state mapping; the signature alone is not a refinement argument
-(research 0006, R26). Two options remain:
-- supply the state mapping from persistent sends to affine one-shot transitions, covering
-  concurrent sends, continuation advancement, cancellation, failure and replay; or
-- record that persistent messaging is the primitive and affine sessions an optional profile,
-  with the obligations that change.
-
-Trigger: bitwire#76 merges, and a persistent `Wire.send` becomes the released primitive.
-Owner: seat caa.
+<!-- identity:pin wires-s5-primitive -->
+*(Closed 2026-10-06, [ADR 0017](design/0017-interaction-layering-supersedes-the-envelope-wire.md)
+§3, an update: the form research 0002's ledger adopted stands.)* Affine one-shot endpoint
+transitions are the normative semantics, and a persistent `Wire.send`, ordered per direction, is
+their permitted refinement. An admitted send is the atomic transition of the current
+incarnation, and each of research 0002's seven minimum laws lands on a clause of bitwire's
+released contract (ADR 0017 §3 has the mapping). The discipline is implicit at conveyance and
+explicit, with names, at the exchange layer, whose reply ends are affine one-shot ends. A carrier
+without per-direction order is a transforming conveyance (§2) and declares it; a session over
+it cannot use admission order as an incarnation index.
 <!-- identity:end -->
 
 ## 6. Realization sketch — non-normative
