@@ -3,8 +3,8 @@
 **Status:** accepted on merge, by this repository's agents, seat caa (jlqyu6o5gy), with the
 acceptance of bitwire's, bitruntime's and bitstore's agents. It is the family-policy record that
 [ADR 0015](0015-deixis-identity.md) §4 proposed, after research 0006 (deixis-internal#80). It
-merges after bitruntime#36 has merged and bitstore has answered on bitstore#13. bitwire#76
-has merged and bitwire v0.5.0 is released.
+merges after deixis-fable's peer read of this revision. bitwire#76 and bitruntime#36 have merged,
+and bitwire v0.5.0 is released.
 
 Identity: adopts ID12, ID13
 
@@ -84,8 +84,15 @@ IDENTITY.md's change rule requires.
   and on this record's pull request.
 - **Accepted-by:** deixis, by this record; bitwire, by its decision 0015 (bitwire#76, merged,
   released in bitwire v0.5.0) and the Codex session's acceptance on this record's pull request;
-  bitruntime, by bitruntime#36 and the same acceptance; bitstore, for ID12's data wing, on
-  bitstore#13. This record merges after bitruntime#36 has merged and bitstore has answered.
+  bitruntime, by bitruntime#36 (merged) and the same acceptance; bitstore, for ID12's data wing,
+  by its own accepted charter, which already states that wing (bitstore `CHARTER.md`):
+
+  > `Data` is an addressless fixed-content reader. `DataTree = DeixisNode<Data>` realizes the
+  > Deixis mandatory-own-value model
+
+  No bitstore agent is active to answer bitstore#13. Its
+  acceptance is cited from that record, not inferred from silence, and the rename it alone may
+  decide is left open there (§2).
 
 ## 2. The specialization names
 
@@ -98,8 +105,9 @@ merged in bitwire 13 minutes after the owner's question, and before this record 
   membership claim or lifetime changes.
 - **Supersedes:** ADR 0012's name `WireTree = DeixisNode<Wire>`, in naming only. `DataTree` is
   bitstore's released public interface, so whether it becomes `DataNode` is bitstore's decision.
-  It is asked on bitstore#13, and ID12 names `DeixisNode<Data>` by its current name until bitstore
-  answers.
+  It is asked on bitstore#13. ID12 names the structure `DeixisNode<Data>`, with bitstore's
+  current name `DataTree` in parentheses, so a later rename by bitstore is an update to that
+  parenthesis and nothing else.
 - **Old rationale and present tradeoff:** ADR 0012's names were the owner's decision, "Use Data /
   DataTree and Wire / WireTree", and the names "emphasized complete structure" (bitwire decision
   0015's account). The present tradeoff:
@@ -131,8 +139,9 @@ merged in bitwire 13 minutes after the owner's question, and before this record 
     short names in parentheses.
 
   Historical records keep their words. deixis's current text moves to `WireNode`.
-- **Evidence and obligations:** bitwire v0.5.0 ships `WireNode`. bitruntime#36 implements it.
-  bitstore's decision on `DataNode` is outstanding (bitstore#13).
+- **Evidence and obligations:** bitwire v0.5.0 ships `WireNode`, and bitruntime#36 (merged)
+  implements it. bitstore's decision on `DataNode` stays open on bitstore#13, for bitstore's
+  agents whenever they are active. The trigger is their answer there.
 - **Approved revision:** IDENTITY.md's ID12 as pinned at this record's merge, and the current
   documents named in this record's pull request.
 - **Derivations:** the Codex session's recommendation, on this record's pull request
