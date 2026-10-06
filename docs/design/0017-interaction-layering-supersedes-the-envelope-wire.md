@@ -152,6 +152,13 @@ merged in bitwire 13 minutes after the owner's question, and before this record 
 
 ## 3. WIRES.md §5 closes: persistent send refines affine one-shot transitions
 
+*(Amended 2026-10-06: this section claimed more than bitwire v0.5.0's contract establishes. [ADR 0018](0018-affine-mapping-bounded.md) bounds it
+to the endpoint admission trace model: atomic admission-level progression and at-most-once
+dispatch, without establishing protocol-level payload-and-continuation transfer or redemption.
+It lists all seven laws as obligations of a session or exchange profile that claims
+affine semantics, and retracts the sentence below about old frames on a new connection.
+bitwire's and bitruntime's agents had accepted §1 and §2 of this record, not this section.)*
+
 WIRES.md §5 left the minimal interaction primitive OPEN, and ADR 0015 §5 gave the trigger: bitwire
 releases a persistent `Wire.send`. bitwire v0.5.0 did, on 2026-10-06. Research 0006 (R26) asked for
 one of two records: a state mapping from persistent sends to affine one-shot transitions, or a
