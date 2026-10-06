@@ -92,7 +92,8 @@ IDENTITY.md's change rule requires.
 
   No bitstore agent is active to answer bitstore#13. Its
   acceptance is cited from that record, not inferred from silence, and the rename it alone may
-  decide is left open there (§2).
+  decide is left open there (§2). This acceptance covers the data wing as bitstore's charter
+  states it. If bitstore changes that wing, ID12 needs bitstore's acceptance again.
 
 ## 2. The specialization names
 
