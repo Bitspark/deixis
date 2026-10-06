@@ -410,9 +410,10 @@ pinned.
   (bitwire v0.5.0, `docs/wire/contract.md`). A handler that sees a whole envelope, destination included, distinguishes a
   path routed within a subtree from the same path routed from the root. Prefix transparency then
   needs a routing cursor beside the unchanged envelope, or an explicit rebasing relation.
-- The persistent `Wire.send` refines affine one-shot transitions: an admitted send advances the
-  current incarnation, and explicit one-shot ends appear at the exchange layer
-  ([WIRES.md](docs/WIRES.md) §5, ADR 0017 §3).
+- The released conveyance primitive is a persistent `Wire.send`, ordered per direction. Its
+  admission trace is consistent with affine one-shot transitions. Whether and how sessions and
+  exchanges carry single-use ends, cancellation and replay rejection is the exchange profile's
+  open design ([WIRES.md](docs/WIRES.md) §5, ADR 0018).
 - Names and ends are different carriers. A name is bytes and crosses places. An end is a live
   capability and stays where it was bound. Binding maps one to the other
   ([ADR 0013](docs/design/0013-binding-views-and-the-service-line.md) §2).
@@ -557,3 +558,6 @@ process failure ([ADR 0015](docs/design/0015-deixis-identity.md), "What happened
   superseding bitwire decision 0014's collapsed sending surface, with the acceptance of deixis,
   bitwire, bitruntime and bitstore. `WireNode` replaces ADR 0012's `WireTree` in naming only,
   and WIRES.md §5 closes.
+- **ID12 updated**, [ADR 0018](docs/design/0018-affine-mapping-bounded.md): ADR 0017 §3's affine
+  mapping is bounded to the endpoint admission trace model, and WIRES.md §5's exchange question
+  is open again. No statement changes.

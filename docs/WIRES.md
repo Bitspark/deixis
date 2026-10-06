@@ -237,15 +237,24 @@ freely, so one-shot is authority-enforced single **redemption** at the binder �
 affine, not strict (external advice, research 0002; minimum laws in its
 integration ledger).
 <!-- identity:pin wires-s5-primitive -->
-*(Closed 2026-10-06, [ADR 0017](design/0017-interaction-layering-supersedes-the-envelope-wire.md)
-§3, an update: the form research 0002's ledger adopted stands.)* Affine one-shot endpoint
-transitions are the normative semantics, and a persistent `Wire.send`, ordered per direction, is
-their permitted refinement. An admitted send is the atomic transition of the current
-incarnation, and each of research 0002's seven minimum laws lands on a clause of bitwire's
-released contract (ADR 0017 §3 has the mapping). The discipline is implicit at conveyance and
-explicit, with names, at the exchange layer, whose reply ends are affine one-shot ends. A carrier
-without per-direction order is a transforming conveyance (§2) and declares it; a session over
-it cannot use admission order as an incarnation index.
+*(2026-10-06, [ADR 0018](design/0018-affine-mapping-bounded.md), bounding
+[ADR 0017](design/0017-interaction-layering-supersedes-the-envelope-wire.md) §3.)* **The
+conveyance question is answered.** The released primitive is a persistent `Wire.send`, ordered
+per direction. Its admission trace is consistent with affine one-shot transitions: an internal
+incarnation index advances exactly at local admission, which is research 0002's law 1, and
+admitted messages are dispatched at most once. **The exchange question stays open.** The other
+affine obligations are owed by any session or exchange profile that claims affine one-shot
+semantics. They are not established by conveyance, and they are not a mandatory reading of
+every consumer exchange. They are:
+- refusing old tokens of transferable ends;
+- replay and deduplication, which belong to consumer protocols;
+- operation-level cancellation;
+- reclamation of abandoned continuations;
+- delegation of single-redemption ends;
+- an exclusive redeemer.
+
+Trigger: R3's exchange profile is decided on bitwire. Owner: seat caa. A carrier without
+per-direction order is a transforming conveyance (§2) and declares it.
 <!-- identity:end -->
 
 ## 6. Realization sketch — non-normative

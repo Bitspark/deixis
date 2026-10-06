@@ -18,7 +18,7 @@ ID12 ff3a34cf9e622c9c525b2ab945ed4bceff2b9bc2e9243bf0235c7b5cbd167ac5 0017
 ID13 6d13981a5556367e365315c333a4f2b1b26828ab8551d7e5c0ea557af17cb6fa 0017
 SECTION IDENTITY.md#completeness 3cf16fd51596f381c6ef1ea762ca27ba699da06f69174fb37a1539fb845773a4 0015
 SECTION docs/WIRES.md#wires-s4-amendment 8c36ff82a751aaf012809a4b8b04b20b4922e88e845fbd0a6c9d4e664f3805d9 0015
-SECTION docs/WIRES.md#wires-s5-primitive 6f6adbce2d654c06f30df893ff90ca2ccf171c84a7eb44aecfb6b46e485b1c63 0017
+SECTION docs/WIRES.md#wires-s5-primitive b614e520d7cf584939d0efad61fe91a498dcd849e1106b7a8ad184459c87f941 0018
 
 # Lines that predate the check and declare a supersession touching a source of an
 # entry. All four record ADR 0010 superseding ADR 0009's optional node values, on the
