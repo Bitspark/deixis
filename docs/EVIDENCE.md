@@ -21,7 +21,7 @@ bitwire and bitruntime and is not inferred from this documentation change.
 **Naming and structural contract, accepted 2026-09-26:**
 [ADR 0012](design/0012-data-wire-tree-symmetry.md) records addressless `Data`
 and `Wire`, with `DataTree = DeixisNode[Data]` and
-`WireTree = DeixisNode[Wire]`. Both require the complete deixis structural
+`WireNode = DeixisNode[Wire]` (ADR 0012's `WireTree`). Both require the complete deixis structural
 contract; addressed read/send access alone is insufficient. The existing
 generic structural evidence applies to the shape, not to I/O, authority,
 lifetime or transport behavior of supplied primitives. A DataTree materializes

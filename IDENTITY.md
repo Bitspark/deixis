@@ -6,8 +6,9 @@ lists the parts of the codec that decide octets and content addresses.
 
 **Status:** the structural contract and the derived constructions are **accepted** by
 [ADR 0015](docs/design/0015-deixis-identity.md), after an openly framed expert consultation
-(research 0006). The family policy is **proposed** there, and adopted by its own record with
-every affected component's acceptance. An entry here changes only through
+(research 0006). The family policy is **accepted** by
+[ADR 0017](docs/design/0017-interaction-layering-supersedes-the-envelope-wire.md), with every
+affected component's acceptance. An entry here changes only through
 [a supersession record](#how-a-contract-changes). Consumers cannot amend a depended-on contract
 by implication. This page does not freeze the codec: `deixis-codec-v2` stays a candidate on its
 own freeze track ([CODEC.md](docs/CODEC.md), [issue #1](https://github.com/Bitspark/deixis/issues/1)).
@@ -358,9 +359,9 @@ design, which deixis anchors and the affected components own together.
 > Complete capability trees derive addressed access by structural selection. Opaque addressed
 > access does not imply a complete tree. Exchange metadata belongs to an explicitly identified
 > profile and need not be required of all messages. Conveyance, addressing and exchange are
-> separate contracts; the family's names are `Data.read()` and `Wire.send(message)`, with
-> `DataTree = DeixisNode<Data>` and `WireTree = DeixisNode<Wire>`, and one lift serves both
-> wings.
+> separate contracts. The family's primitives are `Data.read()` and `Wire.send(message)`, and
+> their complete trees are `DeixisNode<Data>` and `DeixisNode<Wire>` (bitstore's `DataTree`,
+> bitwire's `WireNode`); one lift serves both wings.
 
 "Addressless" means that the primitive and its relay interpret no application path. It does
 not mean the absence of identifiers, endpoints or resource management. "One shared layer" means
@@ -384,11 +385,10 @@ composition, scope, ownership and transport-seam contracts.
 raw message; path rules implemented differently per transport against one contract; an opaque
 addressed facade presented as a complete tree.
 
-- **Contract status:** proposed, ADR 0015. It is adopted by ADR 0017, its supersession record of
-  bitwire decision 0014's collapsed sending surface, once bitwire and bitruntime have accepted
-  it (ADR 0015 §4).
-- **Authority:** family policy: deixis, bitwire and bitruntime together. Provenance: owner:
-  [ADR 0012](docs/design/0012-data-wire-tree-symmetry.md) (2026-09-26), "Use Data / DataTree and
+- **Contract status:** accepted, ADR 0017, its supersession record of bitwire decision 0014's
+  collapsed sending surface, with the acceptance of deixis, bitwire, bitruntime and bitstore.
+- **Authority:** family policy: deixis, bitwire, bitruntime and bitstore together. Provenance:
+  owner: [ADR 0012](docs/design/0012-data-wire-tree-symmetry.md) (2026-09-26), "Use Data / DataTree and
   Wire / WireTree", whose primitives are addressless. owner: the first version of bitwire#42,
   recorded there as "Operator direction recorded on 2026-09-25":
 
@@ -406,10 +406,13 @@ addressed facade presented as a complete tree.
 [ADR 0013](docs/design/0013-binding-views-and-the-service-line.md) and ADR 0015. They are not
 pinned.
 - "A handler presented through Wire.send realizes a local sending capability; a tree of those
-  Wire values is a WireTree. A bare native function tree remains its own generic instantiation"
-  (bitwire#76). A handler that sees a whole envelope, destination included, distinguishes a
+  Wire values is a WireNode. A bare native function tree remains its own generic instantiation"
+  (bitwire v0.5.0, `docs/wire/contract.md`). A handler that sees a whole envelope, destination included, distinguishes a
   path routed within a subtree from the same path routed from the root. Prefix transparency then
   needs a routing cursor beside the unchanged envelope, or an explicit rebasing relation.
+- The persistent `Wire.send` refines affine one-shot transitions: an admitted send advances the
+  current incarnation, and explicit one-shot ends appear at the exchange layer
+  ([WIRES.md](docs/WIRES.md) §5, ADR 0017 §3).
 - Names and ends are different carriers. A name is bytes and crosses places. An end is a live
   capability and stays where it was bound. Binding maps one to the other
   ([ADR 0013](docs/design/0013-binding-views-and-the-service-line.md) §2).
@@ -434,7 +437,7 @@ accepted ([WIRES.md](docs/WIRES.md) §4).
 under a cut; a profile whose relation cannot tell a wrong target from the right one; liveness
 claimed for a chain without its assumptions.
 
-- **Contract status:** proposed, ADR 0015; adopted with ID12 by ADR 0017.
+- **Contract status:** accepted, ADR 0017, with ID12.
 - **Authority:** family policy: deixis, bitwire and bitruntime together. Provenance: owner:
   [WIRES.md](docs/WIRES.md) §4, 2026-08-08: "The conveyance criterion and the routing law are
   DECIDED (operator)."
@@ -444,7 +447,8 @@ claimed for a chain without its assumptions.
 
 ## What deixis requires of a consumer
 
-1. Anything that claims `WireTree`, `DataTree` or the tree contract exposes complete structure
+1. Anything that claims the tree contract (a `WireNode`, a `DataTree`, any `DeixisNode<T>`)
+   exposes complete structure
    (ID4), and keeps absence distinguishable from refusal (ID3). Addressed access alone says that
    it is only that.
 2. A consumer that carries paths carries deixis paths: exact byte keys, relative to a scope,
@@ -461,6 +465,9 @@ claimed for a chain without its assumptions.
 
 - **Content address** is the codec's hash of encoded bytes, and nothing else.
 - **Addressless**, **addressed** and **addressing**, in the family sense, are about paths.
+- **`WireNode`** (bitwire's name) is the complete rooted structure `DeixisNode<Wire>`: not a
+  participant on a wire, and not a single position. **`DataTree`** (bitstore's name) is
+  `DeixisNode<Data>`. "Tree" stays the prose word for a complete structure.
 - New text never writes a bare "address". The two senses collide, and the collision is exactly
   the confusion ID7 keeps apart.
 
@@ -546,3 +553,7 @@ process failure ([ADR 0015](docs/design/0015-deixis-identity.md), "What happened
 - **ID1 to ID11 adopted, ID12 and ID13 proposed**, [ADR 0015](docs/design/0015-deixis-identity.md),
   after research 0006. The charter of ADR 0014 (`D1` to `D8`) is folded in; ADR 0015 §2a has the
   mapping.
+- **ID12 and ID13 adopted**, [ADR 0017](docs/design/0017-interaction-layering-supersedes-the-envelope-wire.md),
+  superseding bitwire decision 0014's collapsed sending surface, with the acceptance of deixis,
+  bitwire, bitruntime and bitstore. `WireNode` replaces ADR 0012's `WireTree` in naming only,
+  and WIRES.md §5 closes.

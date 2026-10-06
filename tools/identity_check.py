@@ -395,7 +395,11 @@ def check(root: str, warnings: list[str] | None = None) -> list[str]:
         is_identity_record = r.startswith("docs/design/") and r[12:16] in identity_records
         breaks = bool(idl.get("breaks") or idl.get("retires"))
         for n, line in enumerate(text.splitlines(), 1):
-            if SUPERSEDE.search(line) and not is_identity_record and not STRUCT.match(line):
+            # A link target is a file name, not prose: ADR 0017's file name contains
+            # "supersedes", and a link to it declares nothing. Keywords are read from the
+            # prose only; the record a line refers to is still read from the whole line.
+            prose = re.sub(r"\]\([^)]*\)", "]()", line)
+            if SUPERSEDE.search(prose) and not is_identity_record and not STRUCT.match(line):
                 protected = [s for e in entries for s in entry_sources(e) if refers_to(r, line, s)]
                 if protected and not structs and (r, sha(line)) not in allow:
                     errors.append(f"{r}:{n}: declares a supersession of a record deixis's contracts "
@@ -403,7 +407,7 @@ def check(root: str, warnings: list[str] | None = None) -> list[str]:
                                   f"and `Identity:` lines (IDENTITY.md, change rule): {line.strip()}")
                 elif not protected and (r, sha(line)) not in allow:
                     warnings.append(f"{r}:{n}: prose supersession (warning only): {line.strip()}")
-            if RETIRES_ID.search(line) and not breaks and not is_identity_record:
+            if RETIRES_ID.search(prose) and not breaks and not is_identity_record:
                 errors.append(f"{r}:{n}: retires an identity entry without an `Identity: breaks` "
                               f"or `retires` line: {line.strip()}")
 
@@ -560,6 +564,12 @@ def self_test(root: str) -> list[str]:
         write(os.path.join(t, "docs", "design", "0999-planted.md"),
               f"# Planted\n\nIdentity: proposes {fam['id']}\n")
     arm("proposing a family-policy entry needs no acceptance", proposed, None)
+
+    arm("a link whose file name says 'supersedes' is not prose",
+        lambda t: write(os.path.join(t, "docs", "design", "0999-planted.md"),
+                        "# Planted\n\nSee [the record](0017-x-supersedes-y.md) and "
+                        "[ADR 0012](0012-data-wire-tree-symmetry.md).\n"),
+        None)
 
     arm("prose supersession of an unprotected record only warns",
         lambda t: write(os.path.join(t, "docs", "design", "0999-planted.md"),

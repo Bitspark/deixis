@@ -224,7 +224,7 @@ The owner approved the envelope design (B) on 4 October, so adopting A's layerin
 supersedes a released design. It is not a finding that B was never approved (R8). A family
 policy changes only with every affected component's acceptance (§3). This record therefore
 proposes ID12 and ID13 and does not adopt them. They are adopted by
-ADR 0017, on the pull request stacked on Bitspark/deixis#20, which is ID12's
+[ADR 0017](0017-interaction-layering-supersedes-the-envelope-wire.md), which is ID12's
 supersession record of bitwire decision 0014's collapsed sending surface. It carries every
 field of the change rule and the acceptance of deixis, bitwire and bitruntime, and it merges
 once bitwire#76 and bitruntime#36 have merged.

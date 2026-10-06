@@ -4,7 +4,7 @@ The pointing. [TREE.md](TREE.md) says what a tree *is*; this says how to point i
 
 **Model status:** all four cores implement mandatory `T` under
 [ADR 0010](design/0010-mandatory-node-values.md).
-[ADR 0012](design/0012-data-wire-tree-symmetry.md) gives DataTree and WireTree
+[ADR 0012](design/0012-data-wire-tree-symmetry.md) gives DataTree and WireTree (now `WireNode`, ADR 0017)
 this same partial selection contract. Addressless reading/sending occurs on
 the own value after successful selection; it cannot erase a missing-versus-present
 distinction. `at` selects structure, so selecting a Wire that refuses a message

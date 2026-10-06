@@ -4,7 +4,8 @@
 
 [ADR 0012](design/0012-data-wire-tree-symmetry.md) fixes the family names:
 `Data.read()` and `Wire.send(message)` are addressless primitives;
-`DataTree = DeixisNode<Data>` and `WireTree = DeixisNode<Wire>` have identical
+`DataTree = DeixisNode<Data>` and `WireNode = DeixisNode<Wire>` (ADR 0012's `WireTree`, renamed by
+ADR 0017) have identical
 structure. [ADR 0014](design/0014-structural-identity-and-lifted-access.md)
 reaffirms sender and receiver trees as equal instances and distinguishes both
 from an opaque addressed facade. Binding portable names remains a separate
