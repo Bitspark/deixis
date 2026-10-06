@@ -322,13 +322,29 @@ distinct operations.
   root, and `at` never follows a mount. Automatic expansion is deferred. An expanded presentation
   is a new interpreted tree, and a mount cycle yields a cycle or limit outcome, never a fabricated
   leaf or default route.
+- **A resolver that continues through a mount states its rule** *(added 2026-10-05,
+  [ADR 0016](0016-topos-destination-and-adr-0013-repairs.md); research 0006, R13)*. It declares:
+  - the delegated suffix, meaning the part of the path it hands on;
+  - the authority transition at the mount;
+  - how the mounted root is interpreted;
+  - whether a local child at the same key takes precedence;
+  - its loop and failure policy.
+
+  Structural `at` still stops at the own value. Mount transparency is a property of the
+  resolver, not a consequence of selection.
 
 ### 9. The service line
 
 **One deployment, separate modules.** Minimal named cells and retention coordination become an
 explicitly named **cell module of deixis-svc**, next to its structural module. **topos is not
-founded now**. Its proposal is disposed of by this decision, and the module's interfaces stay
-separable so the deployment can change later without redefining cell semantics. The provide table
+founded now**, and the module's interfaces stay separable so the deployment can change later
+without redefining cell semantics. *(Amended 2026-10-05: this decides the deployment, not
+topos's destination. The first version of this section said topos's proposal "is disposed of by
+this decision"; that is withdrawn. The destination ruled on 20 August stands: topos is founded as
+the cell contract's home at M1, and this cell module is its first implementation. Until then the
+cell contract changes only with the acceptance of deixis's and deixis-svc's agents together.
+[ADR 0016](0016-topos-destination-and-adr-0013-repairs.md) records this, with M1's deliverables by
+name.)* The provide table
 is not a cell-module responsibility: it belongs to the runtime at the site where its objects live.
 
 | Responsibility | Owner | Invariant | Across a restart |
@@ -471,23 +487,30 @@ bitwire#42 (25 September) and WIRES.md (decided 8 August).
      distinction". It then reversed its own advice of minutes earlier ("The addressless sending
      primitive still needs no path") and proposed one contract with no adapter.
    - The plan the owner approved did not say that it reversed bitwire's 0012, deixis's ADR 0012
-     or that guard.
+     or that guard. The approval itself was real: the owner approved a concrete envelope
+     replacement. Re-adopting the split later is therefore a supersession of that approval, not
+     a finding that it never happened *(added 2026-10-05; research 0006, R8)*.
    - Decision 0014, as merged, then says "The owner requested a clean replacement without
      historical profiles, compatibility exports or redundant wire adapters", without the
      qualifier. Its change note says "Owner explicitly adopted the replacement and prohibited
      compatibility baggage", and its migration line removes "addressless/addressed API splits"
      together with the historic profiles and compatibility aliases.
-   - The request and the split do not conflict. One addressless interface and one derived lift,
-     with no adapter between two wire interfaces, satisfy both.
-1b. **The premise was false for the split.** Before bitruntime 0.5.0, addressing lived once,
-   above a transport-agnostic seam. bitruntime's `transports/go/transport.go`, before `80793ba`:
-   "the seam beneath every carrier … The bitwire/1 protocol engine runs over it; beneath it the
+   - The request admits two readings. Read as excluding adapters that are not needed, it is met
+     by one addressless interface and one derived lift. Read as asking for one interface for
+     everything, it favours the envelope design. Research 0006 weighed both designs
+     symmetrically (R2) *(reworded 2026-10-05)*.
+1b. **What the change bundled.** Before bitruntime 0.5.0, addressing lived once, above a
+   transport-agnostic seam. bitruntime's `transports/go/transport.go`, before `80793ba`: "the
+   seam beneath every carrier … The bitwire/1 protocol engine runs over it; beneath it the
    transport is an in-memory pipe, a WebSocket or a framed byte stream, and neither side of the
-   seam knows which." No transport implemented addressing. The real duplication was two sending
-   interfaces, `Wire` and `AddressedWire`, with bridges between them. 0.5.0 deleted the seam, and
-   queueing is now written once per carrier (`queued` in `core/go/pair.go`, `queuedEnvelope` in
-   `websocket/go/wire.go`). The change that removed "redundant adapters" added duplication below
-   the wire.
+   seam knows which." No transport implemented addressing. The duplication 0.4.0 removed was two
+   sending interfaces, `Wire` and `AddressedWire`, with bridges between them. 0.5.0 also deleted
+   the seam, and queueing is now written once per carrier (`queued` in `core/go/pair.go`,
+   `queuedEnvelope` in `websocket/go/wire.go`). Research 0006 (R2) weighs this. Deleting the
+   seam was a separate implementation choice, compatible with either layering, and per-carrier
+   queues do not by themselves decide between the designs. The point here is narrower: the
+   bundled change removed the layering together with the redundancy, without saying so
+   *(reworded 2026-10-05)*.
 2. **Research 0005 treated 0014 as fixed.** The consultation that led to this record called it a
    fixed constraint ("does not reopen them"). It also left out ADR 0012's authority, "accepted …
    by the operator's explicit instruction", and the reason for the split, which ADR 0012 itself
@@ -511,6 +534,8 @@ v0.1.0's `docs/wire/contract.md` says "Selecting an origin prepends its prefix t
 registered paths" and `at(at(w, a), b) ≃ at(w, a ++ b)`, and both were still there at v0.3.0.
 bitruntime implemented the law in `At` until `80793ba`. bitwire 0.4.0's contract states no prefix
 law. The law survived in deixis's doctrine and was deleted from the consumer's contract and code.
+That is a fact about the contract's text. It is not, by itself, an argument for either layering
+(research 0006, R2).
 
 **The rule adopted:**
 - A consumer's decision that reverses a floor decision the owner accepted is a conflict to resolve,
