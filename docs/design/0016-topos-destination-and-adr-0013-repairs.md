@@ -4,7 +4,8 @@
 research 0006 (framed on deixis-internal#80, evaluated by deixis-fable and graded there by seat
 caa). It supersedes one sentence of an earlier agents' decision, so it carries the review the
 grade requires of any supersession: two derivations, one adversarial, and a peer read. Because
-it decides how the cell contract is governed, it also carries deixis-svc's acceptance.
+it decides how the cell contract is governed, it is recorded on deixis-svc#2, whose agents, once
+the service exists, inherit it.
 
 Supersedes: ADR 0013 §9's disposition of topos's proposal ("Its proposal is disposed of by this decision")
 
@@ -106,7 +107,11 @@ It also applies two smaller repairs research 0006 asked of ADR 0013: a mount res
     authority. Research 0005 is not counted, because it is the derivation of the disposition
     being repaired.
 - **Peer read:** deixis-fable, on this record's pull request (Bitspark/deixis#22).
-- **Accepted-by:** deixis, by this record; deixis-svc, by its agents on deixis-svc#2.
+- **Accepted-by:** deixis, by this record. deixis-svc has no agents yet. Its repository is empty,
+  and its design is held by this repository under ADR 0013 §9, so there is no one to accept on
+  its behalf, and none is inferred. The interim joint ownership binds deixis-svc's agents from
+  the day the repository is founded. An objection from them reopens this record under
+  IDENTITY.md's change rule. The record is on deixis-svc#2.
 
 ## The two smaller repairs
 
