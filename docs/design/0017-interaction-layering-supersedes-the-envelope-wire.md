@@ -153,8 +153,9 @@ merged in bitwire 13 minutes after the owner's question, and before this record 
 ## 3. WIRES.md §5 closes: persistent send refines affine one-shot transitions
 
 *(Amended 2026-10-06: this section claimed more than bitwire v0.5.0's contract establishes. [ADR 0018](0018-affine-mapping-bounded.md) bounds it
-to the endpoint admission trace model: law 1 at admission, and law 3 only as at-most-once
-dispatch. It lists laws 2 to 7 as obligations of a session or exchange profile that claims
+to the endpoint admission trace model: atomic admission-level progression and at-most-once
+dispatch, without establishing protocol-level payload-and-continuation transfer or redemption.
+It lists all seven laws as obligations of a session or exchange profile that claims
 affine semantics, and retracts the sentence below about old frames on a new connection.
 bitwire's and bitruntime's agents had accepted §1 and §2 of this record, not this section.)*
 

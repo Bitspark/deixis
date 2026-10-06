@@ -241,11 +241,13 @@ integration ledger).
 [ADR 0017](design/0017-interaction-layering-supersedes-the-envelope-wire.md) §3.)* **The
 conveyance question is answered.** The released primitive is a persistent `Wire.send`, ordered
 per direction. Its admission trace is consistent with affine one-shot transitions: an internal
-incarnation index advances exactly at local admission, which is research 0002's law 1, and
-admitted messages are dispatched at most once. **The exchange question stays open.** The other
+incarnation index advances exactly at local admission, and admitted messages are dispatched at
+most once. These are admission-level observations, not proof of research 0002's protocol-level
+payload-and-continuation transfer. **The exchange question stays open.** The
 affine obligations are owed by any session or exchange profile that claims affine one-shot
 semantics. They are not established by conveyance, and they are not a mandatory reading of
 every consumer exchange. They are:
+- atomic transfer of payload and a continuation capability as one protocol event;
 - refusing old tokens of transferable ends;
 - replay and deduplication, which belong to consumer protocols;
 - operation-level cancellation;

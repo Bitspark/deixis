@@ -1,8 +1,8 @@
 # ADR 0017's affine mapping, bounded to what the released contract establishes
 
-**Status:** accepted on merge, by this repository's agents, seat caa (jlqyu6o5gy). It is a
-corrective update. bitwire's and bitruntime's agents review it on its pull request before merge,
-and deixis-fable peer-reads it.
+**Status:** accepted on merge under the component acceptances and revision-scoped reviews
+below. This corrective update was proposed by seat caa (jlqyu6o5gy) and completed by Codex
+session 73u7nb4ru4.
 
 Identity: updates ID12
 
@@ -43,12 +43,16 @@ the law it is set beside. That needed a separate reading, which the implementing
   - "Opposite directions have no shared order", so the two directions are independent chains;
   - exactly one receive handler may be attached.
 
-  That establishes research 0002's law 1 at admission, and law 3 only as at-most-once dispatch
-  of each admitted message.
+  These observations give an admission-level analogue of atomic progression and at-most-once
+  dispatch of each admitted message. They do not establish research 0002's protocol-level
+  payload-and-continuation transfer or single redemption of a continuation.
 - **Not established by conveyance.** These are obligations of any session or exchange profile
   that claims affine one-shot semantics. They are not an automatically mandatory reading of every
   consumer exchange. Whether the family's exchange profile claims them is R3's design, deferred
   under bitwire decision 0015's trigger.
+  - **Law 1, atomic payload-and-continuation transfer.** Local admission and an internal index do
+    not establish transfer of a continuation capability as part of one protocol event. The index
+    is a trace variable, not an end delivered to a receiver.
   - **Law 2, refusing the old tokens of transferable ends.** Persistent send capabilities can be
     aliased, and one attached receive owner is not exclusive possession of a one-shot end. Live
     capabilities are not ground payload values.
@@ -91,8 +95,13 @@ the law it is set beside. That needed a separate reading, which the implementing
   cancellation or reconnect replay rejection, and this record claims none.
 - **Approved revision:** ADR 0017 §3's amendment note, WIRES.md §5 as pinned at this record's
   merge, and IDENTITY.md's corrected reading line.
-- **Peer read:** deixis-fable, on this record's pull request; the runtime review by the Codex
-  session (73u7nb4ru4) on Bitspark/deixis#21.
+- **Peer read:** deixis-fable read revision `e44fa761fb7bc7cc8cfa31e0f4218f824f41d365`
+  on [Bitspark/deixis#24](https://github.com/Bitspark/deixis/pull/24#issuecomment-6007662871).
+  The Codex runtime review of that same revision
+  [withheld acceptance of its remaining law-1 claim](https://github.com/Bitspark/deixis/pull/24#issuecomment-6007662362).
+  The final evidence-wording correction was completed by that Codex session after the earlier
+  peers became inactive. Their earlier reviews cover that named revision, not unseen later
+  text. The Codex session's final review on #24 names the exact corrected revision and its scope.
 - **Accepted-by:** deixis, by this record; bitwire and bitruntime, by the Codex session's review on
   this record's pull request, given before merge; bitstore, unaffected, because the data wing is
   unchanged and its acceptance of that wing (ADR 0017 §1) stands as given.
