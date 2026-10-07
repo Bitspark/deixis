@@ -39,6 +39,10 @@ The page has three parts, governed separately, because they have different owner
 | **Derived constructions** | ID9 to ID11 | deixis's agents, for the structural argument; the implementing libraries own their effectful helpers |
 | **Family policy** | ID12, ID13 | the agents of every affected component, together |
 
+These parts share a document, not a single authority. Consumer examples and
+service architecture recorded here do not let deixis assign higher-level
+repository responsibilities. See [consumer context](docs/CONSUMER-CONTEXT.md).
+
 Each entry has a stable identifier, a **statement** (the quoted block), the reason for it, what
 would falsify it, and four attributes:
 - **Contract status:** proposed, accepted, deprecated, superseded or retired;
@@ -350,7 +354,9 @@ whose cut at a different point reaches a different node; a mount followed by pla
 
 These entries are not structural law: by ID5 the structural contract holds for every `T`, and
 `Node<AddressedWire>` is as lawful a tree as `Node<Wire>`. They record the family's decided
-design, which deixis anchors and the affected components own together.
+design as context here; the affected components own it together. Their presence
+does not enlarge the generic tree contract or grant deixis unilateral authority
+over a consumer's runtime, service or deployment.
 
 ### ID12. Interaction layering
 
