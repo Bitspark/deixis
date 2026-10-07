@@ -15,6 +15,12 @@ independently.
 
 ## Context
 
+**Reading scope:** this record also contains consumer architecture. That material
+does not become a requirement of the generic deixis contract or give this
+repository authority to assign downstream ownership. Read the
+[scope clarification](../CONSUMER-CONTEXT.md) and verify current consumer duties
+in their own records. The dated decisions and their provenance remain preserved.
+
 - **ADR 0012 left an operation without an owner.** It put live capabilities into trees
   (`DataTree = DeixisNode<Data>`, `WireTree = DeixisNode<Wire>`). It said "reconstructing readers
   from persisted bytes is a separate consumer operation", and did not define that operation or
@@ -334,6 +340,12 @@ distinct operations.
   resolver, not a consequence of selection.
 
 ### 9. The service line
+
+**Consumer architecture context.** The assignments below record the service-line
+discussion and its cited decisions; they are not structural requirements or a
+mandate issued by this foundation to other repositories. Current service and
+runtime owners must establish their own contracts and acceptance. This scope
+note leaves the historical decisions, including the topos ruling, intact.
 
 **One deployment, separate modules.** Minimal named cells and retention coordination become an
 explicitly named **cell module of deixis-svc**, next to its structural module. **topos is not

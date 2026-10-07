@@ -19,6 +19,13 @@ signature, a store, a transport), it belongs in a layer above this one. The
 [design records](docs/design/) show the criterion applied, including proposals that were
 declined.
 
+Consumer examples and historical family discussions may be recorded here as
+context, but they do not give deixis authority to assign downstream repository
+ownership. Maintain current service and deployment designs with their owners;
+link them as scoped evidence rather than creating a second roadmap here. See
+[consumer context](docs/CONSUMER-CONTEXT.md). Jointly adopted family policies keep
+their separately declared authority and amendment process.
+
 deixis also has **no runtime dependency on any other Bitspark repository**, and almost
 none at all: each core uses its language's standard library, plus its own SHA-256 where
 the language lacks one. A change that adds a dependency needs a reason in the pull
